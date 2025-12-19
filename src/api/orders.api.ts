@@ -1,0 +1,562 @@
+// ============================================
+// Orders API - Order/Reservation Management
+// SaveFood Platform - Anti-gaspillage alimentaire
+// ============================================
+
+import { supabaseClient, requireSupabaseClient, isSupabaseConfigured } from './supabaseClient';
+import { DB_TABLES } from './routes';
+import type { 
+  ApiResponse, 
+  Order, 
+  OrderStatus,
+  CreateOrderInput,
+  PaginatedResponse 
+} from '@/types';
+
+/**
+ * Generate a unique pickup code
+ */
+const generatePickupCode = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
+
+/**
+ * Create a new order/reservation
+ */
+export const createOrder = async (
+  userId: string,
+  orderData: CreateOrderInput
+): Promise<ApiResponse<Order>> => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: null,
+      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
+      success: false,
+    };
+  }
+
+  const client = requireSupabaseClient();
+  
+  // Get food item details to calculate prices
+  const { data: foodItem, error: itemError } = await client
+    .from(DB_TABLES.FOOD_ITEMS)
+    .select('*, merchants(*)')
+    .eq('id', orderData.food_item_id)
+    .single();
+
+  if (itemError || !foodItem) {
+    return {
+      data: null,
+      error: { code: 'NOT_FOUND', message: 'Food item not found' },
+      success: false,
+    };
+  }
+
+  // Check availability
+  if (foodItem.quantity_available < orderData.quantity) {
+    return {
+      data: null,
+      error: { code: 'INSUFFICIENT_QUANTITY', message: 'Not enough items available' },
+      success: false,
+    };
+  }
+
+  const totalPrice = foodItem.discounted_price * orderData.quantity;
+  const originalTotal = foodItem.original_price * orderData.quantity;
+  const savings = originalTotal - totalPrice;
+
+  const { data, error } = await client
+    .from(DB_TABLES.ORDERS)
+    .insert({
+      user_id: userId,
+      merchant_id: foodItem.merchant_id,
+      food_item_id: orderData.food_item_id,
+      quantity: orderData.quantity,
+      total_price: totalPrice,
+      original_total: originalTotal,
+      savings: savings,
+      status: 'pending',
+      pickup_code: generatePickupCode(),
+    })
+    .select('*, food_items(*), merchants(*)')
+    .single();
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.code, message: error.message },
+      success: false,
+    };
+  }
+
+  // Update food item quantity
+  await client
+    .from(DB_TABLES.FOOD_ITEMS)
+    .update({
+      quantity_available: foodItem.quantity_available - orderData.quantity,
+      is_available: foodItem.quantity_available - orderData.quantity > 0,
+    })
+    .eq('id', orderData.food_item_id);
+
+  const order: Order = {
+    ...data,
+    food_item: data.food_items,
+    merchant: data.merchants,
+  };
+
+  return {
+    data: order,
+    error: null,
+    success: true,
+  };
+};
+
+/**
+ * Get order by ID
+ */
+export const getOrderById = async (
+  orderId: string
+): Promise<ApiResponse<Order>> => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: null,
+      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
+      success: false,
+    };
+  }
+
+  const client = requireSupabaseClient();
+  const { data, error } = await client
+    .from(DB_TABLES.ORDERS)
+    .select('*, food_items(*), merchants(*), profiles(*)')
+    .eq('id', orderId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.code, message: error.message },
+      success: false,
+    };
+  }
+
+  const order: Order = data ? {
+    ...data,
+    food_item: data.food_items,
+    merchant: data.merchants,
+    user: data.profiles,
+  } : null;
+
+  return {
+    data: order as Order,
+    error: null,
+    success: true,
+  };
+};
+
+/**
+ * Get orders by user
+ */
+export const getOrdersByUser = async (
+  userId: string,
+  status?: OrderStatus,
+  limit: number = 20,
+  offset: number = 0
+): Promise<ApiResponse<PaginatedResponse<Order>>> => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: null,
+      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
+      success: false,
+    };
+  }
+
+  const client = requireSupabaseClient();
+  let query = client
+    .from(DB_TABLES.ORDERS)
+    .select('*, food_items(*), merchants(*)', { count: 'exact' })
+    .eq('user_id', userId);
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  query = query
+    .range(offset, offset + limit - 1)
+    .order('created_at', { ascending: false });
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.code, message: error.message },
+      success: false,
+    };
+  }
+
+  const orders = data?.map((o) => ({
+    ...o,
+    food_item: o.food_items,
+    merchant: o.merchants,
+  })) as Order[];
+
+  return {
+    data: {
+      data: orders,
+      total: count || 0,
+      page: Math.floor(offset / limit) + 1,
+      per_page: limit,
+      total_pages: Math.ceil((count || 0) / limit),
+    },
+    error: null,
+    success: true,
+  };
+};
+
+/**
+ * Get orders by merchant
+ */
+export const getOrdersByMerchant = async (
+  merchantId: string,
+  status?: OrderStatus,
+  limit: number = 20,
+  offset: number = 0
+): Promise<ApiResponse<PaginatedResponse<Order>>> => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: null,
+      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
+      success: false,
+    };
+  }
+
+  const client = requireSupabaseClient();
+  let query = client
+    .from(DB_TABLES.ORDERS)
+    .select('*, food_items(*), profiles(*)', { count: 'exact' })
+    .eq('merchant_id', merchantId);
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  query = query
+    .range(offset, offset + limit - 1)
+    .order('created_at', { ascending: false });
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.code, message: error.message },
+      success: false,
+    };
+  }
+
+  const orders = data?.map((o) => ({
+    ...o,
+    food_item: o.food_items,
+    user: o.profiles,
+  })) as Order[];
+
+  return {
+    data: {
+      data: orders,
+      total: count || 0,
+      page: Math.floor(offset / limit) + 1,
+      per_page: limit,
+      total_pages: Math.ceil((count || 0) / limit),
+    },
+    error: null,
+    success: true,
+  };
+};
+
+/**
+ * Update order status
+ */
+export const updateOrderStatus = async (
+  orderId: string,
+  status: OrderStatus,
+  additionalData?: Record<string, unknown>
+): Promise<ApiResponse<Order>> => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: null,
+      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
+      success: false,
+    };
+  }
+
+  const client = requireSupabaseClient();
+  
+  const updateData: Record<string, unknown> = {
+    status,
+    updated_at: new Date().toISOString(),
+    ...additionalData,
+  };
+
+  // Set timestamp based on status
+  switch (status) {
+    case 'confirmed':
+      updateData.confirmed_at = new Date().toISOString();
+      break;
+    case 'picked_up':
+    case 'completed':
+      updateData.picked_up_at = new Date().toISOString();
+      break;
+    case 'cancelled':
+      updateData.cancelled_at = new Date().toISOString();
+      break;
+  }
+
+  const { data, error } = await client
+    .from(DB_TABLES.ORDERS)
+    .update(updateData)
+    .eq('id', orderId)
+    .select('*, food_items(*), merchants(*)')
+    .single();
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.code, message: error.message },
+      success: false,
+    };
+  }
+
+  // If cancelled, restore quantity
+  if (status === 'cancelled' && data) {
+    await client
+      .from(DB_TABLES.FOOD_ITEMS)
+      .update({
+        quantity_available: data.food_items.quantity_available + data.quantity,
+        is_available: true,
+      })
+      .eq('id', data.food_item_id);
+  }
+
+  const order: Order = {
+    ...data,
+    food_item: data.food_items,
+    merchant: data.merchants,
+  };
+
+  return {
+    data: order,
+    error: null,
+    success: true,
+  };
+};
+
+/**
+ * Cancel order
+ */
+export const cancelOrder = async (
+  orderId: string,
+  reason?: string
+): Promise<ApiResponse<Order>> => {
+  return updateOrderStatus(orderId, 'cancelled', {
+    cancellation_reason: reason,
+  });
+};
+
+/**
+ * Confirm order (merchant action)
+ */
+export const confirmOrder = async (
+  orderId: string
+): Promise<ApiResponse<Order>> => {
+  return updateOrderStatus(orderId, 'confirmed');
+};
+
+/**
+ * Mark order as ready for pickup
+ */
+export const markOrderReady = async (
+  orderId: string
+): Promise<ApiResponse<Order>> => {
+  return updateOrderStatus(orderId, 'ready');
+};
+
+/**
+ * Complete order (after pickup)
+ */
+export const completeOrder = async (
+  orderId: string,
+  pickupCode: string
+): Promise<ApiResponse<Order>> => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: null,
+      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
+      success: false,
+    };
+  }
+
+  const client = requireSupabaseClient();
+  
+  // Verify pickup code
+  const { data: order, error: fetchError } = await client
+    .from(DB_TABLES.ORDERS)
+    .select('pickup_code')
+    .eq('id', orderId)
+    .single();
+
+  if (fetchError || !order) {
+    return {
+      data: null,
+      error: { code: 'NOT_FOUND', message: 'Order not found' },
+      success: false,
+    };
+  }
+
+  if (order.pickup_code !== pickupCode) {
+    return {
+      data: null,
+      error: { code: 'INVALID_CODE', message: 'Invalid pickup code' },
+      success: false,
+    };
+  }
+
+  return updateOrderStatus(orderId, 'completed');
+};
+
+/**
+ * Add review to completed order
+ */
+export const addOrderReview = async (
+  orderId: string,
+  rating: number,
+  review?: string
+): Promise<ApiResponse<Order>> => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: null,
+      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
+      success: false,
+    };
+  }
+
+  if (rating < 1 || rating > 5) {
+    return {
+      data: null,
+      error: { code: 'INVALID_RATING', message: 'Rating must be between 1 and 5' },
+      success: false,
+    };
+  }
+
+  const client = requireSupabaseClient();
+  const { data, error } = await client
+    .from(DB_TABLES.ORDERS)
+    .update({
+      rating,
+      review,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId)
+    .select('*, food_items(*), merchants(*)')
+    .single();
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.code, message: error.message },
+      success: false,
+    };
+  }
+
+  // Update merchant rating (simplified - in production, recalculate from all reviews)
+  if (data.merchant_id) {
+    const { data: merchant } = await client
+      .from(DB_TABLES.MERCHANTS)
+      .select('rating, total_reviews')
+      .eq('id', data.merchant_id)
+      .single();
+
+    if (merchant) {
+      const newTotalReviews = (merchant.total_reviews || 0) + 1;
+      const newRating = 
+        ((merchant.rating || 0) * (merchant.total_reviews || 0) + rating) / newTotalReviews;
+
+      await client
+        .from(DB_TABLES.MERCHANTS)
+        .update({
+          rating: Math.round(newRating * 10) / 10,
+          total_reviews: newTotalReviews,
+        })
+        .eq('id', data.merchant_id);
+    }
+  }
+
+  const order: Order = {
+    ...data,
+    food_item: data.food_items,
+    merchant: data.merchants,
+  };
+
+  return {
+    data: order,
+    error: null,
+    success: true,
+  };
+};
+
+/**
+ * Get active orders (pending, confirmed, ready)
+ */
+export const getActiveOrders = async (
+  userId?: string,
+  merchantId?: string
+): Promise<ApiResponse<Order[]>> => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: null,
+      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
+      success: false,
+    };
+  }
+
+  const client = requireSupabaseClient();
+  let query = client
+    .from(DB_TABLES.ORDERS)
+    .select('*, food_items(*), merchants(*), profiles(*)')
+    .in('status', ['pending', 'confirmed', 'ready']);
+
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+  if (merchantId) {
+    query = query.eq('merchant_id', merchantId);
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.code, message: error.message },
+      success: false,
+    };
+  }
+
+  const orders = data?.map((o) => ({
+    ...o,
+    food_item: o.food_items,
+    merchant: o.merchants,
+    user: o.profiles,
+  })) as Order[];
+
+  return {
+    data: orders,
+    error: null,
+    success: true,
+  };
+};
