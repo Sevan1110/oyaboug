@@ -1,0 +1,333 @@
+// ============================================
+// Types & Interfaces - SaveFood Platform
+// Anti-gaspillage alimentaire - Gabon
+// ============================================
+
+// ============================================
+// User Types
+// ============================================
+export interface User {
+  id: string;
+  email: string;
+  phone?: string;
+  full_name?: string;
+  avatar_url?: string;
+  role: UserRole;
+  created_at: string;
+  updated_at: string;
+}
+
+export type UserRole = 'user' | 'merchant' | 'admin';
+
+export interface UserProfile extends User {
+  address?: string;
+  city?: string;
+  quartier?: string;
+  preferences?: UserPreferences;
+}
+
+export interface UserPreferences {
+  notifications_enabled: boolean;
+  email_notifications: boolean;
+  sms_notifications: boolean;
+  favorite_categories: string[];
+  max_distance_km: number;
+}
+
+// ============================================
+// Merchant Types
+// ============================================
+export interface Merchant {
+  id: string;
+  user_id: string;
+  business_name: string;
+  business_type: MerchantType;
+  description?: string;
+  logo_url?: string;
+  cover_image_url?: string;
+  address: string;
+  city: string;
+  quartier: string;
+  latitude?: number;
+  longitude?: number;
+  phone: string;
+  email: string;
+  opening_hours?: OpeningHours;
+  rating: number;
+  total_reviews: number;
+  is_verified: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MerchantType = 
+  | 'restaurant'
+  | 'bakery'
+  | 'grocery'
+  | 'supermarket'
+  | 'hotel'
+  | 'caterer'
+  | 'other';
+
+export interface OpeningHours {
+  monday?: DayHours;
+  tuesday?: DayHours;
+  wednesday?: DayHours;
+  thursday?: DayHours;
+  friday?: DayHours;
+  saturday?: DayHours;
+  sunday?: DayHours;
+}
+
+export interface DayHours {
+  open: string;
+  close: string;
+  is_closed: boolean;
+}
+
+// ============================================
+// Inventory / Food Items Types
+// ============================================
+export interface FoodItem {
+  id: string;
+  merchant_id: string;
+  merchant?: Merchant;
+  name: string;
+  description?: string;
+  category: FoodCategory;
+  original_price: number; // in XAF
+  discounted_price: number; // in XAF
+  discount_percentage: number;
+  quantity_available: number;
+  quantity_initial: number;
+  image_url?: string;
+  images?: string[];
+  pickup_start: string;
+  pickup_end: string;
+  expiry_date?: string;
+  is_available: boolean;
+  badges?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type FoodCategory =
+  | 'bread_pastry'
+  | 'prepared_meals'
+  | 'fruits_vegetables'
+  | 'dairy'
+  | 'meat_fish'
+  | 'beverages'
+  | 'snacks'
+  | 'mixed_basket'
+  | 'other';
+
+export interface CreateFoodItemInput {
+  name: string;
+  description?: string;
+  category: FoodCategory;
+  original_price: number;
+  discounted_price: number;
+  quantity_available: number;
+  pickup_start: string;
+  pickup_end: string;
+  expiry_date?: string;
+  image_url?: string;
+}
+
+// ============================================
+// Order / Reservation Types
+// ============================================
+export interface Order {
+  id: string;
+  user_id: string;
+  merchant_id: string;
+  food_item_id: string;
+  food_item?: FoodItem;
+  merchant?: Merchant;
+  user?: User;
+  quantity: number;
+  total_price: number; // in XAF
+  original_total: number; // in XAF
+  savings: number; // in XAF
+  status: OrderStatus;
+  pickup_code: string;
+  pickup_time?: string;
+  confirmed_at?: string;
+  picked_up_at?: string;
+  cancelled_at?: string;
+  cancellation_reason?: string;
+  rating?: number;
+  review?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type OrderStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'ready'
+  | 'picked_up'
+  | 'completed'
+  | 'cancelled'
+  | 'no_show';
+
+export interface CreateOrderInput {
+  food_item_id: string;
+  quantity: number;
+}
+
+// ============================================
+// Pricing Types
+// ============================================
+export interface PricingRecommendation {
+  food_item_id: string;
+  original_price: number;
+  recommended_price: number;
+  discount_percentage: number;
+  confidence_score: number;
+  factors: PricingFactor[];
+  created_at: string;
+}
+
+export interface PricingFactor {
+  name: string;
+  impact: 'positive' | 'negative' | 'neutral';
+  weight: number;
+  description: string;
+}
+
+// ============================================
+// Impact / Analytics Types
+// ============================================
+export interface ImpactStats {
+  total_food_saved_kg: number;
+  total_money_saved_xaf: number;
+  total_co2_avoided_kg: number;
+  total_meals_saved: number;
+  total_orders: number;
+  total_merchants: number;
+  total_users: number;
+}
+
+export interface UserImpact {
+  user_id: string;
+  food_saved_kg: number;
+  money_saved_xaf: number;
+  co2_avoided_kg: number;
+  orders_count: number;
+  favorite_merchants: string[];
+}
+
+export interface MerchantImpact {
+  merchant_id: string;
+  food_saved_kg: number;
+  revenue_from_waste_xaf: number;
+  co2_avoided_kg: number;
+  orders_fulfilled: number;
+  average_rating: number;
+  waste_reduction_rate: number;
+}
+
+// ============================================
+// Geolocation Types (Gabon)
+// ============================================
+export interface GabonLocation {
+  city: GabonCity;
+  quartier: string;
+  latitude: number;
+  longitude: number;
+}
+
+export type GabonCity =
+  | 'Libreville'
+  | 'Port-Gentil'
+  | 'Franceville'
+  | 'Oyem'
+  | 'Moanda'
+  | 'Mouila'
+  | 'Lambaréné'
+  | 'Tchibanga'
+  | 'Koulamoutou'
+  | 'Makokou';
+
+export interface SearchFilters {
+  city?: GabonCity;
+  quartier?: string;
+  category?: FoodCategory;
+  merchant_type?: MerchantType;
+  min_price?: number;
+  max_price?: number;
+  max_distance_km?: number;
+  pickup_today?: boolean;
+  sort_by?: 'distance' | 'price' | 'discount' | 'rating';
+}
+
+// ============================================
+// Notification Types
+// ============================================
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  data?: Record<string, unknown>;
+  is_read: boolean;
+  created_at: string;
+}
+
+export type NotificationType =
+  | 'order_confirmed'
+  | 'order_ready'
+  | 'order_cancelled'
+  | 'new_food_nearby'
+  | 'merchant_verified'
+  | 'promotion'
+  | 'system';
+
+// ============================================
+// Auth Types
+// ============================================
+export interface AuthCredentials {
+  email: string;
+  password: string;
+}
+
+export interface SignUpData extends AuthCredentials {
+  full_name?: string;
+  phone?: string;
+  role: UserRole;
+  business_name?: string; // for merchants
+}
+
+export interface AuthSession {
+  user: User;
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+}
+
+// ============================================
+// API Response Types
+// ============================================
+export interface ApiResponse<T> {
+  data: T | null;
+  error: ApiError | null;
+  success: boolean;
+}
+
+export interface ApiError {
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
