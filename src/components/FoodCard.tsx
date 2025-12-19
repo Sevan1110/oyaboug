@@ -1,0 +1,98 @@
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { MapPin, Clock, Store } from "lucide-react";
+import { motion } from "framer-motion";
+
+export interface FoodItem {
+  id: string;
+  name: string;
+  description: string;
+  originalPrice: number;
+  discountedPrice: number;
+  image: string;
+  merchant: {
+    name: string;
+    type: string;
+    distance: string;
+  };
+  pickupTime: string;
+  quantity: number;
+  badges: ("bio" | "lastItems" | "free")[];
+}
+
+interface FoodCardProps {
+  item: FoodItem;
+  onReserve?: () => void;
+}
+
+const FoodCard = ({ item, onReserve }: FoodCardProps) => {
+  const discount = Math.round((1 - item.discountedPrice / item.originalPrice) * 100);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card hover className="overflow-hidden group">
+        {/* Image */}
+        <div className="relative h-40 overflow-hidden">
+          <img
+            src={item.image}
+            alt={item.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+          <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+            {item.badges.includes("bio") && <Badge variant="bio">Bio</Badge>}
+            {item.badges.includes("lastItems") && <Badge variant="lastItems">Dernières pièces</Badge>}
+            {item.badges.includes("free") && <Badge variant="free">Gratuit</Badge>}
+          </div>
+          <div className="absolute top-3 right-3 bg-secondary text-secondary-foreground text-sm font-bold px-2 py-1 rounded-lg">
+            -{discount}%
+          </div>
+        </div>
+
+        <CardContent className="p-4">
+          {/* Merchant info */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <Store className="w-3 h-3" />
+            <span>{item.merchant.name}</span>
+            <span>•</span>
+            <span>{item.merchant.type}</span>
+          </div>
+
+          {/* Name & description */}
+          <h3 className="font-semibold text-foreground mb-1 line-clamp-1">{item.name}</h3>
+          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{item.description}</p>
+
+          {/* Price */}
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className="text-lg font-bold text-primary">{item.discountedPrice.toFixed(2)} €</span>
+            <span className="text-sm text-muted-foreground line-through">{item.originalPrice.toFixed(2)} €</span>
+          </div>
+
+          {/* Meta info */}
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <MapPin className="w-3 h-3" />
+              {item.merchant.distance}
+            </div>
+            <div className="flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {item.pickupTime}
+            </div>
+          </div>
+        </CardContent>
+
+        <CardFooter className="p-4 pt-0">
+          <Button onClick={onReserve} className="w-full" size="sm">
+            Réserver ({item.quantity} restant{item.quantity > 1 ? "s" : ""})
+          </Button>
+        </CardFooter>
+      </Card>
+    </motion.div>
+  );
+};
+
+export default FoodCard;

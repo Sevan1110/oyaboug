@@ -1,0 +1,86 @@
+import { Link } from "react-router-dom";
+import { Leaf, Instagram, Twitter, Facebook, Mail, MapPin, Phone } from "lucide-react";
+
+const Footer = () => {
+  return (
+    <footer className="bg-card border-t border-border mt-20">
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* Brand */}
+          <div className="md:col-span-1">
+            <Link to="/" className="flex items-center gap-2 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+                <Leaf className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <span className="text-xl font-bold text-foreground">SaveFood</span>
+            </Link>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Ensemble, luttons contre le gaspillage alimentaire. Chaque repas sauvé compte.
+            </p>
+            <div className="flex gap-3 mt-4">
+              <a href="#" className="w-9 h-9 rounded-full bg-accent flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
+                <Instagram className="w-4 h-4" />
+              </a>
+              <a href="#" className="w-9 h-9 rounded-full bg-accent flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
+                <Twitter className="w-4 h-4" />
+              </a>
+              <a href="#" className="w-9 h-9 rounded-full bg-accent flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
+                <Facebook className="w-4 h-4" />
+              </a>
+            </div>
+          </div>
+
+          {/* Links */}
+          <div>
+            <h4 className="font-semibold text-foreground mb-4">Navigation</h4>
+            <ul className="space-y-2">
+              <li><Link to="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">Accueil</Link></li>
+              <li><Link to="/search" className="text-sm text-muted-foreground hover:text-primary transition-colors">Trouver des invendus</Link></li>
+              <li><Link to="/concept" className="text-sm text-muted-foreground hover:text-primary transition-colors">Comment ça marche</Link></li>
+              <li><Link to="/auth?role=merchant" className="text-sm text-muted-foreground hover:text-primary transition-colors">Devenir partenaire</Link></li>
+            </ul>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <h4 className="font-semibold text-foreground mb-4">Légal</h4>
+            <ul className="space-y-2">
+              <li><Link to="/cgu" className="text-sm text-muted-foreground hover:text-primary transition-colors">Conditions d'utilisation</Link></li>
+              <li><Link to="/privacy" className="text-sm text-muted-foreground hover:text-primary transition-colors">Politique de confidentialité</Link></li>
+              <li><Link to="/faq" className="text-sm text-muted-foreground hover:text-primary transition-colors">FAQ</Link></li>
+              <li><Link to="/help" className="text-sm text-muted-foreground hover:text-primary transition-colors">Centre d'aide</Link></li>
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h4 className="font-semibold text-foreground mb-4">Contact</h4>
+            <ul className="space-y-3">
+              <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Mail className="w-4 h-4 text-primary" />
+                contact@savefood.com
+              </li>
+              <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Phone className="w-4 h-4 text-primary" />
+                +33 1 23 45 67 89
+              </li>
+              <li className="flex items-start gap-2 text-sm text-muted-foreground">
+                <MapPin className="w-4 h-4 text-primary mt-0.5" />
+                Paris, France
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <hr className="border-border my-8" />
+
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+          <p>© 2024 SaveFood. Tous droits réservés.</p>
+          <p>Fait avec 💚 pour la planète</p>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+export default Footer;
