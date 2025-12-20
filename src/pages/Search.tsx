@@ -1,95 +1,136 @@
-import { useState } from "react";
+// ============================================
+// Search Page - Find Food Items
+// SaveFood Platform - Anti-gaspillage alimentaire
+// ============================================
+
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import FoodCard, { FoodItem } from "@/components/FoodCard";
-import { Search as SearchIcon, MapPin, Filter, Grid, Map, Clock, Store, SlidersHorizontal } from "lucide-react";
+import FoodCard, { FoodItem as FoodCardItem } from "@/components/FoodCard";
+import { Search as SearchIcon, MapPin, Grid, Map, SlidersHorizontal, Store, Loader2 } from "lucide-react";
+import { getAvailableItems, searchInventory, getCategoryName, formatPrice } from "@/services";
+import type { FoodItem, FoodCategory, GabonCity, MerchantType } from "@/types";
 
-const mockItems: FoodItem[] = [
-  {
-    id: "1",
-    name: "Panier Boulangerie",
-    description: "Assortiment de pains, viennoiseries et pâtisseries du jour",
-    originalPrice: 15.00,
-    discountedPrice: 5.99,
-    image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=300&fit=crop",
-    merchant: { name: "Boulangerie Martin", type: "Boulangerie", distance: "500m" },
-    pickupTime: "18h - 19h",
-    quantity: 3,
-    badges: ["bio"],
-  },
-  {
-    id: "2",
-    name: "Panier Fruits & Légumes",
-    description: "Fruits et légumes frais de saison, idéal pour une famille",
-    originalPrice: 20.00,
-    discountedPrice: 6.99,
-    image: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400&h=300&fit=crop",
-    merchant: { name: "Primeur du Marché", type: "Primeur", distance: "800m" },
-    pickupTime: "17h - 18h30",
-    quantity: 5,
-    badges: ["bio", "lastItems"],
-  },
-  {
-    id: "3",
-    name: "Panier Sushi",
-    description: "Assortiment de sushis, makis et california rolls",
-    originalPrice: 25.00,
-    discountedPrice: 9.99,
-    image: "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400&h=300&fit=crop",
-    merchant: { name: "Sushi Express", type: "Restaurant", distance: "1.2km" },
-    pickupTime: "21h - 22h",
-    quantity: 2,
-    badges: ["lastItems"],
-  },
-  {
-    id: "4",
-    name: "Panier Pâtisserie",
-    description: "Éclairs, tartes et macarons du jour",
-    originalPrice: 18.00,
-    discountedPrice: 0,
-    image: "https://images.unsplash.com/photo-1550617931-e17a7b70dce2?w=400&h=300&fit=crop",
-    merchant: { name: "Douceurs de Marie", type: "Pâtisserie", distance: "350m" },
-    pickupTime: "19h - 20h",
-    quantity: 1,
-    badges: ["free", "lastItems"],
-  },
-  {
-    id: "5",
-    name: "Panier Traiteur",
-    description: "Plats cuisinés, salades composées et accompagnements",
-    originalPrice: 22.00,
-    discountedPrice: 7.99,
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop",
-    merchant: { name: "Le Petit Chef", type: "Traiteur", distance: "600m" },
-    pickupTime: "18h30 - 19h30",
-    quantity: 4,
-    badges: [],
-  },
-  {
-    id: "6",
-    name: "Panier Bio",
-    description: "Produits bio variés : pain, fruits, yaourts",
-    originalPrice: 16.00,
-    discountedPrice: 5.49,
-    image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop",
-    merchant: { name: "Bio & Local", type: "Épicerie", distance: "900m" },
-    pickupTime: "17h - 18h",
-    quantity: 6,
-    badges: ["bio"],
-  },
+// Gabon cities
+const GABON_CITIES: GabonCity[] = [
+  'Libreville',
+  'Port-Gentil',
+  'Franceville',
+  'Oyem',
+  'Moanda',
+  'Mouila',
+  'Lambaréné',
+  'Tchibanga',
+  'Koulamoutou',
+  'Makokou',
+];
+
+const MERCHANT_TYPES: { value: MerchantType; label: string }[] = [
+  { value: 'bakery', label: 'Boulangerie' },
+  { value: 'restaurant', label: 'Restaurant' },
+  { value: 'grocery', label: 'Épicerie' },
+  { value: 'supermarket', label: 'Supermarché' },
+  { value: 'hotel', label: 'Hôtel' },
+  { value: 'caterer', label: 'Traiteur' },
+];
+
+const FOOD_CATEGORIES: FoodCategory[] = [
+  'bread_pastry',
+  'prepared_meals',
+  'fruits_vegetables',
+  'dairy',
+  'meat_fish',
+  'beverages',
+  'snacks',
+  'mixed_basket',
 ];
 
 const SearchPage = () => {
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
   const [showFilters, setShowFilters] = useState(false);
-  const [priceRange, setPriceRange] = useState([0, 20]);
+  const [priceRange, setPriceRange] = useState([0, 20000]); // XAF
+  const [isLoading, setIsLoading] = useState(true);
+  const [items, setItems] = useState<FoodItem[]>([]);
+
+  // Filter states
+  const [selectedCity, setSelectedCity] = useState<GabonCity | "">("");
+  const [selectedCategory, setSelectedCategory] = useState<FoodCategory | "">("");
+  const [selectedMerchantType, setSelectedMerchantType] = useState<MerchantType | "">("");
+  const [sortBy, setSortBy] = useState<"distance" | "price" | "discount" | "rating">("distance");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Load items on mount and when filters change
+  useEffect(() => {
+    loadItems();
+  }, [selectedCity, selectedCategory, selectedMerchantType, priceRange, sortBy]);
+
+  const loadItems = async () => {
+    setIsLoading(true);
+    
+    const result = await searchInventory({
+      city: selectedCity || undefined,
+      category: selectedCategory || undefined,
+      merchantType: selectedMerchantType || undefined,
+      minPrice: priceRange[0],
+      maxPrice: priceRange[1],
+      sortBy,
+    });
+
+    if (result.success && result.data) {
+      setItems(result.data);
+    }
+    
+    setIsLoading(false);
+  };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      loadItems();
+      return;
+    }
+    
+    setIsLoading(true);
+    const result = await searchInventory({
+      city: selectedCity || undefined,
+      category: selectedCategory || undefined,
+      sortBy,
+    });
+    
+    if (result.success && result.data) {
+      // Client-side filter by search query
+      const filtered = result.data.filter(item => 
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.merchant?.business_name?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setItems(filtered);
+    }
+    setIsLoading(false);
+  };
+
+  // Convert FoodItem to FoodCardItem format
+  const toFoodCardItem = (item: FoodItem): FoodCardItem => ({
+    id: item.id,
+    name: item.name,
+    description: item.description || "",
+    originalPrice: item.original_price,
+    discountedPrice: item.discounted_price,
+    image: item.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop",
+    merchant: {
+      name: item.merchant?.business_name || "Commerce",
+      type: item.merchant?.business_type || "other",
+      distance: item.merchant?.quartier || "",
+    },
+    pickupTime: `${item.pickup_start} - ${item.pickup_end}`,
+    quantity: item.quantity_available,
+    badges: (item.badges || []) as ("bio" | "free" | "lastItems")[],
+  });
 
   return (
     <div className="min-h-screen">
@@ -107,7 +148,7 @@ const SearchPage = () => {
               Trouver des <span className="text-gradient">invendus</span>
             </h1>
             <p className="text-muted-foreground">
-              Découvrez les offres disponibles près de chez vous
+              Découvrez les offres disponibles au Gabon
             </p>
           </motion.div>
 
@@ -122,12 +163,29 @@ const SearchPage = () => {
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Select value={selectedCity} onValueChange={(v) => setSelectedCity(v as GabonCity)}>
+                    <SelectTrigger className="pl-10 h-12">
+                      <SelectValue placeholder="Choisir une ville au Gabon" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Toutes les villes</SelectItem>
+                      {GABON_CITIES.map(city => (
+                        <SelectItem key={city} value={city}>{city}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1 relative">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
-                    placeholder="Entrez votre adresse ou ville..."
+                    placeholder="Rechercher un produit ou commerce..."
                     className="pl-10 h-12"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   />
                 </div>
-                <Button size="lg" className="gap-2 h-12">
+                <Button size="lg" className="gap-2 h-12" onClick={handleSearch}>
                   <SearchIcon className="w-5 h-5" />
                   Rechercher
                 </Button>
@@ -152,15 +210,18 @@ const SearchPage = () => {
             </Button>
 
             <div className="flex gap-2 flex-wrap">
-              <Badge variant="outline" className="cursor-pointer hover:bg-accent px-3 py-1.5">
-                <Store className="w-3 h-3 mr-1" /> Boulangerie
-              </Badge>
-              <Badge variant="outline" className="cursor-pointer hover:bg-accent px-3 py-1.5">
-                <Store className="w-3 h-3 mr-1" /> Restaurant
-              </Badge>
-              <Badge variant="outline" className="cursor-pointer hover:bg-accent px-3 py-1.5">
-                <Store className="w-3 h-3 mr-1" /> Primeur
-              </Badge>
+              {MERCHANT_TYPES.slice(0, 3).map(type => (
+                <Badge 
+                  key={type.value}
+                  variant={selectedMerchantType === type.value ? "default" : "outline"} 
+                  className="cursor-pointer hover:bg-accent px-3 py-1.5"
+                  onClick={() => setSelectedMerchantType(
+                    selectedMerchantType === type.value ? "" : type.value
+                  )}
+                >
+                  <Store className="w-3 h-3 mr-1" /> {type.label}
+                </Badge>
+              ))}
             </div>
 
             <div className="ml-auto flex gap-2">
@@ -193,62 +254,61 @@ const SearchPage = () => {
                 <div className="grid md:grid-cols-4 gap-6">
                   <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">
-                      Type de commerce
+                      Catégorie
                     </label>
-                    <Select>
+                    <Select value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as FoodCategory)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Tous" />
+                        <SelectValue placeholder="Toutes" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Tous</SelectItem>
-                        <SelectItem value="bakery">Boulangerie</SelectItem>
-                        <SelectItem value="restaurant">Restaurant</SelectItem>
-                        <SelectItem value="grocery">Épicerie</SelectItem>
-                        <SelectItem value="supermarket">Supermarché</SelectItem>
+                        <SelectItem value="">Toutes</SelectItem>
+                        {FOOD_CATEGORIES.map(cat => (
+                          <SelectItem key={cat} value={cat}>{getCategoryName(cat)}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">
-                      Heure de retrait
+                      Type de commerce
                     </label>
-                    <Select>
+                    <Select value={selectedMerchantType} onValueChange={(v) => setSelectedMerchantType(v as MerchantType)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Toutes les heures" />
+                        <SelectValue placeholder="Tous" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Toutes les heures</SelectItem>
-                        <SelectItem value="morning">Matin (8h-12h)</SelectItem>
-                        <SelectItem value="afternoon">Après-midi (12h-18h)</SelectItem>
-                        <SelectItem value="evening">Soir (18h-22h)</SelectItem>
+                        <SelectItem value="">Tous</SelectItem>
+                        {MERCHANT_TYPES.map(type => (
+                          <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-4 block">
-                      Prix max: {priceRange[1]}€
+                      Prix max: {formatPrice(priceRange[1])}
                     </label>
                     <Slider
                       value={priceRange}
                       onValueChange={setPriceRange}
-                      max={30}
-                      step={1}
+                      max={50000}
+                      step={500}
                       className="w-full"
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">
-                      Distance
+                      Trier par
                     </label>
-                    <Select>
+                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="5 km" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">1 km</SelectItem>
-                        <SelectItem value="2">2 km</SelectItem>
-                        <SelectItem value="5">5 km</SelectItem>
-                        <SelectItem value="10">10 km</SelectItem>
+                        <SelectItem value="distance">Distance</SelectItem>
+                        <SelectItem value="price">Prix croissant</SelectItem>
+                        <SelectItem value="discount">Réduction</SelectItem>
+                        <SelectItem value="rating">Note</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -260,9 +320,9 @@ const SearchPage = () => {
           {/* Results */}
           <div className="flex items-center justify-between mb-4">
             <p className="text-muted-foreground">
-              <span className="font-semibold text-foreground">{mockItems.length}</span> résultats trouvés
+              <span className="font-semibold text-foreground">{items.length}</span> résultats trouvés
             </p>
-            <Select defaultValue="distance">
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
               <SelectTrigger className="w-40">
                 <SelectValue />
               </SelectTrigger>
@@ -270,31 +330,44 @@ const SearchPage = () => {
                 <SelectItem value="distance">Distance</SelectItem>
                 <SelectItem value="price">Prix croissant</SelectItem>
                 <SelectItem value="discount">Réduction</SelectItem>
-                <SelectItem value="time">Heure de retrait</SelectItem>
+                <SelectItem value="rating">Note</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {viewMode === "grid" ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : viewMode === "grid" ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mockItems.map((item, index) => (
+              {items.map((item, index) => (
                 <motion.div
                   key={item.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <FoodCard item={item} />
+                  <FoodCard item={toFoodCardItem(item)} />
                 </motion.div>
               ))}
+              {items.length === 0 && (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-muted-foreground">Aucun résultat trouvé</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Essayez de modifier vos filtres
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <Card className="h-[500px] flex items-center justify-center bg-muted/50">
               <div className="text-center text-muted-foreground">
                 <Map className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>La carte interactive sera disponible après connexion</p>
+                <p>Carte du Gabon interactive</p>
+                <p className="text-sm mt-2">Connectez-vous pour voir les commerces près de vous</p>
                 <Button variant="link" className="mt-2">
-                  Se connecter pour voir la carte
+                  Se connecter
                 </Button>
               </div>
             </Card>
