@@ -1,4 +1,10 @@
-import { Link, useSearchParams } from "react-router-dom";
+// ============================================
+// Auth Page - Login & Signup
+// SaveFood Platform - Anti-gaspillage alimentaire
+// ============================================
+
+import { useState } from "react";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,13 +13,136 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Leaf, User, Store, Mail, Lock, Phone, ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { Leaf, User, Store, Mail, Lock, Phone, ArrowLeft, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { login, register, loginWithOtp } from "@/services";
+import type { UserRole } from "@/types";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
   const initialRole = searchParams.get("role") === "merchant" ? "merchant" : "user";
-  const [role, setRole] = useState<"user" | "merchant">(initialRole);
+  const [role, setRole] = useState<UserRole>(initialRole);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Login form state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
+  // Signup form state
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!loginEmail || !loginPassword) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    const result = await login(loginEmail, loginPassword);
+    setIsLoading(false);
+
+    if (result.success) {
+      toast({
+        title: "Connexion réussie",
+        description: "Bienvenue sur SaveFood !",
+      });
+      // Redirect based on role
+      navigate(role === "merchant" ? "/merchant/dashboard" : "/user/dashboard");
+    } else {
+      toast({
+        title: "Erreur de connexion",
+        description: result.error?.message || "Email ou mot de passe incorrect",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!signupEmail || !signupPassword) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs obligatoires",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!acceptedTerms) {
+      toast({
+        title: "Erreur",
+        description: "Vous devez accepter les conditions d'utilisation",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    const result = await register(signupEmail, signupPassword, {
+      phone: signupPhone,
+      role,
+      businessName: role === "merchant" ? businessName : undefined,
+    });
+    setIsLoading(false);
+
+    if (result.success) {
+      toast({
+        title: "Inscription réussie",
+        description: "Vérifiez votre email pour confirmer votre compte",
+      });
+      navigate(role === "merchant" ? "/merchant/dashboard" : "/user/dashboard");
+    } else {
+      toast({
+        title: "Erreur d'inscription",
+        description: result.error?.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOtpLogin = async () => {
+    const identifier = loginEmail || signupPhone;
+    if (!identifier) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez entrer un email ou numéro de téléphone",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    const type = identifier.includes("@") ? "email" : "phone";
+    const result = await loginWithOtp(identifier, type);
+    setIsLoading(false);
+
+    if (result.success) {
+      toast({
+        title: "Code envoyé",
+        description: `Un code de vérification a été envoyé à ${identifier}`,
+      });
+    } else {
+      toast({
+        title: "Erreur",
+        description: result.error?.message || "Impossible d'envoyer le code",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-20">
@@ -52,6 +181,7 @@ const Auth = () => {
             {/* Role Selection */}
             <div className="flex gap-3 mb-6">
               <button
+                type="button"
                 onClick={() => setRole("user")}
                 className={`flex-1 p-4 rounded-xl border-2 transition-all ${
                   role === "user"
@@ -65,6 +195,7 @@ const Auth = () => {
                 </p>
               </button>
               <button
+                type="button"
                 onClick={() => setRole("merchant")}
                 className={`flex-1 p-4 rounded-xl border-2 transition-all ${
                   role === "merchant"
@@ -86,85 +217,155 @@ const Auth = () => {
               </TabsList>
 
               {/* Login Tab */}
-              <TabsContent value="login" className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="login-email" type="email" placeholder="votre@email.com" className="pl-10" />
+              <TabsContent value="login">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input 
+                        id="login-email" 
+                        type="email" 
+                        placeholder="votre@email.com" 
+                        className="pl-10"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        disabled={isLoading}
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Mot de passe</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="login-password" type="password" placeholder="••••••••" className="pl-10" />
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Mot de passe</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input 
+                        id="login-password" 
+                        type="password" 
+                        placeholder="••••••••" 
+                        className="pl-10"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        disabled={isLoading}
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Checkbox id="remember" />
-                    <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
-                      Se souvenir de moi
-                    </Label>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox id="remember" />
+                      <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
+                        Se souvenir de moi
+                      </Label>
+                    </div>
+                    <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                      Mot de passe oublié ?
+                    </Link>
                   </div>
-                  <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-                    Mot de passe oublié ?
-                  </Link>
-                </div>
-                <Button className="w-full" size="lg">
-                  Se connecter
-                </Button>
+                  <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Connexion...
+                      </>
+                    ) : (
+                      "Se connecter"
+                    )}
+                  </Button>
+                </form>
               </TabsContent>
 
               {/* Signup Tab */}
-              <TabsContent value="signup" className="space-y-4">
-                {role === "merchant" && (
+              <TabsContent value="signup">
+                <form onSubmit={handleSignup} className="space-y-4">
+                  {role === "merchant" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="business-name">Nom du commerce</Label>
+                      <div className="relative">
+                        <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input 
+                          id="business-name" 
+                          placeholder="Ma Boulangerie" 
+                          className="pl-10"
+                          value={businessName}
+                          onChange={(e) => setBusinessName(e.target.value)}
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-2">
-                    <Label htmlFor="business-name">Nom du commerce</Label>
+                    <Label htmlFor="signup-email">Email</Label>
                     <div className="relative">
-                      <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input id="business-name" placeholder="Ma Boulangerie" className="pl-10" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input 
+                        id="signup-email" 
+                        type="email" 
+                        placeholder="votre@email.com" 
+                        className="pl-10"
+                        value={signupEmail}
+                        onChange={(e) => setSignupEmail(e.target.value)}
+                        disabled={isLoading}
+                      />
                     </div>
                   </div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="signup-email" type="email" placeholder="votre@email.com" className="pl-10" />
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-phone">Téléphone</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input 
+                        id="signup-phone" 
+                        type="tel" 
+                        placeholder="+241 XX XX XX XX" 
+                        className="pl-10"
+                        value={signupPhone}
+                        onChange={(e) => setSignupPhone(e.target.value)}
+                        disabled={isLoading}
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-phone">Téléphone</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="signup-phone" type="tel" placeholder="+33 6 12 34 56 78" className="pl-10" />
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Mot de passe</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input 
+                        id="signup-password" 
+                        type="password" 
+                        placeholder="••••••••" 
+                        className="pl-10"
+                        value={signupPassword}
+                        onChange={(e) => setSignupPassword(e.target.value)}
+                        disabled={isLoading}
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Mot de passe</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="signup-password" type="password" placeholder="••••••••" className="pl-10" />
+                  <div className="flex items-start gap-2">
+                    <Checkbox 
+                      id="cgu" 
+                      className="mt-1"
+                      checked={acceptedTerms}
+                      onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+                    />
+                    <Label htmlFor="cgu" className="text-sm text-muted-foreground cursor-pointer">
+                      J'accepte les{" "}
+                      <Link to="/cgu" className="text-primary hover:underline">
+                        conditions d'utilisation
+                      </Link>{" "}
+                      et la{" "}
+                      <Link to="/privacy" className="text-primary hover:underline">
+                        politique de confidentialité
+                      </Link>
+                    </Label>
                   </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Checkbox id="cgu" className="mt-1" />
-                  <Label htmlFor="cgu" className="text-sm text-muted-foreground cursor-pointer">
-                    J'accepte les{" "}
-                    <Link to="/cgu" className="text-primary hover:underline">
-                      conditions d'utilisation
-                    </Link>{" "}
-                    et la{" "}
-                    <Link to="/privacy" className="text-primary hover:underline">
-                      politique de confidentialité
-                    </Link>
-                  </Label>
-                </div>
-                <Button className="w-full" size="lg">
-                  Créer mon compte
-                </Button>
+                  <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Inscription...
+                      </>
+                    ) : (
+                      "Créer mon compte"
+                    )}
+                  </Button>
+                </form>
               </TabsContent>
             </Tabs>
 
@@ -175,7 +376,13 @@ const Auth = () => {
               </span>
             </div>
 
-            <Button variant="outline" className="w-full gap-2" size="lg">
+            <Button 
+              variant="outline" 
+              className="w-full gap-2" 
+              size="lg"
+              onClick={handleOtpLogin}
+              disabled={isLoading}
+            >
               <Phone className="w-4 h-4" />
               Continuer avec OTP
             </Button>
