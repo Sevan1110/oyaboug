@@ -3,14 +3,14 @@
 // SaveFood Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useEffect, useRef, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { useEffect, useRef, useMemo, useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock, Store, Star } from "lucide-react";
+import { MapPin, Clock, Store, Crosshair, Loader2 } from "lucide-react";
 import type { FoodItem, GabonCity } from "@/types";
 
 // Fix for default marker icons in React-Leaflet
@@ -70,6 +70,40 @@ const createCustomIcon = (color: string = "#22C55E") => {
   });
 };
 
+// User location icon
+const userLocationIcon = L.divIcon({
+  className: "user-location-marker",
+  html: `
+    <div style="
+      position: relative;
+      width: 24px;
+      height: 24px;
+    ">
+      <div style="
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        background: hsl(217, 91%, 60%);
+        border: 3px solid white;
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      "></div>
+      <div style="
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        background: hsl(217, 91%, 60%, 0.2);
+        border-radius: 50%;
+        top: -8px;
+        left: -8px;
+        animation: pulse 2s infinite;
+      "></div>
+    </div>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+});
+
 // Merchant marker icon
 const merchantIcon = createCustomIcon("hsl(145, 65%, 42%)");
 const urgentIcon = createCustomIcon("hsl(0, 72%, 51%)");
@@ -77,12 +111,44 @@ const urgentIcon = createCustomIcon("hsl(0, 72%, 51%)");
 interface MapItemPopupProps {
   item: FoodItem;
   onSelect?: (item: FoodItem) => void;
+  userLocation?: [number, number] | null;
 }
 
-const MapItemPopup = ({ item, onSelect }: MapItemPopupProps) => {
+// Calculate distance between two points (Haversine formula)
+const calculateDistance = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number => {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+const MapItemPopup = ({ item, onSelect, userLocation }: MapItemPopupProps) => {
   const discount = Math.round(
     ((item.original_price - item.discounted_price) / item.original_price) * 100
   );
+
+  // Calculate distance if user location is available
+  let distance: number | null = null;
+  if (userLocation && item.merchant?.latitude && item.merchant?.longitude) {
+    distance = calculateDistance(
+      userLocation[0],
+      userLocation[1],
+      item.merchant.latitude,
+      item.merchant.longitude
+    );
+  }
 
   return (
     <div className="min-w-[220px]">
@@ -102,6 +168,15 @@ const MapItemPopup = ({ item, onSelect }: MapItemPopupProps) => {
             <Store className="w-3 h-3" />
             {item.merchant?.business_name || "Commerce"}
           </p>
+          {distance !== null && (
+            <p className="text-xs text-primary flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3 h-3" />
+              {distance < 1 
+                ? `${Math.round(distance * 1000)}m` 
+                : `${distance.toFixed(1)}km`
+              }
+            </p>
+          )}
         </div>
       </div>
 
@@ -148,13 +223,18 @@ const MapItemPopup = ({ item, onSelect }: MapItemPopupProps) => {
 // Component to recenter map
 interface MapRecenterProps {
   city?: GabonCity;
+  userLocation?: [number, number] | null;
 }
 
-const MapRecenter = ({ city }: MapRecenterProps) => {
+const MapRecenter = ({ city, userLocation }: MapRecenterProps) => {
   const map = useMap();
 
   useEffect(() => {
-    if (city && GABON_CITIES_COORDS[city]) {
+    if (userLocation) {
+      map.flyTo(userLocation, 14, {
+        duration: 1.5,
+      });
+    } else if (city && GABON_CITIES_COORDS[city]) {
       map.flyTo(GABON_CITIES_COORDS[city], 13, {
         duration: 1.5,
       });
@@ -163,9 +243,61 @@ const MapRecenter = ({ city }: MapRecenterProps) => {
         duration: 1.5,
       });
     }
-  }, [city, map]);
+  }, [city, userLocation, map]);
 
   return null;
+};
+
+// Component to handle locate control
+interface LocateControlProps {
+  onLocate: (position: [number, number]) => void;
+  isLocating: boolean;
+}
+
+const LocateControl = ({ onLocate, isLocating }: LocateControlProps) => {
+  const map = useMap();
+
+  const handleLocate = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          onLocate([latitude, longitude]);
+          map.flyTo([latitude, longitude], 14, { duration: 1.5 });
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          // Fallback to Libreville
+          onLocate([0.4162, 9.4673]);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000,
+        }
+      );
+    }
+  };
+
+  return (
+    <div className="leaflet-top leaflet-left" style={{ marginTop: "10px", marginLeft: "10px" }}>
+      <div className="leaflet-control leaflet-bar">
+        <button
+          onClick={handleLocate}
+          disabled={isLocating}
+          className="flex items-center justify-center w-[34px] h-[34px] bg-card hover:bg-muted border-none cursor-pointer rounded"
+          title="Ma position"
+          style={{ lineHeight: 1 }}
+        >
+          {isLocating ? (
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          ) : (
+            <Crosshair className="w-4 h-4 text-foreground" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
 };
 
 interface GabonMapProps {
@@ -182,6 +314,15 @@ const GabonMap = ({
   className = "",
 }: GabonMapProps) => {
   const mapRef = useRef<L.Map>(null);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [nearbyRadius, setNearbyRadius] = useState(2); // km
+
+  const handleLocate = (position: [number, number]) => {
+    setIsLocating(true);
+    setUserLocation(position);
+    setTimeout(() => setIsLocating(false), 500);
+  };
 
   // Generate mock coordinates for items without real coordinates
   const itemsWithCoords = useMemo(() => {
@@ -203,8 +344,23 @@ const GabonMap = ({
     });
   }, [items]);
 
+  // Filter nearby items when user location is available
+  const nearbyItems = useMemo(() => {
+    if (!userLocation) return [];
+
+    return itemsWithCoords.filter((item) => {
+      const distance = calculateDistance(
+        userLocation[0],
+        userLocation[1],
+        item.coords[0],
+        item.coords[1]
+      );
+      return distance <= nearbyRadius;
+    });
+  }, [userLocation, itemsWithCoords, nearbyRadius]);
+
   return (
-    <Card className={`overflow-hidden ${className}`}>
+    <Card className={`overflow-hidden relative ${className}`}>
       <MapContainer
         ref={mapRef}
         center={GABON_CENTER}
@@ -220,7 +376,40 @@ const GabonMap = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <MapRecenter city={selectedCity as GabonCity} />
+        <MapRecenter 
+          city={selectedCity as GabonCity} 
+          userLocation={userLocation}
+        />
+        
+        <LocateControl onLocate={handleLocate} isLocating={isLocating} />
+
+        {/* User location marker */}
+        {userLocation && (
+          <>
+            <Marker position={userLocation} icon={userLocationIcon}>
+              <Popup>
+                <div className="text-center p-2">
+                  <h3 className="font-semibold text-foreground">Votre position</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {nearbyItems.length} offre(s) à proximité
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+            {/* Radius circle */}
+            <Circle
+              center={userLocation}
+              radius={nearbyRadius * 1000}
+              pathOptions={{
+                color: "hsl(217, 91%, 60%)",
+                fillColor: "hsl(217, 91%, 60%)",
+                fillOpacity: 0.1,
+                weight: 2,
+                dashArray: "5, 5",
+              }}
+            />
+          </>
+        )}
 
         {/* City markers */}
         {Object.entries(GABON_CITIES_COORDS).map(([city, coords]) => {
@@ -228,7 +417,7 @@ const GabonMap = ({
             (item) => item.merchant?.city === city
           );
 
-          if (cityItems.length === 0 && !selectedCity) {
+          if (cityItems.length === 0 && !selectedCity && !userLocation) {
             return (
               <Marker
                 key={city}
@@ -276,7 +465,11 @@ const GabonMap = ({
             icon={item.quantity_available <= 3 ? urgentIcon : merchantIcon}
           >
             <Popup>
-              <MapItemPopup item={item} onSelect={onItemSelect} />
+              <MapItemPopup 
+                item={item} 
+                onSelect={onItemSelect} 
+                userLocation={userLocation}
+              />
             </Popup>
           </Marker>
         ))}
@@ -285,6 +478,15 @@ const GabonMap = ({
       {/* Legend */}
       <div className="absolute bottom-4 left-4 z-[1000] bg-card/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
         <div className="flex flex-col gap-2 text-xs">
+          {userLocation && (
+            <div className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ background: "hsl(217, 91%, 60%)" }}
+              />
+              <span className="text-foreground">Votre position</span>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <div
               className="w-3 h-3 rounded-full"
@@ -302,12 +504,90 @@ const GabonMap = ({
         </div>
       </div>
 
-      {/* Items count */}
-      {items.length > 0 && (
-        <div className="absolute top-4 right-4 z-[1000] bg-primary text-primary-foreground rounded-full px-3 py-1.5 text-sm font-semibold shadow-lg">
-          {items.length} offre{items.length > 1 ? "s" : ""}
+      {/* Items count & nearby */}
+      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+        {items.length > 0 && (
+          <div className="bg-primary text-primary-foreground rounded-full px-3 py-1.5 text-sm font-semibold shadow-lg">
+            {items.length} offre{items.length > 1 ? "s" : ""}
+          </div>
+        )}
+        {userLocation && nearbyItems.length > 0 && (
+          <div className="bg-blue-500 text-white rounded-full px-3 py-1.5 text-sm font-semibold shadow-lg flex items-center gap-1">
+            <MapPin className="w-3 h-3" />
+            {nearbyItems.length} à {nearbyRadius}km
+          </div>
+        )}
+      </div>
+
+      {/* Radius selector when user location is active */}
+      {userLocation && (
+        <div className="absolute bottom-4 right-4 z-[1000] bg-card/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+          <p className="text-xs text-muted-foreground mb-2">Rayon de recherche</p>
+          <div className="flex gap-1">
+            {[1, 2, 5, 10].map((r) => (
+              <button
+                key={r}
+                onClick={() => setNearbyRadius(r)}
+                className={`px-2 py-1 text-xs rounded transition-colors ${
+                  nearbyRadius === r
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                {r}km
+              </button>
+            ))}
+          </div>
         </div>
       )}
+
+      {/* Locate button for mobile */}
+      {!userLocation && (
+        <div className="absolute bottom-4 right-4 z-[1000]">
+          <Button
+            onClick={() => {
+              if (navigator.geolocation) {
+                setIsLocating(true);
+                navigator.geolocation.getCurrentPosition(
+                  (position) => {
+                    handleLocate([position.coords.latitude, position.coords.longitude]);
+                  },
+                  () => {
+                    setIsLocating(false);
+                  }
+                );
+              }
+            }}
+            disabled={isLocating}
+            className="gap-2 shadow-lg"
+          >
+            {isLocating ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Crosshair className="w-4 h-4" />
+            )}
+            Me localiser
+          </Button>
+        </div>
+      )}
+
+      {/* CSS for pulse animation */}
+      <style>{`
+        @keyframes pulse {
+          0% {
+            transform: scale(1);
+            opacity: 0.5;
+          }
+          50% {
+            transform: scale(1.5);
+            opacity: 0.2;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 0.5;
+          }
+        }
+      `}</style>
     </Card>
   );
 };
