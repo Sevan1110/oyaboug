@@ -3,7 +3,7 @@
 // SaveFood Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,9 @@ import FoodCard, { FoodItem as FoodCardItem } from "@/components/FoodCard";
 import { Search as SearchIcon, MapPin, Grid, Map, SlidersHorizontal, Store, Loader2 } from "lucide-react";
 import { getAvailableItems, searchInventory, getCategoryName, formatPrice } from "@/services";
 import type { FoodItem, FoodCategory, GabonCity, MerchantType } from "@/types";
+
+// Lazy load map component to avoid SSR issues
+const GabonMap = lazy(() => import("@/components/GabonMap"));
 
 // Gabon cities
 const GABON_CITIES: GabonCity[] = [
@@ -361,16 +364,23 @@ const SearchPage = () => {
               )}
             </div>
           ) : (
-            <Card className="h-[500px] flex items-center justify-center bg-muted/50">
-              <div className="text-center text-muted-foreground">
-                <Map className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Carte du Gabon interactive</p>
-                <p className="text-sm mt-2">Connectez-vous pour voir les commerces près de vous</p>
-                <Button variant="link" className="mt-2">
-                  Se connecter
-                </Button>
+            <Suspense
+              fallback={
+                <Card className="h-[500px] flex items-center justify-center bg-muted/50">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </Card>
+              }
+            >
+              <div className="relative">
+                <GabonMap
+                  items={items}
+                  selectedCity={selectedCity}
+                  onItemSelect={(item) => {
+                    console.log("Selected item:", item);
+                  }}
+                />
               </div>
-            </Card>
+            </Suspense>
           )}
         </div>
       </main>
