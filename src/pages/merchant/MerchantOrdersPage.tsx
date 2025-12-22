@@ -146,7 +146,7 @@ const MerchantOrdersPage = () => {
               </div>
               <div className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
-                <span>{formatted.date}</span>
+                <span>{formatted.createdAt}</span>
               </div>
             </div>
 

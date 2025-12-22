@@ -10,6 +10,15 @@ import Concept from "./pages/Concept";
 import UserDashboard from "./pages/UserDashboard";
 import MerchantDashboard from "./pages/MerchantDashboard";
 import NotFound from "./pages/NotFound";
+import {
+  MerchantDashboardPage,
+  MerchantProductsPage,
+  MerchantOrdersPage,
+  MerchantAnalyticsPage,
+  MerchantImpactPage,
+  MerchantProfilePage,
+  MerchantSettingsPage,
+} from "./pages/merchant";
 
 const queryClient = new QueryClient();
 
@@ -25,7 +34,13 @@ const App = () => (
           <Route path="/search" element={<Search />} />
           <Route path="/concept" element={<Concept />} />
           <Route path="/user/dashboard" element={<UserDashboard />} />
-          <Route path="/merchant/dashboard" element={<MerchantDashboard />} />
+          <Route path="/merchant/dashboard" element={<MerchantDashboardPage />} />
+          <Route path="/merchant/products" element={<MerchantProductsPage />} />
+          <Route path="/merchant/orders" element={<MerchantOrdersPage />} />
+          <Route path="/merchant/analytics" element={<MerchantAnalyticsPage />} />
+          <Route path="/merchant/impact" element={<MerchantImpactPage />} />
+          <Route path="/merchant/profile" element={<MerchantProfilePage />} />
+          <Route path="/merchant/settings" element={<MerchantSettingsPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>
