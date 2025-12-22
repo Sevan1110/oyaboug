@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import MerchantLayout from "@/components/merchant/MerchantLayout";
+import AddProductModal from "@/components/merchant/AddProductModal";
 import {
   Plus,
   Search,
@@ -40,6 +41,7 @@ const MerchantProductsPage = () => {
   const [products, setProducts] = useState<FoodItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("active");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const merchantId = "mock-merchant-id";
 
@@ -207,12 +209,10 @@ const MerchantProductsPage = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Link to="/merchant/products/new">
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
-            Nouveau produit
-          </Button>
-        </Link>
+        <Button className="gap-2" onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="w-4 h-4" />
+          Nouveau produit
+        </Button>
       </div>
 
       {/* Tabs */}
@@ -262,15 +262,20 @@ const MerchantProductsPage = () => {
                 ? "Essayez une autre recherche"
                 : "Commencez par ajouter votre premier produit"}
             </p>
-            <Link to="/merchant/products/new">
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Ajouter un produit
-              </Button>
-            </Link>
+            <Button className="gap-2" onClick={() => setIsAddModalOpen(true)}>
+              <Plus className="w-4 h-4" />
+              Ajouter un produit
+            </Button>
           </div>
         </Card>
       )}
+
+      {/* Add Product Modal */}
+      <AddProductModal
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        onProductCreated={loadProducts}
+      />
     </MerchantLayout>
   );
 };
