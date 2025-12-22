@@ -3,7 +3,7 @@
 // SaveFood Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
@@ -34,6 +34,8 @@ import {
   Clock,
   Image as ImageIcon,
   X,
+  Upload,
+  Camera,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { FoodCategory, CreateFoodItemInput } from "@/types";
@@ -45,6 +47,7 @@ interface BasketItem {
   category: FoodCategory;
   originalPrice: number;
   quantity: number;
+  imagePreview?: string;
 }
 
 interface AddProductModalProps {
@@ -71,6 +74,8 @@ const AddProductModal = ({
   onProductCreated,
 }: AddProductModalProps) => {
   const [mode, setMode] = useState<"single" | "basket">("single");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const basketFileInputRef = useRef<HTMLInputElement>(null);
   
   // Single product form
   const [productForm, setProductForm] = useState<CreateFoodItemInput>({
@@ -85,6 +90,8 @@ const AddProductModal = ({
     expiry_date: "",
     image_url: "",
   });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [basketImagePreview, setBasketImagePreview] = useState<string | null>(null);
 
   // Basket mode
   const [basketItems, setBasketItems] = useState<BasketItem[]>([]);
@@ -103,6 +110,45 @@ const AddProductModal = ({
     quantity: 1,
   });
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, target: "single" | "basket") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Veuillez sélectionner une image valide");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("L'image ne doit pas dépasser 5 Mo");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (target === "single") {
+        setImagePreview(result);
+        setProductForm({ ...productForm, image_url: result });
+      } else {
+        setBasketImagePreview(result);
+      }
+      toast.success("Image ajoutée avec succès");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = (target: "single" | "basket") => {
+    if (target === "single") {
+      setImagePreview(null);
+      setProductForm({ ...productForm, image_url: "" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } else {
+      setBasketImagePreview(null);
+      if (basketFileInputRef.current) basketFileInputRef.current.value = "";
+    }
+  };
+
   const resetForm = () => {
     setProductForm({
       name: "",
@@ -116,12 +162,16 @@ const AddProductModal = ({
       expiry_date: "",
       image_url: "",
     });
+    setImagePreview(null);
+    setBasketImagePreview(null);
     setBasketItems([]);
     setBasketName("");
     setBasketDescription("");
     setBasketQuantity(1);
     setBasketDiscount(30);
     setTempItem({ name: "", category: "other", originalPrice: 0, quantity: 1 });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (basketFileInputRef.current) basketFileInputRef.current.value = "";
   };
 
   const handleClose = () => {
@@ -175,8 +225,12 @@ const AddProductModal = ({
   };
 
   const handleSubmitBasket = () => {
-    if (!basketName || basketItems.length === 0) {
-      toast.error("Veuillez ajouter un nom et au moins un produit au panier");
+    if (!basketName) {
+      toast.error("Veuillez donner un nom au panier");
+      return;
+    }
+    if (basketItems.length < 2) {
+      toast.error("Un panier doit contenir au moins 2 produits");
       return;
     }
 
@@ -190,6 +244,7 @@ const AddProductModal = ({
       pickup_start: basketPickupStart,
       pickup_end: basketPickupEnd,
       items: basketItems,
+      image_url: basketImagePreview,
     };
 
     // Mock API call
@@ -368,20 +423,58 @@ const AddProductModal = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="image_url">URL de l'image</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="image_url"
-                  placeholder="https://..."
-                  value={productForm.image_url}
-                  onChange={(e) =>
-                    setProductForm({ ...productForm, image_url: e.target.value })
-                  }
-                />
-                <Button variant="outline" size="icon">
-                  <ImageIcon className="w-4 h-4" />
-                </Button>
-              </div>
+              <Label>Image du produit</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleImageUpload(e, "single")}
+              />
+              {imagePreview ? (
+                <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
+                  <img
+                    src={imagePreview}
+                    alt="Aperçu"
+                    className="w-full h-full object-cover"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 h-8 w-8"
+                    onClick={() => removeImage("single")}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 gap-2"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="w-4 h-4" />
+                    Importer une image
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => {
+                      if (fileInputRef.current) {
+                        fileInputRef.current.setAttribute("capture", "environment");
+                        fileInputRef.current.click();
+                        fileInputRef.current.removeAttribute("capture");
+                      }
+                    }}
+                  >
+                    <Camera className="w-4 h-4" />
+                    Photo
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
@@ -427,6 +520,62 @@ const AddProductModal = ({
                 value={basketDescription}
                 onChange={(e) => setBasketDescription(e.target.value)}
               />
+            </div>
+
+            {/* Basket Image Upload */}
+            <div className="space-y-2">
+              <Label>Image du panier</Label>
+              <input
+                ref={basketFileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleImageUpload(e, "basket")}
+              />
+              {basketImagePreview ? (
+                <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
+                  <img
+                    src={basketImagePreview}
+                    alt="Aperçu du panier"
+                    className="w-full h-full object-cover"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 h-8 w-8"
+                    onClick={() => removeImage("basket")}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 gap-2"
+                    onClick={() => basketFileInputRef.current?.click()}
+                  >
+                    <Upload className="w-4 h-4" />
+                    Importer une image
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => {
+                      if (basketFileInputRef.current) {
+                        basketFileInputRef.current.setAttribute("capture", "environment");
+                        basketFileInputRef.current.click();
+                        basketFileInputRef.current.removeAttribute("capture");
+                      }
+                    }}
+                  >
+                    <Camera className="w-4 h-4" />
+                    Photo
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Add items to basket */}
@@ -486,8 +635,13 @@ const AddProductModal = ({
                   exit={{ opacity: 0, height: 0 }}
                   className="space-y-2"
                 >
-                  <Label className="text-sm font-medium">
+                  <Label className="text-sm font-medium flex items-center gap-2">
                     Articles dans le panier ({basketItems.length})
+                    {basketItems.length < 2 && (
+                      <Badge variant="secondary" className="text-xs">
+                        Minimum 2 produits requis
+                      </Badge>
+                    )}
                   </Label>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {basketItems.map((item) => (
@@ -595,7 +749,7 @@ const AddProductModal = ({
               </Button>
               <Button
                 onClick={handleSubmitBasket}
-                disabled={basketItems.length === 0}
+                disabled={basketItems.length < 2}
               >
                 <ShoppingBasket className="w-4 h-4 mr-2" />
                 Créer le panier ({basketItems.length} articles)
