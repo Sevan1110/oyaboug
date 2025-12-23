@@ -100,26 +100,8 @@ const Auth = () => {
       phone: signupPhone,
       role,
       businessName: role === "merchant" ? businessName : undefined,
-      firstName,
-      lastName,
-      birthDate,
     });
     setIsLoading(false);
-
-    if (result.success) {
-      toast({
-        title: "Inscription réussie",
-        description: "Vérifiez votre email pour confirmer votre compte",
-      });
-      navigate(role === "merchant" ? "/merchant/dashboard" : "/user/dashboard");
-    } else {
-      toast({
-        title: "Erreur d'inscription",
-        description: result.error?.message || "Une erreur est survenue",
-        variant: "destructive",
-      });
-    }
-  };
 
     if (result.success) {
       toast({
