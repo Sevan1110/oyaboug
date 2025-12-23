@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Leaf, User, Store, Mail, Lock, Phone, ArrowLeft, Loader2 } from "lucide-react";
+import { Leaf, User, Store, Mail, Lock, Phone, ArrowLeft, Loader2, Calendar, UserCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { login, register, loginWithOtp } from "@/services";
 import type { UserRole } from "@/types";
@@ -35,6 +35,9 @@ const Auth = () => {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
@@ -73,7 +76,7 @@ const Auth = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!signupEmail || !signupPassword) {
+    if (!signupEmail || !signupPassword || !firstName || !lastName) {
       toast({
         title: "Erreur",
         description: "Veuillez remplir tous les champs obligatoires",
@@ -93,11 +96,30 @@ const Auth = () => {
 
     setIsLoading(true);
     const result = await register(signupEmail, signupPassword, {
+      fullName: `${firstName} ${lastName}`,
       phone: signupPhone,
       role,
       businessName: role === "merchant" ? businessName : undefined,
+      firstName,
+      lastName,
+      birthDate,
     });
     setIsLoading(false);
+
+    if (result.success) {
+      toast({
+        title: "Inscription réussie",
+        description: "Vérifiez votre email pour confirmer votre compte",
+      });
+      navigate(role === "merchant" ? "/merchant/dashboard" : "/user/dashboard");
+    } else {
+      toast({
+        title: "Erreur d'inscription",
+        description: result.error?.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
+    }
+  };
 
     if (result.success) {
       toast({
@@ -292,6 +314,53 @@ const Auth = () => {
                       </div>
                     </div>
                   )}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="first-name">Prénom *</Label>
+                      <div className="relative">
+                        <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input 
+                          id="first-name" 
+                          placeholder="Jean" 
+                          className="pl-10"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          disabled={isLoading}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="last-name">Nom *</Label>
+                      <div className="relative">
+                        <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input 
+                          id="last-name" 
+                          placeholder="Dupont" 
+                          className="pl-10"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          disabled={isLoading}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="birth-date">Date de naissance</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input 
+                        id="birth-date" 
+                        type="date"
+                        className="pl-10"
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                        disabled={isLoading}
+                        max={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
                     <div className="relative">

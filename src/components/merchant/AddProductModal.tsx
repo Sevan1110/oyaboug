@@ -36,10 +36,12 @@ import {
   X,
   Upload,
   Camera,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { FoodCategory, CreateFoodItemInput } from "@/types";
 import { formatPrice, getCategoryName } from "@/services";
+import { compressImage, validateImageFile, formatFileSize, getBase64Size } from "@/utils/imageCompression";
 
 interface BasketItem {
   id: string;
@@ -92,6 +94,8 @@ const AddProductModal = ({
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [basketImagePreview, setBasketImagePreview] = useState<string | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionInfo, setCompressionInfo] = useState<{ original: number; compressed: number } | null>(null);
 
   // Basket mode
   const [basketItems, setBasketItems] = useState<BasketItem[]>([]);
@@ -110,32 +114,47 @@ const AddProductModal = ({
     quantity: 1,
   });
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, target: "single" | "basket") => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: "single" | "basket") => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Veuillez sélectionner une image valide");
+    // Validate image
+    const validation = validateImageFile(file, 10);
+    if (!validation.valid) {
+      toast.error(validation.error);
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("L'image ne doit pas dépasser 5 Mo");
-      return;
-    }
+    setIsCompressing(true);
+    const originalSize = file.size;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
+    try {
+      // Compress image
+      const compressedDataUrl = await compressImage(file, {
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 0.8,
+        mimeType: 'image/jpeg',
+      });
+
+      const compressedSize = getBase64Size(compressedDataUrl);
+      setCompressionInfo({ original: originalSize, compressed: compressedSize });
+
       if (target === "single") {
-        setImagePreview(result);
-        setProductForm({ ...productForm, image_url: result });
+        setImagePreview(compressedDataUrl);
+        setProductForm({ ...productForm, image_url: compressedDataUrl });
       } else {
-        setBasketImagePreview(result);
+        setBasketImagePreview(compressedDataUrl);
       }
-      toast.success("Image ajoutée avec succès");
-    };
-    reader.readAsDataURL(file);
+
+      const savings = Math.round((1 - compressedSize / originalSize) * 100);
+      toast.success(`Image compressée (${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)}, -${savings}%)`);
+    } catch (error) {
+      console.error("Image compression error:", error);
+      toast.error("Erreur lors de la compression de l'image");
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
   const removeImage = (target: "single" | "basket") => {
@@ -431,7 +450,14 @@ const AddProductModal = ({
                 className="hidden"
                 onChange={(e) => handleImageUpload(e, "single")}
               />
-              {imagePreview ? (
+              {isCompressing ? (
+                <div className="flex items-center justify-center h-32 rounded-lg border border-border bg-muted/50">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Compression en cours...</span>
+                  </div>
+                </div>
+              ) : imagePreview ? (
                 <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
                   <img
                     src={imagePreview}
@@ -446,6 +472,11 @@ const AddProductModal = ({
                   >
                     <X className="w-4 h-4" />
                   </Button>
+                  {compressionInfo && (
+                    <Badge className="absolute bottom-2 left-2 text-xs" variant="secondary">
+                      {formatFileSize(compressionInfo.compressed)}
+                    </Badge>
+                  )}
                 </div>
               ) : (
                 <div className="flex gap-2">

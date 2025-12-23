@@ -100,3 +100,31 @@ export {
   getImpactTier,
   formatLargeNumber,
 } from './impact.service';
+
+// Transaction Service
+export {
+  createTransaction,
+  processPayment,
+  validateQRCode,
+  completeTransaction,
+  cancelTransaction,
+  getUserTransactions,
+  getTransaction,
+  getTransactionStatusText,
+  getTransactionStatusColor,
+} from './transaction.service';
+
+// Notification Service
+export {
+  getUserNotifications,
+  getUnreadCount,
+  markAsRead,
+  markAllAsRead,
+  archiveNotification,
+  deleteNotification,
+  createNotification,
+  getPreferences as getNotificationPrefs,
+  updatePreferences as updateNotificationPrefs,
+  sendOrderNotification,
+  sendQRCodeNotification,
+} from './notification.service';
