@@ -128,3 +128,13 @@ export {
   sendOrderNotification,
   sendQRCodeNotification,
 } from './notification.service';
+
+// Telemetry Service
+export {
+  saveConsent,
+  startSession,
+  startSessionWithIp,
+  trackPageView,
+  trackEvent,
+  trackClientLog,
+} from './telemetry.service';

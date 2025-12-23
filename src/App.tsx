@@ -20,6 +20,10 @@ import {
   MerchantSettingsPage,
 } from "./pages/merchant";
 import { TermsOfService, PrivacyPolicy, HelpCenter } from "./pages/legal";
+import TelemetryProvider from "./components/telemetry/TelemetryProvider";
+import CookieConsentBanner, {
+  readConsent,
+} from "./components/telemetry/CookieConsentBanner";
 
 const queryClient = new QueryClient();
 
@@ -29,24 +33,32 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/concept" element={<Concept />} />
-          <Route path="/user/dashboard" element={<UserDashboard />} />
-          <Route path="/merchant/dashboard" element={<MerchantDashboardPage />} />
-          <Route path="/merchant/products" element={<MerchantProductsPage />} />
-          <Route path="/merchant/orders" element={<MerchantOrdersPage />} />
-          <Route path="/merchant/analytics" element={<MerchantAnalyticsPage />} />
-          <Route path="/merchant/impact" element={<MerchantImpactPage />} />
-          <Route path="/merchant/profile" element={<MerchantProfilePage />} />
-          <Route path="/merchant/settings" element={<MerchantSettingsPage />} />
-          <Route path="/cgu" element={<TermsOfService />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/help" element={<HelpCenter />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <CookieConsentBanner
+          onConsentChange={() => {
+            // Re-read consent; TelemetryProvider uses cookie state
+            readConsent();
+          }}
+        />
+        <TelemetryProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/concept" element={<Concept />} />
+            <Route path="/user/dashboard" element={<UserDashboard />} />
+            <Route path="/merchant/dashboard" element={<MerchantDashboardPage />} />
+            <Route path="/merchant/products" element={<MerchantProductsPage />} />
+            <Route path="/merchant/orders" element={<MerchantOrdersPage />} />
+            <Route path="/merchant/analytics" element={<MerchantAnalyticsPage />} />
+            <Route path="/merchant/impact" element={<MerchantImpactPage />} />
+            <Route path="/merchant/profile" element={<MerchantProfilePage />} />
+            <Route path="/merchant/settings" element={<MerchantSettingsPage />} />
+            <Route path="/cgu" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/help" element={<HelpCenter />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TelemetryProvider>
       </TooltipProvider>
     </BrowserRouter>
   </QueryClientProvider>

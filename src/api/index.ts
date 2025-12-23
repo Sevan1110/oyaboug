@@ -100,3 +100,13 @@ export {
   logImpact,
   generateImpactReport,
 } from './impact.api';
+
+// Telemetry API
+export {
+  upsertTelemetryConsent,
+  createTelemetrySession,
+  createTelemetrySessionViaEdge,
+  createTelemetryPageView,
+  createTelemetryEvent,
+  createTelemetryClientLog,
+} from './telemetry.api';

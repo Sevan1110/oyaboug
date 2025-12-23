@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserLayout from "@/components/user/UserLayout";
 import FoodCard, { FoodItem as FoodCardItem } from "@/components/FoodCard";
 import {
@@ -28,6 +29,15 @@ import {
   Bell,
   Store,
 } from "lucide-react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { 
   getUserOrders, 
   getActiveOrders, 
@@ -47,6 +57,7 @@ import type { Order, FoodItem, UserImpact, Merchant, UserPreferences } from "@/t
 const UserDashboard = () => {
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
+  const [spendPeriod, setSpendPeriod] = useState<"week" | "month">("week");
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
   const [purchaseHistory, setPurchaseHistory] = useState<Order[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<FoodItem[]>([]);
@@ -229,6 +240,9 @@ const UserDashboard = () => {
   };
 
   const totalSpentXaf = purchaseHistory.reduce((sum, o) => sum + (o.total_price || 0), 0);
+  const totalSavedXaf = purchaseHistory.reduce((sum, o) => sum + (o.savings || 0), 0);
+  const averageBasketXaf = purchaseHistory.length > 0 ? Math.round(totalSpentXaf / purchaseHistory.length) : 0;
+  const totalItemsPurchased = purchaseHistory.reduce((sum, o) => sum + (o.quantity || 0), 0);
   const consumedBasketsCount = purchaseHistory.reduce(
     (sum, o) => sum + (consumedOrderIds.has(o.id) ? 1 : 0),
     0
@@ -237,6 +251,47 @@ const UserDashboard = () => {
     (sum, o) => sum + (consumedOrderIds.has(o.id) ? o.quantity : 0),
     0
   );
+
+  const getDayKey = (d: Date) => d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+  const getMonthKey = (d: Date) => d.toLocaleDateString("fr-FR", { month: "short" });
+
+  const spendSeries = (() => {
+    const now = new Date();
+
+    if (spendPeriod === "week") {
+      const days = Array.from({ length: 7 }).map((_, idx) => {
+        const date = new Date(now);
+        date.setDate(now.getDate() - (6 - idx));
+        return { date, label: getDayKey(date), spent: 0, saved: 0 };
+      });
+
+      const byLabel = new Map(days.map((d) => [d.label, d] as const));
+      purchaseHistory.forEach((o) => {
+        const date = new Date(o.created_at);
+        const label = getDayKey(date);
+        const bucket = byLabel.get(label);
+        if (!bucket) return;
+        bucket.spent += o.total_price || 0;
+        bucket.saved += o.savings || 0;
+      });
+      return days;
+    }
+
+    const months = Array.from({ length: 6 }).map((_, idx) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1);
+      return { date, label: getMonthKey(date), spent: 0, saved: 0 };
+    });
+    const byMonthIndex = new Map(months.map((m) => [m.date.getMonth() + m.date.getFullYear() * 12, m] as const));
+    purchaseHistory.forEach((o) => {
+      const date = new Date(o.created_at);
+      const key = date.getMonth() + date.getFullYear() * 12;
+      const bucket = byMonthIndex.get(key);
+      if (!bucket) return;
+      bucket.spent += o.total_price || 0;
+      bucket.saved += o.savings || 0;
+    });
+    return months;
+  })();
 
   const stats = [
     { 
@@ -327,6 +382,73 @@ const UserDashboard = () => {
               </motion.div>
             ))}
           </div>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <Card>
+              <CardHeader className="flex-row items-center justify-between">
+                <CardTitle className="text-lg">Suivi des dépenses alimentaires</CardTitle>
+                <Tabs value={spendPeriod} onValueChange={(v) => setSpendPeriod(v as "week" | "month")}>
+                  <TabsList>
+                    <TabsTrigger value="week">Semaine</TabsTrigger>
+                    <TabsTrigger value="month">Mois</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid sm:grid-cols-4 gap-4">
+                  <div className="border rounded-xl p-3">
+                    <p className="text-xs text-muted-foreground">Total dépensé</p>
+                    <p className="text-lg font-bold text-foreground">{formatPrice(totalSpentXaf)}</p>
+                  </div>
+                  <div className="border rounded-xl p-3">
+                    <p className="text-xs text-muted-foreground">Économies réalisées</p>
+                    <p className="text-lg font-bold text-foreground">{formatPrice(totalSavedXaf)}</p>
+                  </div>
+                  <div className="border rounded-xl p-3">
+                    <p className="text-xs text-muted-foreground">Panier moyen</p>
+                    <p className="text-lg font-bold text-foreground">{formatPrice(averageBasketXaf)}</p>
+                  </div>
+                  <div className="border rounded-xl p-3">
+                    <p className="text-xs text-muted-foreground">Produits achetés</p>
+                    <p className="text-lg font-bold text-foreground">{totalItemsPurchased}</p>
+                  </div>
+                </div>
+
+                <div className="h-[260px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={spendSeries}>
+                      <defs>
+                        <linearGradient id="colorSpent" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(145, 65%, 42%)" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="hsl(145, 65%, 42%)" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="colorSaved" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(28, 85%, 55%)" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="hsl(28, 85%, 55%)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="label" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                        formatter={(value: number, name: string) => {
+                          const label = name === "spent" ? "Dépensé" : "Économisé";
+                          return [`${Number(value).toLocaleString()} XAF`, label];
+                        }}
+                      />
+                      <Area type="monotone" dataKey="spent" stroke="hsl(145, 65%, 42%)" fillOpacity={1} fill="url(#colorSpent)" />
+                      <Area type="monotone" dataKey="saved" stroke="hsl(28, 85%, 55%)" fillOpacity={1} fill="url(#colorSaved)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
           <div className="grid sm:grid-cols-3 gap-4">
             <Link to="/search">
