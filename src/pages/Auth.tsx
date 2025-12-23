@@ -151,19 +151,6 @@ const Auth = () => {
     const type = identifier.includes("@") ? "email" : "phone";
     const result = await loginWithOtp(identifier, type);
     setIsLoading(false);
-
-    if (result.success) {
-      toast({
-        title: "Code envoyé",
-        description: `Un code de vérification a été envoyé à ${identifier}`,
-      });
-    } else {
-      toast({
-        title: "Erreur",
-        description: result.error?.message || "Impossible d'envoyer le code",
-        variant: "destructive",
-      });
-    }
   };
 
   return (
