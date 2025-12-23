@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import UserLayout from "@/components/user/UserLayout";
 import FoodCard, { FoodItem as FoodCardItem } from "@/components/FoodCard";
 import {
   ShoppingBag,
@@ -46,6 +45,7 @@ import {
 import type { Order, FoodItem, UserImpact, Merchant, UserPreferences } from "@/types";
 
 const UserDashboard = () => {
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
   const [purchaseHistory, setPurchaseHistory] = useState<Order[]>([]);
@@ -65,6 +65,13 @@ const UserDashboard = () => {
 
   const storageKey = `savefood:user:${userId}:consumedOrders`;
   const favoriteProductsStorageKey = `savefood:user:${userId}:favoriteProducts`;
+
+  const tab = (searchParams.get("tab") || "overview") as
+    | "overview"
+    | "active"
+    | "history"
+    | "favorites"
+    | "preferences";
 
   useEffect(() => {
     const raw = localStorage.getItem(storageKey);
@@ -272,37 +279,39 @@ const UserDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen">
-        <Navbar />
-        <div className="flex items-center justify-center pt-32">
+      <UserLayout title="Dashboard" subtitle="Chargement de votre activité">
+        <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      </div>
+      </UserLayout>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      <Navbar />
-
-      <main className="pt-24 pb-12">
-        <div className="container mx-auto px-4">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <h1 className="text-3xl font-bold text-foreground mb-2">
+    <UserLayout
+      title="Dashboard"
+      subtitle={
+        tab === "overview"
+          ? "Vue d'ensemble de votre activité"
+          : tab === "active"
+            ? "Vos réservations en cours"
+            : tab === "history"
+              ? "Vos achats et suivi de consommation"
+              : tab === "favorites"
+                ? "Vos restaurants et produits favoris"
+                : "Personnalisation des alertes"
+      }
+    >
+      {tab === "overview" && (
+        <div className="space-y-8">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
               Bonjour, <span className="text-gradient">Utilisateur</span> 👋
-            </h1>
-            <p className="text-muted-foreground">
-              Voici le résumé de votre activité anti-gaspillage
-            </p>
+            </h2>
+            <p className="text-muted-foreground">Voici le résumé de votre activité anti-gaspillage</p>
           </motion.div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="grid md:grid-cols-3 gap-4">
             {stats.map((stat, index) => (
               <motion.div
                 key={stat.label}
@@ -319,13 +328,7 @@ const UserDashboard = () => {
             ))}
           </div>
 
-          {/* Quick Actions */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="grid sm:grid-cols-3 gap-4 mb-8"
-          >
+          <div className="grid sm:grid-cols-3 gap-4">
             <Link to="/search">
               <Card className="p-4 h-full hover:shadow-lg transition-shadow cursor-pointer">
                 <div className="flex items-center gap-3">
@@ -339,7 +342,7 @@ const UserDashboard = () => {
                 </div>
               </Card>
             </Link>
-            <Link to="/user/reservations">
+            <Link to="/user/dashboard?tab=active">
               <Card className="p-4 h-full hover:shadow-lg transition-shadow cursor-pointer">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-secondary/10 rounded-xl flex items-center justify-center">
@@ -352,7 +355,7 @@ const UserDashboard = () => {
                 </div>
               </Card>
             </Link>
-            <Link to="/user/favorites">
+            <Link to="/user/dashboard?tab=favorites">
               <Card className="p-4 h-full hover:shadow-lg transition-shadow cursor-pointer">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-destructive/10 rounded-xl flex items-center justify-center">
@@ -365,187 +368,17 @@ const UserDashboard = () => {
                 </div>
               </Card>
             </Link>
-          </motion.div>
+          </div>
 
-          {/* Active Reservations */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mb-8"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-foreground">Réservations en cours</h2>
-              <Link to="/user/reservations">
-                <Button variant="ghost" size="sm" className="gap-1">
-                  Voir tout <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-            </div>
-
-            {activeOrders.length > 0 ? (
-              <div className="space-y-4">
-                {activeOrders.map((order) => {
-                  const formatted = formatOrderForDisplay(order);
-                  return (
-                    <Card key={order.id} className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-                            <ShoppingBag className="w-6 h-6 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-foreground">{formatted.merchantName}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Clock className="w-3 h-3" />
-                              {formatted.itemName}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <Badge className={formatted.statusColor}>
-                            {formatted.status}
-                          </Badge>
-                          <p className="text-lg font-bold text-foreground mt-1">{formatted.totalPrice}</p>
-                          {order.pickup_code && (
-                            <p className="text-xs text-muted-foreground">Code: {order.pickup_code}</p>
-                          )}
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            ) : (
-              <Card className="p-8 text-center">
-                <ShoppingBag className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">Aucune réservation en cours</p>
-                <Link to="/search">
-                  <Button variant="link" className="mt-2">
-                    Trouver des invendus
-                  </Button>
-                </Link>
-              </Card>
-            )}
-          </motion.div>
-
-          {/* Purchase History */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-            className="mb-8"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-foreground">Historique d'achats</h2>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Montant dépensé</p>
-                <p className="text-sm font-semibold text-foreground">{formatPrice(totalSpentXaf)}</p>
-              </div>
-            </div>
-
-            <div className="grid sm:grid-cols-3 gap-4 mb-4">
-              <Card className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-secondary/10 rounded-xl flex items-center justify-center">
-                    <Wallet className="w-5 h-5 text-secondary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Achats</p>
-                    <p className="text-lg font-bold text-foreground">{purchaseHistory.length}</p>
-                  </div>
-                </div>
-              </Card>
-              <Card className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
-                    <CheckCircle2 className="w-5 h-5 text-success" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Paniers consommés</p>
-                    <p className="text-lg font-bold text-foreground">{consumedBasketsCount}</p>
-                  </div>
-                </div>
-              </Card>
-              <Card className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                    <ShoppingBag className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Produits consommés</p>
-                    <p className="text-lg font-bold text-foreground">{consumedProductsCount}</p>
-                  </div>
-                </div>
-              </Card>
-            </div>
-
-            {purchaseHistory.length > 0 ? (
-              <div className="space-y-4">
-                {purchaseHistory.slice(0, 6).map((order) => {
-                  const formatted = formatOrderForDisplay(order);
-                  const isConsumed = consumedOrderIds.has(order.id);
-
-                  return (
-                    <Card key={order.id} className="p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center">
-                            <ShoppingBag className="w-6 h-6 text-secondary" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-foreground">{formatted.merchantName}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {formatted.itemName} • x{formatted.quantity} • {formatted.createdAt}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <Badge className={formatted.statusColor}>{formatted.status}</Badge>
-                          <p className="text-lg font-bold text-foreground mt-1">{formatted.totalPrice}</p>
-                          <Button
-                            type="button"
-                            variant={isConsumed ? "secondary" : "outline"}
-                            size="sm"
-                            className="mt-2"
-                            onClick={() => toggleConsumed(order.id)}
-                          >
-                            {isConsumed ? "Consommé" : "Marquer consommé"}
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            ) : (
-              <Card className="p-8 text-center">
-                <Wallet className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">Aucun achat pour le moment</p>
-                <Link to="/search">
-                  <Button variant="link" className="mt-2">
-                    Découvrir des invendus
-                  </Button>
-                </Link>
-              </Card>
-            )}
-          </motion.div>
-
-          {/* Suggested Items */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-foreground">Suggestions pour vous</h2>
+              <h3 className="text-xl font-semibold text-foreground">Suggestions pour vous</h3>
               <Link to="/search">
                 <Button variant="ghost" size="sm" className="gap-1">
                   Voir tout <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
             </div>
-
             <div className="grid sm:grid-cols-2 gap-4">
               {favoriteItems.map((item) => {
                 const isFavProduct = favoriteProductIds.has(item.id);
@@ -567,147 +400,325 @@ const UserDashboard = () => {
               })}
             </div>
           </motion.div>
+        </div>
+      )}
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.55 }}
-            className="mt-8"
-          >
-            <div className="grid lg:grid-cols-2 gap-6">
-              <Card className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Store className="w-5 h-5 text-primary" />
-                    <h2 className="text-xl font-semibold text-foreground">Restaurants favoris</h2>
-                  </div>
-                  <Badge className="bg-primary/10 text-primary">{favoriteMerchantIds.size}</Badge>
-                </div>
+      {tab === "active" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-foreground">Réservations en cours</h2>
+            <Link to="/search">
+              <Button variant="outline" size="sm">Rechercher</Button>
+            </Link>
+          </div>
 
-                {favoriteMerchants.length > 0 ? (
-                  <div className="space-y-3">
-                    {favoriteMerchants.slice(0, 6).map((m) => {
-                      const isFav = favoriteMerchantIds.has(m.id);
-                      return (
-                        <div key={m.id} className="flex items-center justify-between gap-3 border rounded-xl p-3">
-                          <div>
-                            <p className="font-medium text-foreground">{m.business_name}</p>
-                            <p className="text-xs text-muted-foreground">{m.city} • {m.quartier}</p>
+          {activeOrders.length > 0 ? (
+            <div className="space-y-4">
+              {activeOrders.map((order) => {
+                const formatted = formatOrderForDisplay(order);
+                return (
+                  <Card key={order.id} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                          <ShoppingBag className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{formatted.merchantName}</p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Clock className="w-3 h-3" />
+                            {formatted.itemName}
                           </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge className={formatted.statusColor}>{formatted.status}</Badge>
+                        <p className="text-lg font-bold text-foreground mt-1">{formatted.totalPrice}</p>
+                        {order.pickup_code && (
+                          <p className="text-xs text-muted-foreground">Code: {order.pickup_code}</p>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <ShoppingBag className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground">Aucune réservation en cours</p>
+              <Link to="/search">
+                <Button variant="link" className="mt-2">Trouver des invendus</Button>
+              </Link>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {tab === "history" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-foreground">Historique d'achats</h2>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Montant dépensé</p>
+              <p className="text-sm font-semibold text-foreground">{formatPrice(totalSpentXaf)}</p>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-3 gap-4">
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-secondary/10 rounded-xl flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-secondary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Achats</p>
+                  <p className="text-lg font-bold text-foreground">{purchaseHistory.length}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-success" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Paniers consommés</p>
+                  <p className="text-lg font-bold text-foreground">{consumedBasketsCount}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                  <ShoppingBag className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Produits consommés</p>
+                  <p className="text-lg font-bold text-foreground">{consumedProductsCount}</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {purchaseHistory.length > 0 ? (
+            <div className="space-y-4">
+              {purchaseHistory.map((order) => {
+                const formatted = formatOrderForDisplay(order);
+                const isConsumed = consumedOrderIds.has(order.id);
+
+                return (
+                  <Card key={order.id} className="p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center">
+                          <ShoppingBag className="w-6 h-6 text-secondary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{formatted.merchantName}</p>
+                          <p className="text-sm text-muted-foreground">{formatted.itemName} • x{formatted.quantity} • {formatted.createdAt}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge className={formatted.statusColor}>{formatted.status}</Badge>
+                        <p className="text-lg font-bold text-foreground mt-1">{formatted.totalPrice}</p>
+                        <Button
+                          type="button"
+                          variant={isConsumed ? "secondary" : "outline"}
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => toggleConsumed(order.id)}
+                        >
+                          {isConsumed ? "Consommé" : "Marquer consommé"}
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <Wallet className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground">Aucun achat pour le moment</p>
+              <Link to="/search">
+                <Button variant="link" className="mt-2">Découvrir des invendus</Button>
+              </Link>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {tab === "favorites" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-foreground">Favoris</h2>
+            <Link to="/search">
+              <Button variant="outline" size="sm">Ajouter</Button>
+            </Link>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Store className="w-5 h-5 text-primary" />
+                  <h3 className="text-lg font-semibold text-foreground">Restaurants favoris</h3>
+                </div>
+                <Badge className="bg-primary/10 text-primary">{favoriteMerchantIds.size}</Badge>
+              </div>
+
+              {favoriteMerchants.length > 0 ? (
+                <div className="space-y-3">
+                  {favoriteMerchants.map((m) => {
+                    const isFav = favoriteMerchantIds.has(m.id);
+                    return (
+                      <div key={m.id} className="flex items-center justify-between gap-3 border rounded-xl p-3">
+                        <div>
+                          <p className="font-medium text-foreground">{m.business_name}</p>
+                          <p className="text-xs text-muted-foreground">{m.city} • {m.quartier}</p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isFav ? "secondary" : "outline"}
+                          disabled={isUpdatingFavorites}
+                          onClick={() => handleToggleFavoriteMerchant(m.id)}
+                        >
+                          {isFav ? "Retirer" : "Ajouter"}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground">Aucun restaurant favori</p>
+                  <Link to="/search">
+                    <Button variant="link" className="mt-2">Trouver des commerces</Button>
+                  </Link>
+                </div>
+              )}
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-destructive" />
+                  <h3 className="text-lg font-semibold text-foreground">Produits favoris</h3>
+                </div>
+                <Badge className="bg-destructive/10 text-destructive">{favoriteProductIds.size}</Badge>
+              </div>
+
+              {favoriteItems.length > 0 ? (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {favoriteItems.map((item) => {
+                    const isFavProduct = favoriteProductIds.has(item.id);
+                    return (
+                      <div key={item.id} className="relative">
+                        <div className="absolute right-3 top-3 z-10">
                           <Button
                             type="button"
-                            size="sm"
-                            variant={isFav ? "secondary" : "outline"}
-                            disabled={isUpdatingFavorites}
-                            onClick={() => handleToggleFavoriteMerchant(m.id)}
+                            size="icon"
+                            variant={isFavProduct ? "secondary" : "outline"}
+                            onClick={() => toggleFavoriteProduct(item.id)}
                           >
-                            {isFav ? "Retirer" : "Ajouter"}
+                            <Heart className={isFavProduct ? "w-4 h-4 text-destructive" : "w-4 h-4"} />
                           </Button>
+                        </div>
+                        <FoodCard item={toFoodCardItem(item)} />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground">Aucun produit chargé</p>
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {tab === "preferences" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-foreground">Préférences d'alertes</h2>
+          </div>
+
+          <Card className="p-6">
+            {preferences ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm text-foreground">Notifications</Label>
+                  <Switch
+                    checked={preferences.notifications_enabled}
+                    onCheckedChange={(checked) => updatePrefs({ notifications_enabled: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm text-foreground">Email</Label>
+                  <Switch
+                    checked={preferences.email_notifications}
+                    onCheckedChange={(checked) => updatePrefs({ email_notifications: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm text-foreground">SMS</Label>
+                  <Switch
+                    checked={preferences.sms_notifications}
+                    onCheckedChange={(checked) => updatePrefs({ sms_notifications: checked })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="max-distance" className="text-sm text-foreground">Distance max (km)</Label>
+                  <Input
+                    id="max-distance"
+                    type="number"
+                    min={1}
+                    value={preferences.max_distance_km}
+                    onChange={(e) => updatePrefs({ max_distance_km: Number(e.target.value) })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm text-foreground">Types/catégories favoris</Label>
+                  <div className="max-h-60 overflow-auto space-y-2 pr-1">
+                    {categoryOptions.map((c) => {
+                      const checked = (preferences.favorite_categories || []).includes(c.category);
+                      return (
+                        <div key={c.category} className="flex items-center justify-between gap-3 border rounded-xl p-2">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={() => togglePrefCategory(c.category)}
+                            />
+                            <span className="text-sm text-foreground">{c.category}</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">{c.count}</span>
                         </div>
                       );
                     })}
                   </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <p className="text-muted-foreground">Aucun restaurant favori</p>
-                    <Link to="/search">
-                      <Button variant="link" className="mt-2">Trouver des commerces</Button>
-                    </Link>
-                  </div>
-                )}
-              </Card>
-
-              <Card className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Bell className="w-5 h-5 text-secondary" />
-                    <h2 className="text-xl font-semibold text-foreground">Préférences d'alertes</h2>
-                  </div>
                 </div>
 
-                {preferences ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm text-foreground">Notifications</Label>
-                      <Switch
-                        checked={preferences.notifications_enabled}
-                        onCheckedChange={(checked) => updatePrefs({ notifications_enabled: checked })}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm text-foreground">Email</Label>
-                      <Switch
-                        checked={preferences.email_notifications}
-                        onCheckedChange={(checked) => updatePrefs({ email_notifications: checked })}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm text-foreground">SMS</Label>
-                      <Switch
-                        checked={preferences.sms_notifications}
-                        onCheckedChange={(checked) => updatePrefs({ sms_notifications: checked })}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="max-distance" className="text-sm text-foreground">Distance max (km)</Label>
-                      <Input
-                        id="max-distance"
-                        type="number"
-                        min={1}
-                        value={preferences.max_distance_km}
-                        onChange={(e) => updatePrefs({ max_distance_km: Number(e.target.value) })}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm text-foreground">Types/catégories favoris</Label>
-                      <div className="max-h-44 overflow-auto space-y-2 pr-1">
-                        {categoryOptions.map((c) => {
-                          const checked = (preferences.favorite_categories || []).includes(c.category);
-                          return (
-                            <div key={c.category} className="flex items-center justify-between gap-3 border rounded-xl p-2">
-                              <div className="flex items-center gap-2">
-                                <Checkbox
-                                  checked={checked}
-                                  onCheckedChange={(v) => {
-                                    if (v === true) togglePrefCategory(c.category);
-                                    else togglePrefCategory(c.category);
-                                  }}
-                                />
-                                <span className="text-sm text-foreground">{c.category}</span>
-                              </div>
-                              <span className="text-xs text-muted-foreground">{c.count}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <Button
-                      type="button"
-                      className="w-full"
-                      disabled={isSavingPreferences}
-                      onClick={savePreferences}
-                    >
-                      {isSavingPreferences ? "Enregistrement..." : "Enregistrer"}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto" />
-                  </div>
-                )}
-              </Card>
-            </div>
-          </motion.div>
+                <Button type="button" className="w-full" disabled={isSavingPreferences} onClick={savePreferences}>
+                  {isSavingPreferences ? "Enregistrement..." : "Enregistrer"}
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto" />
+              </div>
+            )}
+          </Card>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+      )}
+    </UserLayout>
   );
 };
 
