@@ -121,21 +121,6 @@ const Auth = () => {
     }
   };
 
-    if (result.success) {
-      toast({
-        title: "Inscription réussie",
-        description: "Vérifiez votre email pour confirmer votre compte",
-      });
-      navigate(role === "merchant" ? "/merchant/dashboard" : "/user/dashboard");
-    } else {
-      toast({
-        title: "Erreur d'inscription",
-        description: result.error?.message || "Une erreur est survenue",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleOtpLogin = async () => {
     const identifier = loginEmail || signupPhone;
     if (!identifier) {
