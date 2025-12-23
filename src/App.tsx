@@ -19,6 +19,7 @@ import {
   MerchantProfilePage,
   MerchantSettingsPage,
 } from "./pages/merchant";
+import { TermsOfService, PrivacyPolicy, HelpCenter } from "./pages/legal";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,9 @@ const App = () => (
           <Route path="/merchant/impact" element={<MerchantImpactPage />} />
           <Route path="/merchant/profile" element={<MerchantProfilePage />} />
           <Route path="/merchant/settings" element={<MerchantSettingsPage />} />
+          <Route path="/cgu" element={<TermsOfService />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/help" element={<HelpCenter />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>
