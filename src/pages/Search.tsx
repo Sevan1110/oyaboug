@@ -63,9 +63,9 @@ const SearchPage = () => {
   const [items, setItems] = useState<FoodItem[]>([]);
 
   // Filter states
-  const [selectedCity, setSelectedCity] = useState<GabonCity | "">("");
-  const [selectedCategory, setSelectedCategory] = useState<FoodCategory | "">("");
-  const [selectedMerchantType, setSelectedMerchantType] = useState<MerchantType | "">("");
+  const [selectedCity, setSelectedCity] = useState<GabonCity | "all">("all");
+  const [selectedCategory, setSelectedCategory] = useState<FoodCategory | "all">("all");
+  const [selectedMerchantType, setSelectedMerchantType] = useState<MerchantType | "all">("all");
   const [sortBy, setSortBy] = useState<"distance" | "price" | "discount" | "rating">("distance");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -78,9 +78,9 @@ const SearchPage = () => {
     setIsLoading(true);
     
     const result = await searchInventory({
-      city: selectedCity || undefined,
-      category: selectedCategory || undefined,
-      merchantType: selectedMerchantType || undefined,
+      city: selectedCity === "all" ? undefined : selectedCity,
+      category: selectedCategory === "all" ? undefined : selectedCategory,
+      merchantType: selectedMerchantType === "all" ? undefined : selectedMerchantType,
       minPrice: priceRange[0],
       maxPrice: priceRange[1],
       sortBy,
@@ -101,8 +101,8 @@ const SearchPage = () => {
     
     setIsLoading(true);
     const result = await searchInventory({
-      city: selectedCity || undefined,
-      category: selectedCategory || undefined,
+      city: selectedCity === "all" ? undefined : selectedCity,
+      category: selectedCategory === "all" ? undefined : selectedCategory,
       sortBy,
     });
     
@@ -166,12 +166,12 @@ const SearchPage = () => {
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Select value={selectedCity} onValueChange={(v) => setSelectedCity(v as GabonCity)}>
+                  <Select value={selectedCity} onValueChange={(v) => setSelectedCity(v as GabonCity | "all")}>
                     <SelectTrigger className="pl-10 h-12">
                       <SelectValue placeholder="Choisir une ville au Gabon" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Toutes les villes</SelectItem>
+                      <SelectItem value="all">Toutes les villes</SelectItem>
                       {GABON_CITIES.map(city => (
                         <SelectItem key={city} value={city}>{city}</SelectItem>
                       ))}
@@ -219,7 +219,7 @@ const SearchPage = () => {
                   variant={selectedMerchantType === type.value ? "default" : "outline"} 
                   className="cursor-pointer hover:bg-accent px-3 py-1.5"
                   onClick={() => setSelectedMerchantType(
-                    selectedMerchantType === type.value ? "" : type.value
+                    selectedMerchantType === type.value ? "all" : type.value
                   )}
                 >
                   <Store className="w-3 h-3 mr-1" /> {type.label}
@@ -259,12 +259,12 @@ const SearchPage = () => {
                     <label className="text-sm font-medium text-foreground mb-2 block">
                       Catégorie
                     </label>
-                    <Select value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as FoodCategory)}>
+                    <Select value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as FoodCategory | "all")}>
                       <SelectTrigger>
                         <SelectValue placeholder="Toutes" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Toutes</SelectItem>
+                        <SelectItem value="all">Toutes</SelectItem>
                         {FOOD_CATEGORIES.map(cat => (
                           <SelectItem key={cat} value={cat}>{getCategoryName(cat)}</SelectItem>
                         ))}
@@ -275,12 +275,12 @@ const SearchPage = () => {
                     <label className="text-sm font-medium text-foreground mb-2 block">
                       Type de commerce
                     </label>
-                    <Select value={selectedMerchantType} onValueChange={(v) => setSelectedMerchantType(v as MerchantType)}>
+                    <Select value={selectedMerchantType} onValueChange={(v) => setSelectedMerchantType(v as MerchantType | "all")}>
                       <SelectTrigger>
                         <SelectValue placeholder="Tous" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Tous</SelectItem>
+                        <SelectItem value="all">Tous</SelectItem>
                         {MERCHANT_TYPES.map(type => (
                           <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
                         ))}
@@ -374,7 +374,7 @@ const SearchPage = () => {
               <div className="relative">
                 <GabonMap
                   items={items}
-                  selectedCity={selectedCity}
+                  selectedCity={selectedCity === "all" ? "" : selectedCity}
                   onItemSelect={(item) => {
                     console.log("Selected item:", item);
                   }}
