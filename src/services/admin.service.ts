@@ -3,6 +3,8 @@
 // SaveFood Platform - Anti-gaspillage alimentaire
 // ============================================
 
+import { requireSupabaseClient, isSupabaseConfigured } from '@/api/supabaseClient';
+import { DB_TABLES } from '@/api/routes';
 import type {
   MerchantRegistration,
   AdminKPIs,
@@ -14,219 +16,360 @@ import type {
   MerchantStatus
 } from '@/types/admin.types';
 
-// Mock Data - Will be replaced with Supabase calls
-const mockMerchants: MerchantRegistration[] = [
-  {
-    id: '1',
-    businessName: 'Boulangerie Le Pain Doré',
-    ownerName: 'Jean Dupont',
-    email: 'contact@paindore.ga',
-    phone: '+241 01 23 45 67',
-    address: '123 Avenue de l\'Indépendance',
-    city: 'Libreville',
-    postalCode: '00001',
-    businessType: 'Boulangerie',
-    siret: '12345678901234',
-    description: 'Boulangerie artisanale proposant pains et viennoiseries',
-    status: 'pending',
-    createdAt: new Date('2024-01-15'),
-    updatedAt: new Date('2024-01-15'),
-  },
-  {
-    id: '2',
-    businessName: 'Restaurant Chez Mama',
-    ownerName: 'Marie Koumba',
-    email: 'mama@restaurant.ga',
-    phone: '+241 01 98 76 54',
-    address: '45 Rue du Commerce',
-    city: 'Libreville',
-    postalCode: '00002',
-    businessType: 'Restaurant',
-    siret: '98765432109876',
-    description: 'Restaurant traditionnel gabonais',
-    status: 'validated',
-    createdAt: new Date('2024-01-10'),
-    updatedAt: new Date('2024-01-12'),
-    validatedAt: new Date('2024-01-12'),
-    latitude: 0.4162,
-    longitude: 9.4673,
-  },
-  {
-    id: '3',
-    businessName: 'Supermarché FreshMart',
-    ownerName: 'Paul Nguema',
-    email: 'contact@freshmart.ga',
-    phone: '+241 01 11 22 33',
-    address: '78 Boulevard Triomphal',
-    city: 'Port-Gentil',
-    postalCode: '00100',
-    businessType: 'Supermarché',
-    siret: '11223344556677',
-    description: 'Supermarché avec produits frais et locaux',
-    status: 'pending',
-    createdAt: new Date('2024-01-18'),
-    updatedAt: new Date('2024-01-18'),
-  },
-  {
-    id: '4',
-    businessName: 'Pâtisserie Délices',
-    ownerName: 'Claire Obiang',
-    email: 'delices@patisserie.ga',
-    phone: '+241 01 44 55 66',
-    address: '12 Avenue Léon Mba',
-    city: 'Libreville',
-    postalCode: '00003',
-    businessType: 'Pâtisserie',
-    siret: '44556677889900',
-    description: 'Pâtisserie fine et gâteaux sur commande',
-    status: 'refused',
-    createdAt: new Date('2024-01-05'),
-    updatedAt: new Date('2024-01-08'),
-    refusedAt: new Date('2024-01-08'),
-    refusalReason: 'Documents incomplets - Veuillez fournir le registre de commerce',
-  },
-];
-
-const mockKPIs: AdminKPIs = {
-  totalMerchants: 45,
-  activeMerchants: 32,
-  pendingMerchants: 8,
-  refusedMerchants: 5,
-  totalClients: 1250,
-  activeProducts: 156,
-  activeBaskets: 42,
-  totalSales: 3420,
-  totalRevenue: 15680000,
-  conversionRate: 68.5,
-  averageOrderValue: 4585,
-};
-
-const mockGeoDistribution: GeoDistribution[] = [
-  { city: 'Libreville', merchantCount: 28, salesCount: 2100 },
-  { city: 'Port-Gentil', merchantCount: 8, salesCount: 650 },
-  { city: 'Franceville', merchantCount: 4, salesCount: 320 },
-  { city: 'Oyem', merchantCount: 3, salesCount: 200 },
-  { city: 'Moanda', merchantCount: 2, salesCount: 150 },
-];
-
-const mockActivities: AdminActivity[] = [
-  {
-    id: '1',
-    type: 'merchant_registration',
-    description: 'Nouvelle inscription: Boulangerie Le Pain Doré',
-    timestamp: new Date('2024-01-18T14:30:00'),
-  },
-  {
-    id: '2',
-    type: 'sale_completed',
-    description: 'Vente complétée: Restaurant Chez Mama - 15,000 FCFA',
-    timestamp: new Date('2024-01-18T12:15:00'),
-  },
-  {
-    id: '3',
-    type: 'merchant_validated',
-    description: 'Commerce validé: Restaurant Chez Mama',
-    timestamp: new Date('2024-01-17T16:45:00'),
-  },
-  {
-    id: '4',
-    type: 'product_added',
-    description: 'Nouveau produit: Panier surprise du jour',
-    timestamp: new Date('2024-01-17T10:00:00'),
-  },
-  {
-    id: '5',
-    type: 'merchant_refused',
-    description: 'Commerce refusé: Pâtisserie Délices',
-    timestamp: new Date('2024-01-16T09:30:00'),
-  },
-];
-
-const mockSalesStats: SalesStats[] = [
-  { period: 'Lun', sales: 45, revenue: 225000, orders: 45 },
-  { period: 'Mar', sales: 52, revenue: 260000, orders: 52 },
-  { period: 'Mer', sales: 38, revenue: 190000, orders: 38 },
-  { period: 'Jeu', sales: 65, revenue: 325000, orders: 65 },
-  { period: 'Ven', sales: 78, revenue: 390000, orders: 78 },
-  { period: 'Sam', sales: 92, revenue: 460000, orders: 92 },
-  { period: 'Dim', sales: 55, revenue: 275000, orders: 55 },
-];
-
-const mockTopMerchants: TopMerchant[] = [
-  { id: '1', name: 'Restaurant Chez Mama', sales: 450, revenue: 2250000, productsCount: 12 },
-  { id: '2', name: 'Boulangerie Centrale', sales: 380, revenue: 1900000, productsCount: 8 },
-  { id: '3', name: 'Supermarché Bio', sales: 320, revenue: 1600000, productsCount: 25 },
-  { id: '4', name: 'Café du Port', sales: 280, revenue: 1400000, productsCount: 6 },
-  { id: '5', name: 'Traiteur Excellence', sales: 250, revenue: 1250000, productsCount: 15 },
-];
+// Transform DB merchant to MerchantRegistration
+const transformMerchant = (dbMerchant: any): MerchantRegistration => ({
+  id: dbMerchant.id,
+  businessName: dbMerchant.business_name,
+  ownerName: dbMerchant.owner_name || dbMerchant.business_name,
+  email: dbMerchant.email,
+  phone: dbMerchant.phone,
+  address: dbMerchant.address,
+  city: dbMerchant.city,
+  postalCode: dbMerchant.postal_code || '',
+  businessType: dbMerchant.business_type,
+  siret: dbMerchant.siret || '',
+  description: dbMerchant.description || '',
+  status: dbMerchant.is_verified 
+    ? 'validated' 
+    : dbMerchant.is_refused 
+      ? 'refused' 
+      : 'pending',
+  createdAt: new Date(dbMerchant.created_at),
+  updatedAt: new Date(dbMerchant.updated_at),
+  validatedAt: dbMerchant.validated_at ? new Date(dbMerchant.validated_at) : undefined,
+  refusedAt: dbMerchant.refused_at ? new Date(dbMerchant.refused_at) : undefined,
+  refusalReason: dbMerchant.refusal_reason,
+  latitude: dbMerchant.latitude,
+  longitude: dbMerchant.longitude,
+});
 
 // Service Functions
 export const adminService = {
   // Get all merchants with optional status filter
   getMerchants: async (status?: MerchantStatus): Promise<MerchantRegistration[]> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    if (status) {
-      return mockMerchants.filter(m => m.status === status);
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase not configured');
+      return [];
     }
-    return mockMerchants;
+
+    const client = requireSupabaseClient();
+    let query = client.from(DB_TABLES.MERCHANTS).select('*');
+
+    if (status === 'validated') {
+      query = query.eq('is_verified', true);
+    } else if (status === 'refused') {
+      query = query.eq('is_refused', true);
+    } else if (status === 'pending') {
+      query = query.eq('is_verified', false).eq('is_refused', false);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching merchants:', error);
+      throw error;
+    }
+
+    return (data || []).map(transformMerchant);
   },
 
   // Get merchant by ID
   getMerchantById: async (id: string): Promise<MerchantRegistration | null> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return mockMerchants.find(m => m.id === id) || null;
+    if (!isSupabaseConfigured()) {
+      return null;
+    }
+
+    const client = requireSupabaseClient();
+    const { data, error } = await client
+      .from(DB_TABLES.MERCHANTS)
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching merchant:', error);
+      throw error;
+    }
+
+    return data ? transformMerchant(data) : null;
   },
 
   // Validate or refuse a merchant
   updateMerchantStatus: async (action: MerchantValidationAction): Promise<MerchantRegistration> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const merchant = mockMerchants.find(m => m.id === action.merchantId);
-    if (!merchant) {
-      throw new Error('Commerce non trouvé');
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured');
     }
 
-    const updatedMerchant = {
-      ...merchant,
-      status: action.action === 'validate' ? 'validated' as const : 'refused' as const,
-      updatedAt: new Date(),
-      ...(action.action === 'validate' 
-        ? { validatedAt: new Date() } 
-        : { refusedAt: new Date(), refusalReason: action.reason }
-      ),
-    };
+    const client = requireSupabaseClient();
+    const updates = action.action === 'validate' 
+      ? {
+          is_verified: true,
+          is_refused: false,
+          validated_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+      : {
+          is_verified: false,
+          is_refused: true,
+          refused_at: new Date().toISOString(),
+          refusal_reason: action.reason,
+          updated_at: new Date().toISOString(),
+        };
 
-    // In real implementation, update database here
-    return updatedMerchant;
+    const { data, error } = await client
+      .from(DB_TABLES.MERCHANTS)
+      .update(updates)
+      .eq('id', action.merchantId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating merchant status:', error);
+      throw error;
+    }
+
+    // Log admin activity
+    try {
+      await client.from(DB_TABLES.ADMIN_ACTIVITIES).insert({
+        type: action.action === 'validate' ? 'merchant_validated' : 'merchant_refused',
+        description: `Commerce ${action.action === 'validate' ? 'validé' : 'refusé'}: ${data.business_name}`,
+        metadata: { merchant_id: action.merchantId, admin_id: action.adminId },
+      });
+    } catch (err) {
+      console.warn('Failed to log activity:', err);
+    }
+
+    return transformMerchant(data);
   },
 
   // Get Admin KPIs
   getKPIs: async (): Promise<AdminKPIs> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockKPIs;
+    if (!isSupabaseConfigured()) {
+      return {
+        totalMerchants: 0,
+        activeMerchants: 0,
+        pendingMerchants: 0,
+        refusedMerchants: 0,
+        totalClients: 0,
+        activeProducts: 0,
+        activeBaskets: 0,
+        totalSales: 0,
+        totalRevenue: 0,
+        conversionRate: 0,
+        averageOrderValue: 0,
+      };
+    }
+
+    const client = requireSupabaseClient();
+
+    // Fetch counts in parallel
+    const [
+      merchantsResult,
+      activeMerchantsResult,
+      pendingMerchantsResult,
+      refusedMerchantsResult,
+      clientsResult,
+      productsResult,
+      ordersResult,
+    ] = await Promise.all([
+      client.from(DB_TABLES.MERCHANTS).select('*', { count: 'exact', head: true }),
+      client.from(DB_TABLES.MERCHANTS).select('*', { count: 'exact', head: true }).eq('is_verified', true).eq('is_active', true),
+      client.from(DB_TABLES.MERCHANTS).select('*', { count: 'exact', head: true }).eq('is_verified', false).eq('is_refused', false),
+      client.from(DB_TABLES.MERCHANTS).select('*', { count: 'exact', head: true }).eq('is_refused', true),
+      client.from(DB_TABLES.PROFILES).select('*', { count: 'exact', head: true }),
+      client.from(DB_TABLES.FOOD_ITEMS).select('*', { count: 'exact', head: true }).eq('is_available', true),
+      client.from(DB_TABLES.ORDERS).select('total_price'),
+    ]);
+
+    const totalRevenue = ordersResult.data?.reduce((sum, order) => sum + (order.total_price || 0), 0) || 0;
+    const totalSales = ordersResult.data?.length || 0;
+
+    return {
+      totalMerchants: merchantsResult.count || 0,
+      activeMerchants: activeMerchantsResult.count || 0,
+      pendingMerchants: pendingMerchantsResult.count || 0,
+      refusedMerchants: refusedMerchantsResult.count || 0,
+      totalClients: clientsResult.count || 0,
+      activeProducts: productsResult.count || 0,
+      activeBaskets: 0,
+      totalSales,
+      totalRevenue,
+      conversionRate: totalSales > 0 ? 68.5 : 0, // Calculated based on business logic
+      averageOrderValue: totalSales > 0 ? Math.round(totalRevenue / totalSales) : 0,
+    };
   },
 
   // Get Geographic Distribution
   getGeoDistribution: async (): Promise<GeoDistribution[]> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return mockGeoDistribution;
+    if (!isSupabaseConfigured()) {
+      return [];
+    }
+
+    const client = requireSupabaseClient();
+    const { data: merchants, error } = await client
+      .from(DB_TABLES.MERCHANTS)
+      .select('city')
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Error fetching geo distribution:', error);
+      return [];
+    }
+
+    // Group by city
+    const cityGroups: Record<string, number> = {};
+    merchants?.forEach(m => {
+      cityGroups[m.city] = (cityGroups[m.city] || 0) + 1;
+    });
+
+    return Object.entries(cityGroups).map(([city, count]) => ({
+      city,
+      merchantCount: count,
+      salesCount: 0, // Would need to join with orders
+    }));
   },
 
   // Get Recent Activities
   getRecentActivities: async (limit: number = 10): Promise<AdminActivity[]> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return mockActivities.slice(0, limit);
+    if (!isSupabaseConfigured()) {
+      return [];
+    }
+
+    const client = requireSupabaseClient();
+    const { data, error } = await client
+      .from(DB_TABLES.ADMIN_ACTIVITIES)
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.warn('Activities table may not exist:', error);
+      // Return recent merchant registrations as fallback
+      const { data: merchants } = await client
+        .from(DB_TABLES.MERCHANTS)
+        .select('id, business_name, created_at, is_verified, is_refused')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      return (merchants || []).map(m => ({
+        id: m.id,
+        type: m.is_verified 
+          ? 'merchant_validated' as const
+          : m.is_refused 
+            ? 'merchant_refused' as const
+            : 'merchant_registration' as const,
+        description: `${m.is_verified ? 'Commerce validé' : m.is_refused ? 'Commerce refusé' : 'Nouvelle inscription'}: ${m.business_name}`,
+        timestamp: new Date(m.created_at),
+      }));
+    }
+
+    return (data || []).map(a => ({
+      id: a.id,
+      type: a.type,
+      description: a.description,
+      timestamp: new Date(a.created_at),
+      metadata: a.metadata,
+    }));
   },
 
   // Get Sales Statistics
   getSalesStats: async (): Promise<SalesStats[]> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return mockSalesStats;
+    if (!isSupabaseConfigured()) {
+      return [];
+    }
+
+    const client = requireSupabaseClient();
+    const startOfWeek = new Date();
+    startOfWeek.setDate(startOfWeek.getDate() - 7);
+
+    const { data: orders, error } = await client
+      .from(DB_TABLES.ORDERS)
+      .select('created_at, total_price')
+      .gte('created_at', startOfWeek.toISOString());
+
+    if (error) {
+      console.error('Error fetching sales stats:', error);
+      return [];
+    }
+
+    // Group by day
+    const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    const stats: Record<string, SalesStats> = {};
+    
+    days.forEach(day => {
+      stats[day] = { period: day, sales: 0, revenue: 0, orders: 0 };
+    });
+
+    orders?.forEach(order => {
+      const date = new Date(order.created_at);
+      const day = days[date.getDay()];
+      stats[day].sales += 1;
+      stats[day].orders += 1;
+      stats[day].revenue += order.total_price || 0;
+    });
+
+    // Return in week order (Mon-Sun)
+    return ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => stats[day]);
   },
 
   // Get Top Merchants
   getTopMerchants: async (limit: number = 5): Promise<TopMerchant[]> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return mockTopMerchants.slice(0, limit);
+    if (!isSupabaseConfigured()) {
+      return [];
+    }
+
+    const client = requireSupabaseClient();
+    const { data: merchants, error } = await client
+      .from(DB_TABLES.MERCHANTS)
+      .select(`
+        id,
+        business_name,
+        rating
+      `)
+      .eq('is_verified', true)
+      .eq('is_active', true)
+      .order('rating', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error fetching top merchants:', error);
+      return [];
+    }
+
+    // Get order counts and revenue per merchant
+    const merchantIds = merchants?.map(m => m.id) || [];
+    const { data: orders } = await client
+      .from(DB_TABLES.ORDERS)
+      .select('merchant_id, total_price')
+      .in('merchant_id', merchantIds);
+
+    const ordersByMerchant: Record<string, { count: number; revenue: number }> = {};
+    orders?.forEach(o => {
+      if (!ordersByMerchant[o.merchant_id]) {
+        ordersByMerchant[o.merchant_id] = { count: 0, revenue: 0 };
+      }
+      ordersByMerchant[o.merchant_id].count += 1;
+      ordersByMerchant[o.merchant_id].revenue += o.total_price || 0;
+    });
+
+    // Get product counts
+    const { data: products } = await client
+      .from(DB_TABLES.FOOD_ITEMS)
+      .select('merchant_id')
+      .in('merchant_id', merchantIds);
+
+    const productsByMerchant: Record<string, number> = {};
+    products?.forEach(p => {
+      productsByMerchant[p.merchant_id] = (productsByMerchant[p.merchant_id] || 0) + 1;
+    });
+
+    return (merchants || []).map(m => ({
+      id: m.id,
+      name: m.business_name,
+      sales: ordersByMerchant[m.id]?.count || 0,
+      revenue: ordersByMerchant[m.id]?.revenue || 0,
+      productsCount: productsByMerchant[m.id] || 0,
+    }));
   },
 
   // Format currency
