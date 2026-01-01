@@ -1,6 +1,6 @@
 // ============================================
 // Add Product Modal - Create new products or baskets
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState, useRef } from "react";

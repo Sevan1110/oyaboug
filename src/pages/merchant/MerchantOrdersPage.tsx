@@ -1,6 +1,6 @@
 // ============================================
 // Merchant Orders Page - Manage Reservations
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState, useEffect } from "react";

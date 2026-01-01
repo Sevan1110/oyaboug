@@ -1,6 +1,6 @@
 // ============================================
 // Supabase Client - Centralized Configuration
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -14,7 +14,7 @@ const isConfigured = SUPABASE_URL && SUPABASE_ANON_KEY;
 
 if (!isConfigured && import.meta.env.DEV) {
   console.warn(
-    '[SaveFood] Supabase not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.'
+    '[oyaboug] Supabase not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.'
   );
 }
 

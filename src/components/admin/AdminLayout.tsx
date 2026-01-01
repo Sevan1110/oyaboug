@@ -1,6 +1,6 @@
 // ============================================
 // Admin Layout - Dashboard Layout Wrapper
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { ReactNode } from "react";

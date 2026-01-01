@@ -1,6 +1,6 @@
 // ============================================
 // Search Page - Find Food Items
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState, useEffect, lazy, Suspense } from "react";

@@ -14,7 +14,7 @@ const testimonials = [
     name: "Thomas B.",
     role: "Boulangerie du Coin",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-    content: "En tant que commerçant, SaveFood m'a permis de réduire mes pertes de 60%. Une solution gagnant-gagnant !",
+    content: "En tant que commerçant, oyaboug m'a permis de réduire mes pertes de 60%. Une solution gagnant-gagnant !",
     rating: 5,
   },
   {

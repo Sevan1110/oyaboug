@@ -1,6 +1,6 @@
 // ============================================
 // Admin Settings Page - Platform Settings
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState } from "react";
@@ -25,8 +25,8 @@ import { toast } from "sonner";
 
 const AdminSettingsPage = () => {
   const [settings, setSettings] = useState({
-    platformName: 'SaveFood Gabon',
-    supportEmail: 'support@savefood.ga',
+    platformName: 'oyaboug Gabon',
+    supportEmail: 'support@oyaboug.ga',
     autoApprove: false,
     emailNotifications: true,
     maintenanceMode: false,
@@ -68,7 +68,7 @@ const AdminSettingsPage = () => {
                   Informations de la plateforme
                 </CardTitle>
                 <CardDescription>
-                  Paramètres généraux de la plateforme SaveFood
+                  Paramètres généraux de la plateforme oyaboug
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

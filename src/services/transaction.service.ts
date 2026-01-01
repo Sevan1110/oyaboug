@@ -1,6 +1,6 @@
 // ============================================
 // Transaction Service
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import type { ApiResponse } from '@/types';

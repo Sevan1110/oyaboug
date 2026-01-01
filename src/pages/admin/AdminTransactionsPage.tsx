@@ -1,6 +1,6 @@
 // ============================================
 // Admin Transactions Page - Sales Management
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState } from "react";

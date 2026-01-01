@@ -1,6 +1,6 @@
 // ============================================
 // Auth Page - Login & Signup
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState } from "react";
@@ -60,7 +60,7 @@ const Auth = () => {
     if (result.success) {
       toast({
         title: "Connexion réussie",
-        description: "Bienvenue sur SaveFood !",
+        description: "Bienvenue sur oyaboug !",
       });
       // Redirect based on role
       navigate(role === "merchant" ? "/merchant/dashboard" : "/user/dashboard");
@@ -157,7 +157,7 @@ const Auth = () => {
           <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg">
             <Leaf className="w-6 h-6 text-primary-foreground" />
           </div>
-          <span className="text-2xl font-bold text-foreground">SaveFood</span>
+          <span className="text-2xl font-bold text-foreground">oyaboug</span>
         </div>
 
         <Card className="shadow-xl">

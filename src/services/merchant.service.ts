@@ -1,6 +1,6 @@
 // ============================================
 // Merchant Service - Merchant Business Logic
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import {

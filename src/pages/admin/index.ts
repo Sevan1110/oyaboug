@@ -1,6 +1,6 @@
 // ============================================
 // Admin Pages Index
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 export { default as AdminDashboardPage } from './AdminDashboardPage';

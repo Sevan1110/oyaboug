@@ -1,6 +1,6 @@
 // ============================================
 // Merchant Impact Page - Environmental Impact
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState, useEffect } from "react";
@@ -112,7 +112,7 @@ const MerchantImpactPage = () => {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-foreground">
-                  Éco-Héros SaveFood
+                  Éco-Héros oyaboug
                 </h2>
                 <Badge variant="secondary" className="mt-1">
                   Niveau Or • Top 10% des commerçants

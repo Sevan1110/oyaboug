@@ -1,6 +1,6 @@
 // ============================================
 // Admin Dashboard Page - Main Overview
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useEffect, useState } from "react";
@@ -118,7 +118,7 @@ const AdminDashboardPage = () => {
   return (
     <AdminLayout
       title="Tableau de bord"
-      subtitle="Vue d'ensemble de la plateforme SaveFood"
+      subtitle="Vue d'ensemble de la plateforme oyaboug"
     >
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

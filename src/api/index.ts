@@ -1,6 +1,6 @@
 // ============================================
 // API Layer - Centralized Exports
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 // Supabase Client

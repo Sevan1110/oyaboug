@@ -1,6 +1,6 @@
 // ============================================
 // Admin Merchants Page - Merchant Management
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useEffect, useState } from "react";

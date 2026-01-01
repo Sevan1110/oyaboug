@@ -1,6 +1,6 @@
 // ============================================
 // Notification Bell Component
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { Bell } from "lucide-react";

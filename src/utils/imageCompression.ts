@@ -1,6 +1,6 @@
 // ============================================
 // Image Compression Utility
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 interface CompressOptions {

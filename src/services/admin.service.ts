@@ -1,6 +1,6 @@
 // ============================================
 // Admin Service - Super Admin Business Logic
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { requireSupabaseClient, isSupabaseConfigured } from '@/api/supabaseClient';

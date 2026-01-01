@@ -1,6 +1,6 @@
 // ============================================
 // Notification Types
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 export type NotificationCategory =

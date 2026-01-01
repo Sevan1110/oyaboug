@@ -1,6 +1,6 @@
 // ============================================
 // API Routes - Centralized Endpoint Definitions
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 /**

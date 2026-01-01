@@ -1,6 +1,6 @@
 // ============================================
 // Admin Components Index
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 export { default as AdminLayout } from './AdminLayout';

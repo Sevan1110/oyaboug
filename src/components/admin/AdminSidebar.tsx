@@ -1,6 +1,6 @@
 // ============================================
 // Admin Sidebar - Navigation Component
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useLocation, Link } from "react-router-dom";
@@ -119,7 +119,7 @@ const AdminSidebar = () => {
                 Super Admin
               </h2>
               <p className="text-xs text-muted-foreground truncate">
-                SaveFood Platform
+                oyaboug Platform
               </p>
             </div>
           )}

@@ -1,6 +1,6 @@
 // ============================================
 // Merchants API - Merchant Management Operations
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { supabaseClient, requireSupabaseClient, isSupabaseConfigured } from './supabaseClient';

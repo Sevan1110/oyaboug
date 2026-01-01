@@ -1,6 +1,6 @@
 // ============================================
 // KPI Card - Statistics Display Component
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { LucideIcon } from "lucide-react";

@@ -1,6 +1,6 @@
 // ============================================
 // Admin Types - Super Admin Dashboard Types
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 // Merchant Status Enum
