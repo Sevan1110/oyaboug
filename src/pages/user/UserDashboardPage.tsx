@@ -1,6 +1,6 @@
 // ============================================
 // User Dashboard Page - With Sidebar Layout
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState, useEffect } from "react";

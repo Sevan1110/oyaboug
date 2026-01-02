@@ -1,6 +1,6 @@
 // ============================================
 // Merchant Registration Page - Business Signup Form
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState } from "react";
@@ -635,10 +635,10 @@ const MerchantRegisterPage = () => {
             <div className="space-y-1 leading-none">
               <FormLabel className="text-foreground">
                 Je m'engage à lutter contre le gaspillage alimentaire en proposant 
-                mes invendus à prix réduit sur la plateforme SaveFood
+                mes invendus à prix réduit sur la plateforme oyaboug
               </FormLabel>
               <FormDescription>
-                En rejoignant SaveFood, vous contribuez à réduire le gaspillage alimentaire au Gabon
+                En rejoignant oyaboug, vous contribuez à réduire le gaspillage alimentaire au Gabon
               </FormDescription>
               <FormMessage />
             </div>
@@ -660,7 +660,7 @@ const MerchantRegisterPage = () => {
             className="text-center mb-8"
           >
             <h1 className="text-3xl font-bold text-foreground mb-2">
-              Devenir partenaire <span className="text-gradient">SaveFood</span>
+              Devenir partenaire <span className="text-gradient">oyaboug</span>
             </h1>
             <p className="text-muted-foreground">
               Rejoignez le mouvement anti-gaspillage et valorisez vos invendus

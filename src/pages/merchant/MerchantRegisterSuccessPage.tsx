@@ -1,6 +1,6 @@
 // ============================================
 // Merchant Registration Success Page
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { Link } from "react-router-dom";
@@ -31,7 +31,7 @@ const MerchantRegisterSuccessPage = () => {
               Demande envoyée avec succès !
             </h1>
             <p className="text-muted-foreground text-lg mb-8">
-              Merci de votre intérêt pour SaveFood. Notre équipe va examiner votre dossier.
+              Merci de votre intérêt pour oyaboug. Notre équipe va examiner votre dossier.
             </p>
 
             <Card className="mb-8">

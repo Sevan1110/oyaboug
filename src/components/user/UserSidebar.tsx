@@ -1,6 +1,6 @@
 // ============================================
 // User Sidebar - Navigation Component
-// SaveFood Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useLocation, Link } from "react-router-dom";
@@ -112,7 +112,7 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
                 {userName}
               </h2>
               <p className="text-xs text-muted-foreground truncate">
-                Client SaveFood
+                Client oyaboug
               </p>
             </div>
           )}
