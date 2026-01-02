@@ -7,9 +7,8 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Search from "./pages/Search";
 import Concept from "./pages/Concept";
-import UserDashboard from "./pages/UserDashboard";
-import MerchantDashboard from "./pages/MerchantDashboard";
 import NotFound from "./pages/NotFound";
+import { UserDashboardPage } from "./pages/user";
 import {
   MerchantDashboardPage,
   MerchantProductsPage,
@@ -19,6 +18,8 @@ import {
   MerchantProfilePage,
   MerchantSettingsPage,
 } from "./pages/merchant";
+import MerchantRegisterPage from "./pages/merchant/MerchantRegisterPage";
+import MerchantRegisterSuccessPage from "./pages/merchant/MerchantRegisterSuccessPage";
 import {
   AdminDashboardPage,
   AdminMerchantsPage,
@@ -47,11 +48,22 @@ const App = () => (
           <Route path="/search" element={<Search />} />
           <Route path="/concept" element={<Concept />} />
           
+          {/* Merchant Registration */}
+          <Route path="/merchant/register" element={<MerchantRegisterPage />} />
+          <Route path="/merchant/register/success" element={<MerchantRegisterSuccessPage />} />
+          
           {/* User Routes */}
-          <Route path="/user/dashboard" element={<UserDashboard />} />
+          <Route path="/user" element={<UserDashboardPage />} />
+          <Route path="/user/reservations" element={<UserDashboardPage />} />
+          <Route path="/user/favorites" element={<UserDashboardPage />} />
+          <Route path="/user/impact" element={<UserDashboardPage />} />
+          <Route path="/user/profile" element={<UserDashboardPage />} />
+          <Route path="/user/notifications" element={<UserDashboardPage />} />
+          <Route path="/user/settings" element={<UserDashboardPage />} />
+          <Route path="/user/help" element={<UserDashboardPage />} />
           
           {/* Merchant Routes */}
-          <Route path="/merchant/dashboard" element={<MerchantDashboardPage />} />
+          <Route path="/merchant" element={<MerchantDashboardPage />} />
           <Route path="/merchant/products" element={<MerchantProductsPage />} />
           <Route path="/merchant/orders" element={<MerchantOrdersPage />} />
           <Route path="/merchant/analytics" element={<MerchantAnalyticsPage />} />
@@ -60,7 +72,7 @@ const App = () => (
           <Route path="/merchant/settings" element={<MerchantSettingsPage />} />
           
           {/* Admin Routes */}
-          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+          <Route path="/admin" element={<AdminDashboardPage />} />
           <Route path="/admin/merchants" element={<AdminMerchantsPage />} />
           <Route path="/admin/validations" element={<AdminValidationsPage />} />
           <Route path="/admin/clients" element={<AdminClientsPage />} />
