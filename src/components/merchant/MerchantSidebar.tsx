@@ -1,6 +1,6 @@
 // ============================================
 // Merchant Sidebar - Navigation Component
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useLocation, Link } from "react-router-dom";

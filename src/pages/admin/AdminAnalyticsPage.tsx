@@ -1,6 +1,6 @@
 // ============================================
 // Admin Analytics Page - Statistics & Insights
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useEffect, useState } from "react";

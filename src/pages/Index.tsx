@@ -65,13 +65,13 @@ const Index = () => {
         </div>
       </section>
 
-      <ImpactStats />
+      {/* <ImpactStats />
       <HowItWorks />
       <Testimonials />
-      <FAQ />
+      <FAQ /> */}
 
       {/* Final CTA */}
-      <section className="py-20 bg-primary">
+      {/* <section className="py-20 bg-primary">
         <div className="container mx-auto px-4 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -92,9 +92,9 @@ const Index = () => {
             </Link>
           </motion.div>
         </div>
-      </section>
+      </section> */}
 
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 };

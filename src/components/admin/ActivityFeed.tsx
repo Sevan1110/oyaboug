@@ -1,6 +1,6 @@
 // ============================================
 // Activity Feed - Recent Activities Component
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { AdminActivity } from "@/types/admin.types";

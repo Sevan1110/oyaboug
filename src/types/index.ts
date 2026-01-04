@@ -1,5 +1,5 @@
 // ============================================
-// Types & Interfaces - oyaboug Platform
+// Types & Interfaces - ouyaboung Platform
 // Anti-gaspillage alimentaire - Gabon
 // ============================================
 

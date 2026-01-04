@@ -1,6 +1,6 @@
 // ============================================
 // Order Service - Order/Reservation Business Logic
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import {

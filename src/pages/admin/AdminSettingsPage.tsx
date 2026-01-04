@@ -1,6 +1,6 @@
 // ============================================
 // Admin Settings Page - Platform Settings
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState } from "react";
@@ -25,8 +25,8 @@ import { toast } from "sonner";
 
 const AdminSettingsPage = () => {
   const [settings, setSettings] = useState({
-    platformName: 'oyaboug Gabon',
-    supportEmail: 'support@oyaboug.ga',
+    platformName: 'ouyaboung Gabon',
+    supportEmail: 'support@ouyaboung.ga',
     autoApprove: false,
     emailNotifications: true,
     maintenanceMode: false,
@@ -68,7 +68,7 @@ const AdminSettingsPage = () => {
                   Informations de la plateforme
                 </CardTitle>
                 <CardDescription>
-                  Paramètres généraux de la plateforme oyaboug
+                  Paramètres généraux de la plateforme ouyaboung
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

@@ -1,6 +1,6 @@
 // ============================================
 // Merchant Validation Card - Pending Merchant Display
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { MerchantRegistration } from "@/types/admin.types";

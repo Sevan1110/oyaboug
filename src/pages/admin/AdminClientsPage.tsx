@@ -1,6 +1,6 @@
 // ============================================
 // Admin Clients Page - Client Management
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState } from "react";

@@ -24,7 +24,7 @@ const Navbar = () => {
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
             <Leaf className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold text-foreground">oyaboug</span>
+          <span className="text-xl font-bold text-foreground">ouyaboung</span>
         </Link>
 
         {/* Desktop Navigation */}

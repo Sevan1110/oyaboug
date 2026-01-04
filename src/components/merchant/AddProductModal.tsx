@@ -1,6 +1,6 @@
 // ============================================
 // Add Product Modal - Create new products or baskets
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState, useRef } from "react";

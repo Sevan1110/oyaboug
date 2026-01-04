@@ -1,6 +1,6 @@
 // ============================================
 // Orders API - Order/Reservation Management
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { supabaseClient, requireSupabaseClient, isSupabaseConfigured } from './supabaseClient';

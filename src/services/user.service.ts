@@ -1,6 +1,6 @@
 // ============================================
 // User Service - User Management Business Logic
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import {

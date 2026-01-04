@@ -1,6 +1,6 @@
 // ============================================
 // Impact API - Environmental & Social Impact
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { supabaseClient, requireSupabaseClient, isSupabaseConfigured } from './supabaseClient';

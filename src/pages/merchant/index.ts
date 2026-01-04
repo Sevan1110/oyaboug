@@ -1,6 +1,6 @@
 // ============================================
 // Merchant Pages - Centralized Exports
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 export { default as MerchantDashboardPage } from "./MerchantDashboardPage";

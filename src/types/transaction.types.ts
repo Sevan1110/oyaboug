@@ -1,6 +1,6 @@
 // ============================================
 // Transaction & QR Code Types
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 export type TransactionStatus =

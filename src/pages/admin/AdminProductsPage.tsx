@@ -1,6 +1,6 @@
 // ============================================
 // Admin Products Page - Products & Baskets
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState } from "react";

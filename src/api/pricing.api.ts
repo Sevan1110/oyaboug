@@ -1,6 +1,6 @@
 // ============================================
 // Pricing API - Dynamic Pricing Operations
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { supabaseClient, requireSupabaseClient, isSupabaseConfigured } from './supabaseClient';

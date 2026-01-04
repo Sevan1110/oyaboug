@@ -14,22 +14,22 @@ const TermsOfService = () => {
         <div className="prose prose-green max-w-none space-y-6 text-muted-foreground">
           <section>
             <h2 className="text-xl font-semibold text-foreground">1. Objet</h2>
-            <p>Les présentes conditions générales régissent l'utilisation de la plateforme oyaboug, service de lutte contre le gaspillage alimentaire au Gabon.</p>
+            <p>Les présentes conditions générales régissent l'utilisation de la plateforme ouyaboung, service de lutte contre le gaspillage alimentaire au Gabon.</p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-foreground">2. Inscription</h2>
-            <p>L'utilisation de oyaboug nécessite la création d'un compte. L'utilisateur s'engage à fournir des informations exactes et à maintenir la confidentialité de ses identifiants.</p>
+            <p>L'utilisation de ouyaboung nécessite la création d'un compte. L'utilisateur s'engage à fournir des informations exactes et à maintenir la confidentialité de ses identifiants.</p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-foreground">3. Services</h2>
-            <p>oyaboug permet aux commerçants de proposer des produits à prix réduits et aux consommateurs d'acheter ces produits. Les transactions sont effectuées directement entre les parties.</p>
+            <p>ouyaboung permet aux commerçants de proposer des produits à prix réduits et aux consommateurs d'acheter ces produits. Les transactions sont effectuées directement entre les parties.</p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-foreground">4. Responsabilités</h2>
-            <p>oyaboug agit en tant qu'intermédiaire. Les commerçants sont responsables de la qualité et de la conformité des produits proposés.</p>
+            <p>ouyaboung agit en tant qu'intermédiaire. Les commerçants sont responsables de la qualité et de la conformité des produits proposés.</p>
           </section>
 
           <section>
@@ -39,7 +39,7 @@ const TermsOfService = () => {
 
           <section>
             <h2 className="text-xl font-semibold text-foreground">6. Contact</h2>
-            <p>Pour toute question, contactez-nous à support@oyaboug.ga</p>
+            <p>Pour toute question, contactez-nous à support@ouyaboung.ga</p>
           </section>
         </div>
       </div>

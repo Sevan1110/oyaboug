@@ -1,6 +1,6 @@
 // ============================================
 // User Components - Centralized Exports
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 export { default as UserLayout } from './UserLayout';

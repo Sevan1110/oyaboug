@@ -1,6 +1,6 @@
 // ============================================
 // Admin Validations Page - Pending Merchants
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useEffect, useState } from "react";

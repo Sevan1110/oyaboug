@@ -33,12 +33,12 @@ const benefits = {
 };
 
 const comparison = [
-  { feature: "Accès instantané aux invendus", oyaboug: true, others: false },
-  { feature: "Géolocalisation en temps réel", oyaboug: true, others: true },
-  { feature: "Paiement mobile money", oyaboug: true, others: false },
-  { feature: "Paniers gratuits solidaires", oyaboug: true, others: false },
-  { feature: "Statistiques d'impact", oyaboug: true, others: false },
-  { feature: "Support local 24/7", oyaboug: true, others: false },
+  { feature: "Accès instantané aux invendus", ouyaboung: true, others: false },
+  { feature: "Géolocalisation en temps réel", ouyaboung: true, others: true },
+  { feature: "Paiement mobile money", ouyaboung: true, others: false },
+  { feature: "Paniers gratuits solidaires", ouyaboung: true, others: false },
+  { feature: "Statistiques d'impact", ouyaboung: true, others: false },
+  { feature: "Support local 24/7", ouyaboung: true, others: false },
 ];
 
 const Concept = () => {
@@ -60,7 +60,7 @@ const Concept = () => {
               </h1>
               <p className="text-lg text-muted-foreground mb-8">
                 Chaque jour, des tonnes de nourriture parfaitement consommable sont jetées. 
-                oyaboug connecte les commerces et les consommateurs pour donner une seconde vie à ces produits.
+                ouyaboung connecte les commerces et les consommateurs pour donner une seconde vie à ces produits.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/search">
@@ -223,7 +223,7 @@ const Concept = () => {
               className="text-center mb-12"
             >
               <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-                Pourquoi choisir <span className="text-gradient">oyaboug</span> ?
+                Pourquoi choisir <span className="text-gradient">ouyaboung</span> ?
               </h2>
             </motion.div>
 
@@ -239,7 +239,7 @@ const Concept = () => {
                     <thead>
                       <tr className="border-b border-border">
                         <th className="text-left p-4 font-medium text-foreground">Fonctionnalité</th>
-                        <th className="p-4 font-medium text-primary">oyaboug</th>
+                        <th className="p-4 font-medium text-primary">ouyaboung</th>
                         <th className="p-4 font-medium text-muted-foreground">Autres</th>
                       </tr>
                     </thead>

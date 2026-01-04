@@ -1,6 +1,6 @@
 // ============================================
 // User Dashboard Page - With Sidebar Layout
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState, useEffect } from "react";

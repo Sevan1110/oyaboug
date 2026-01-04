@@ -1,6 +1,6 @@
 // ============================================
 // Admin Geographic Page - Geographic Distribution
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useEffect, useState } from "react";

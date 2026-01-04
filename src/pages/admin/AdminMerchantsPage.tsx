@@ -1,6 +1,6 @@
 // ============================================
 // Admin Merchants Page - Merchant Management
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useEffect, useState } from "react";

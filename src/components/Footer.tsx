@@ -12,7 +12,7 @@ const Footer = () => {
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                 <Leaf className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold text-foreground">oyaboug</span>
+              <span className="text-xl font-bold text-foreground">ouyaboung</span>
             </Link>
             <p className="text-muted-foreground text-sm leading-relaxed">
               Ensemble, luttons contre le gaspillage alimentaire. Chaque repas sauvé compte.
@@ -75,7 +75,7 @@ const Footer = () => {
         <hr className="border-border my-8" />
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} oyaboug. Tous droits réservés.</p>
+          <p>© {new Date().getFullYear()} ouyaboung. Tous droits réservés.</p>
           <p>Fait avec 💚 pour la planète</p>
         </div>
       </div>

@@ -1,6 +1,6 @@
 // ============================================
 // Merchant Settings Page - Account Settings
-// oyaboug Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState } from "react";

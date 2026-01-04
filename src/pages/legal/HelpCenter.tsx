@@ -28,7 +28,7 @@ const HelpCenter = () => {
               <CardTitle className="text-lg">Email</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
-              <p className="text-muted-foreground mb-3">support@oyaboug.ga</p>
+              <p className="text-muted-foreground mb-3">support@ouyaboung.ga</p>
               <Button variant="outline" size="sm">Envoyer un email</Button>
             </CardContent>
           </Card>
