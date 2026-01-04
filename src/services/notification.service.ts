@@ -1,6 +1,6 @@
 // ============================================
 // Notification Service
-// SaveFood Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import type { ApiResponse } from '@/types';

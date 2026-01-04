@@ -1,6 +1,6 @@
 // ============================================
 // Merchant Profile Page - Business Settings
-// SaveFood Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState } from "react";

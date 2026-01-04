@@ -8,8 +8,8 @@ import {
 
 const faqs = [
   {
-    question: "Comment fonctionne SaveFood ?",
-    answer: "SaveFood connecte les commerces ayant des invendus avec les consommateurs. Vous pouvez réserver des paniers surprises à prix réduits et les récupérer dans les créneaux indiqués.",
+    question: "Comment fonctionne ouyaboung ?",
+    answer: "ouyaboung connecte les commerces ayant des invendus avec les consommateurs. Vous pouvez réserver des paniers surprises à prix réduits et les récupérer dans les créneaux indiqués.",
   },
   {
     question: "Qu'est-ce qu'un panier surprise ?",
@@ -29,7 +29,7 @@ const faqs = [
   },
   {
     question: "Y a-t-il des frais pour les commerçants ?",
-    answer: "SaveFood prélève une petite commission sur chaque vente réalisée. Cela nous permet de maintenir et développer la plateforme tout en restant accessible à tous.",
+    answer: "ouyaboung prélève une petite commission sur chaque vente réalisée. Cela nous permet de maintenir et développer la plateforme tout en restant accessible à tous.",
   },
 ];
 
@@ -48,7 +48,7 @@ const FAQ = () => {
             Questions <span className="text-gradient">fréquentes</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Tout ce que vous devez savoir sur SaveFood.
+            Tout ce que vous devez savoir sur ouyaboung.
           </p>
         </motion.div>
 

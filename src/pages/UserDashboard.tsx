@@ -1,6 +1,6 @@
 // ============================================
 // User Dashboard - User Account Page
-// SaveFood Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState, useEffect } from "react";

@@ -1,5 +1,5 @@
 // ============================================
-// Types & Interfaces - SaveFood Platform
+// Types & Interfaces - ouyaboung Platform
 // Anti-gaspillage alimentaire - Gabon
 // ============================================
 

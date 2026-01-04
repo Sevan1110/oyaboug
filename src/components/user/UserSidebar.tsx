@@ -1,4 +1,9 @@
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+// ============================================
+// User Sidebar - Navigation Component
+// ouyaboung Platform - Anti-gaspillage alimentaire
+// ============================================
+
+import { useLocation, Link } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -12,98 +17,157 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   LayoutDashboard,
   ShoppingBag,
-  Wallet,
   Heart,
+  Leaf,
+  Settings,
   Bell,
-  Search,
   LogOut,
+  HelpCircle,
+  User,
+  Search,
 } from "lucide-react";
 
 const mainMenuItems = [
   {
-    title: "Aperçu",
-    url: "/user/dashboard?tab=overview",
+    title: "Tableau de bord",
+    url: "/user",
     icon: LayoutDashboard,
   },
   {
-    title: "Réservations",
-    url: "/user/dashboard?tab=active",
+    title: "Rechercher",
+    url: "/search",
+    icon: Search,
+  },
+  {
+    title: "Mes réservations",
+    url: "/user/reservations",
     icon: ShoppingBag,
+    badge: 2,
   },
   {
-    title: "Historique",
-    url: "/user/dashboard?tab=history",
-    icon: Wallet,
-  },
-  {
-    title: "Favoris",
-    url: "/user/dashboard?tab=favorites",
+    title: "Mes favoris",
+    url: "/user/favorites",
     icon: Heart,
   },
   {
-    title: "Préférences",
-    url: "/user/dashboard?tab=preferences",
+    title: "Mon impact",
+    url: "/user/impact",
+    icon: Leaf,
+  },
+];
+
+const settingsMenuItems = [
+  {
+    title: "Mon profil",
+    url: "/user/profile",
+    icon: User,
+  },
+  {
+    title: "Notifications",
+    url: "/user/notifications",
     icon: Bell,
+  },
+  {
+    title: "Paramètres",
+    url: "/user/settings",
+    icon: Settings,
+  },
+  {
+    title: "Aide",
+    url: "/user/help",
+    icon: HelpCircle,
   },
 ];
 
 interface UserSidebarProps {
   userName?: string;
-  userEmail?: string;
 }
 
-const UserSidebar = ({ userName = "Utilisateur", userEmail = "" }: UserSidebarProps) => {
+const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
   const location = useLocation();
-  const [searchParams] = useSearchParams();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
-  const currentTab = searchParams.get("tab") || "overview";
-  const isActive = (url: string) => {
-    const urlObj = new URL(url, window.location.origin);
-    const tab = urlObj.searchParams.get("tab") || "overview";
-    return location.pathname === "/user/dashboard" && currentTab === tab;
+  const isActive = (path: string) => {
+    if (path === "/user") {
+      return location.pathname === "/user";
+    }
+    return location.pathname.startsWith(path);
   };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-semibold text-primary">SF</span>
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <User className="w-5 h-5 text-primary" />
           </div>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-foreground truncate">{userName}</h2>
-              <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+              <h2 className="font-semibold text-foreground truncate">
+                {userName}
+              </h2>
+              <p className="text-xs text-muted-foreground truncate">
+                Client ouyaboung
+              </p>
             </div>
           )}
         </div>
       </SidebarHeader>
 
       <SidebarContent>
-        {!isCollapsed && (
-          <div className="px-4 mb-4">
-            <Link to="/search">
-              <Button className="w-full gap-2" size="sm">
-                <Search className="w-4 h-4" />
-                Rechercher
-              </Button>
-            </Link>
-          </div>
-        )}
-
+        {/* Main Navigation */}
         <SidebarGroup>
-          <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
+          <SidebarGroupLabel>Menu principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    tooltip={item.title}
+                  >
+                    <Link
+                      to={item.url}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </div>
+                      {item.badge && !isCollapsed && (
+                        <Badge
+                          variant="secondary"
+                          className="ml-auto h-5 px-1.5 text-xs"
+                        >
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Settings */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Paramètres</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {settingsMenuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    tooltip={item.title}
+                  >
                     <Link to={item.url}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>

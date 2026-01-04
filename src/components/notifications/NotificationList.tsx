@@ -1,6 +1,6 @@
 // ============================================
 // Notification List Component
-// SaveFood Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { Link } from "react-router-dom";

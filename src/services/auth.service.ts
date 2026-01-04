@@ -1,6 +1,6 @@
 // ============================================
 // Auth Service - Authentication Business Logic
-// SaveFood Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import {

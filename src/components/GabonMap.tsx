@@ -1,6 +1,6 @@
 // ============================================
 // GabonMap Component - Interactive Leaflet Map
-// SaveFood Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useEffect, useRef, useMemo, useState } from "react";

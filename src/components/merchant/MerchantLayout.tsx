@@ -1,6 +1,6 @@
 // ============================================
 // Merchant Layout - Dashboard Layout Wrapper
-// SaveFood Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { ReactNode } from "react";

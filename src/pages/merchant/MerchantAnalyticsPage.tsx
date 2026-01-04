@@ -1,6 +1,6 @@
 // ============================================
 // Merchant Analytics Page - Statistics & Insights
-// SaveFood Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState } from "react";

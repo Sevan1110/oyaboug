@@ -1,6 +1,6 @@
 // ============================================
 // Notifications Hook
-// SaveFood Platform - Anti-gaspillage alimentaire
+// ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
 import { useState, useCallback, useMemo } from 'react';
