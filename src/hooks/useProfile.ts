@@ -1,0 +1,107 @@
+// ============================================
+// useProfile Hook - User Profile Management
+// ouyaboung Platform - Anti-gaspillage alimentaire
+// ============================================
+
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabaseClient } from '@/api/supabaseClient';
+import type { UserProfile } from '@/types';
+
+export const useProfile = () => {
+  const { user, isAuthenticated } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // First, try to get existing profile
+        const { data: existingProfile, error: fetchError } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = not found
+          throw fetchError;
+        }
+
+        if (existingProfile) {
+          setProfile(existingProfile);
+          return;
+        }
+
+        // If no profile exists, create one
+        const newProfile = {
+          id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+          phone: user.user_metadata?.phone || null,
+          avatar_url: user.user_metadata?.avatar_url || null,
+          role: user.user_metadata?.role || user.app_metadata?.role || 'user',
+        };
+
+        const { data: createdProfile, error: createError } = await supabaseClient
+          .from('profiles')
+          .insert(newProfile)
+          .select()
+          .single();
+
+        if (createError) {
+          throw createError;
+        }
+
+        setProfile(createdProfile);
+      } catch (err) {
+        console.error('Error fetching/creating profile:', err);
+        setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [user, isAuthenticated]);
+
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    if (!profile || !user) return { success: false, error: 'No profile or user' };
+
+    try {
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setProfile(data);
+      return { success: true };
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Erreur lors de la mise à jour'
+      };
+    }
+  };
+
+  return {
+    profile,
+    loading,
+    error,
+    updateProfile,
+  };
+};

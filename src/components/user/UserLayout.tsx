@@ -6,10 +6,14 @@
 import { ReactNode } from "react";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import UserSidebar from "./UserSidebar";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 interface UserLayoutProps {
   children: ReactNode;
@@ -18,6 +22,51 @@ interface UserLayoutProps {
 }
 
 const UserLayout = ({ children, title, subtitle }: UserLayoutProps) => {
+  const { toast } = useToast();
+  const { signOut, user } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Déconnexion réussie",
+        description: "Vous avez été déconnecté avec succès.",
+      });
+      // La redirection vers la page d'accueil sera gérée par AuthRedirectHandler
+    } catch (error) {
+      toast({
+        title: "Erreur de déconnexion",
+        description: "Une erreur est survenue lors de la déconnexion.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Obtenir les initiales de l'utilisateur pour l'avatar
+  const getUserInitials = () => {
+    if (user?.user_metadata?.full_name) {
+      return user.user_metadata.full_name
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    if (user?.email) {
+      return user.email[0].toUpperCase();
+    }
+    return 'U';
+  };
+
+  // Obtenir l'URL de l'image de profil
+  const getProfileImageUrl = () => {
+    return user?.user_metadata?.avatar_url || null;
+  };
+
+  // Obtenir le nom d'affichage de l'utilisateur
+  const getDisplayName = () => {
+    return user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Utilisateur';
+  };
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -53,10 +102,35 @@ const UserLayout = ({ children, title, subtitle }: UserLayoutProps) => {
                 </Button>
 
                 {/* User Avatar */}
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-sm font-medium text-primary">U</span>
-                  </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="rounded-full"
+                  asChild
+                  title="Mon profil"
+                >
+                  <Link to="/user/profile">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage 
+                        src={getProfileImageUrl()} 
+                        alt={getDisplayName()}
+                      />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
+                </Button>
+
+                {/* Logout Button */}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleLogout}
+                  title="Se déconnecter"
+                >
+                  <LogOut className="w-5 h-5" />
                 </Button>
               </div>
             </div>

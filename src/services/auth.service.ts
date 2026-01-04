@@ -24,8 +24,21 @@ export const login = async (
   email: string,
   password: string
 ): Promise<ApiResponse<{ user: User; session: unknown }>> => {
+  console.log('=== AUTH.SERVICE LOGIN ===');
+  console.log('Email:', email);
+  console.log('Password provided:', !!password);
+  
   const credentials: AuthCredentials = { email, password };
-  return signInWithEmail(credentials);
+  
+  try {
+    console.log('Appel de signInWithEmail()...');
+    const result = await signInWithEmail(credentials);
+    console.log('Résultat de signInWithEmail():', result);
+    return result;
+  } catch (error) {
+    console.error('Exception dans login():', error);
+    throw error;
+  }
 };
 
 /**
@@ -136,3 +149,6 @@ export const getUserRole = async (): Promise<UserRole | null> => {
   const { data } = await getCurrentUser();
   return (data?.user?.user_metadata?.role as UserRole) || null;
 };
+
+// Re-export API functions that are used directly
+export { getCurrentUser };

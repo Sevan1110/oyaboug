@@ -27,6 +27,7 @@ import {
   formatOrderForDisplay,
   formatPrice,
   getAvailableItems,
+  getCurrentUser,
 } from "@/services";
 import type { Order, FoodItem, UserImpact } from "@/types";
 
@@ -35,34 +36,51 @@ const UserDashboardPage = () => {
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<FoodItem[]>([]);
   const [userImpact, setUserImpact] = useState<UserImpact | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   
-  // Mock user ID - in real app, get from auth context
-  const userId = "mock-user-id";
-
   useEffect(() => {
-    loadDashboardData();
+    loadUserAndDashboardData();
   }, []);
 
-  const loadDashboardData = async () => {
+  const loadUserAndDashboardData = async () => {
     setIsLoading(true);
     
-    // Load in parallel
-    const [ordersResult, impactResult, itemsResult] = await Promise.all([
-      getActiveOrders({ userId }),
-      getUserStats(userId),
-      getAvailableItems({ perPage: 4 }),
-    ]);
+    try {
+      // Get current user
+      const userResult = await getCurrentUser();
+      if (!userResult.data?.user) {
+        // Redirect to auth if not authenticated
+        window.location.href = '/auth';
+        return;
+      }
+      
+      const user = userResult.data.user;
+      setCurrentUser(user);
+      const userId = user.id;
 
-    if (ordersResult.success && ordersResult.data) {
-      setActiveOrders(ordersResult.data);
-    }
+      // Load dashboard data in parallel
+      const [ordersResult, impactResult, itemsResult] = await Promise.all([
+        getActiveOrders({ userId }),
+        getUserStats(userId),
+        getAvailableItems({ perPage: 4 }),
+      ]);
 
-    if (impactResult.success && impactResult.data) {
-      setUserImpact(impactResult.data);
-    }
+      if (ordersResult.success && ordersResult.data) {
+        setActiveOrders(ordersResult.data);
+      }
 
-    if (itemsResult.success && itemsResult.data) {
-      setFavoriteItems(itemsResult.data.data.slice(0, 4));
+      if (impactResult.success && impactResult.data) {
+        setUserImpact(impactResult.data);
+      }
+
+      if (itemsResult.success && itemsResult.data) {
+        setFavoriteItems(itemsResult.data.data.slice(0, 4));
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      // Redirect to auth on error
+      window.location.href = '/auth';
+      return;
     }
 
     setIsLoading(false);
@@ -143,7 +161,7 @@ const UserDashboardPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-foreground mb-1">
-                    Bonjour, <span className="text-primary">Utilisateur</span> 👋
+                    Bonjour, <span className="text-primary">{currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'Utilisateur'}</span> 👋
                   </h2>
                   <p className="text-muted-foreground">
                     Vous avez {activeOrders.length} réservation(s) en cours

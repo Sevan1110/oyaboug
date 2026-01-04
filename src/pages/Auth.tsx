@@ -3,7 +3,7 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -15,17 +15,49 @@ import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Leaf, User, Store, Mail, Lock, Phone, ArrowLeft, Loader2, Calendar, UserCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { login, register, loginWithOtp } from "@/services";
+import { useAuthActions } from "@/hooks/useAuthActions";
+import { useAuth } from "@/hooks/useAuth";
+import { requireSupabaseClient } from "@/api/supabaseClient";
 import type { UserRole } from "@/types";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+  const { isAuthenticated, loading, user } = useAuth();
+  const { signIn, signUp, signInWithOTP, isLoading } = useAuthActions();
+
+  // Diagnostic de l'état de connexion au chargement
+  useEffect(() => {
+    console.log('=== DIAGNOSTIC AUTH PAGE ===');
+    console.log('État de connexion:', {
+      isAuthenticated,
+      loading,
+      user: user ? 'connecté' : 'non connecté',
+      userId: user?.id,
+      userEmail: user?.email,
+      userRole: user?.user_metadata?.role
+    });
+
+    // Diagnostic du client Supabase
+    try {
+      const supabaseClient = requireSupabaseClient();
+      console.log('Client Supabase:', supabaseClient ? 'OK' : 'ERREUR');
+      console.log('URL Supabase:', import.meta.env.VITE_SUPABASE_URL);
+    } catch (error) {
+      console.error('Erreur client Supabase:', error);
+    }
+  }, [isAuthenticated, loading, user]);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate]);
+
   const initialRole = searchParams.get("role") === "merchant" ? "merchant" : "user";
   const [role, setRole] = useState<UserRole>(initialRole);
-  const [isLoading, setIsLoading] = useState(false);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -43,7 +75,11 @@ const Auth = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    console.log('=== TENTATIVE DE CONNEXION ===');
+    console.log('Email:', loginEmail);
+    console.log('Password provided:', !!loginPassword);
+
     if (!loginEmail || !loginPassword) {
       toast({
         title: "Erreur",
@@ -53,23 +89,23 @@ const Auth = () => {
       return;
     }
 
-    setIsLoading(true);
-    const result = await login(loginEmail, loginPassword);
-    setIsLoading(false);
+    try {
+      // Diagnostic avant l'appel API
+      console.log('Appel de signIn avec:', { email: loginEmail, password: '***' });
+      
+      const result = await signIn(loginEmail, loginPassword);
+      
+      console.log('Résultat signIn:', result);
 
-    if (result.success) {
-      toast({
-        title: "Connexion réussie",
-        description: "Bienvenue sur ouyaboung !",
-      });
-      // Redirect based on role
-      navigate(role === "merchant" ? "/merchant/dashboard" : "/user/dashboard");
-    } else {
-      toast({
-        title: "Erreur de connexion",
-        description: result.error?.message || "Email ou mot de passe incorrect",
-        variant: "destructive",
-      });
+      if (result.success) {
+        console.log('Connexion réussie, redirection...');
+        // Redirect will be handled by AuthRedirectHandler
+        return;
+      } else {
+        console.error('Échec de connexion:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur exception dans handleLogin:', error);
     }
   };
 
@@ -94,28 +130,18 @@ const Auth = () => {
       return;
     }
 
-    setIsLoading(true);
-    const result = await register(signupEmail, signupPassword, {
+    const result = await signUp(signupEmail, signupPassword, {
       fullName: `${firstName} ${lastName}`,
       phone: signupPhone,
       role,
       businessName: role === "merchant" ? businessName : undefined,
     });
-    setIsLoading(false);
 
     if (result.success) {
-      toast({
-        title: "Inscription réussie",
-        description: "Vérifiez votre email pour confirmer votre compte",
-      });
-      navigate(role === "merchant" ? "/merchant/dashboard" : "/user/dashboard");
-    } else {
-      toast({
-        title: "Erreur d'inscription",
-        description: result.error?.message || "Une erreur est survenue",
-        variant: "destructive",
-      });
+      // Success handling is done in the hook
+      return;
     }
+    // Error handling is done in the hook
   };
 
   const handleOtpLogin = async () => {
@@ -129,10 +155,8 @@ const Auth = () => {
       return;
     }
 
-    setIsLoading(true);
     const type = identifier.includes("@") ? "email" : "phone";
-    const result = await loginWithOtp(identifier, type);
-    setIsLoading(false);
+    await signInWithOTP(identifier, type);
   };
 
   return (
