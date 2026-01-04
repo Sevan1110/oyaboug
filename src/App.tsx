@@ -8,7 +8,16 @@ import Auth from "./pages/Auth";
 import Search from "./pages/Search";
 import Concept from "./pages/Concept";
 import NotFound from "./pages/NotFound";
-import { UserDashboardPage } from "./pages/user";
+import { 
+  UserDashboardPage,
+  UserReservationsPage,
+  UserFavoritesPage,
+  UserImpactPage,
+  UserNotificationsPage,
+  UserProfilePage,
+  UserSettingsPage,
+  UserHelpPage,
+} from "./pages/user";
 import {
   MerchantDashboardPage,
   MerchantProductsPage,
@@ -54,13 +63,13 @@ const App = () => (
           
           {/* User Routes */}
           <Route path="/user" element={<UserDashboardPage />} />
-          <Route path="/user/reservations" element={<UserDashboardPage />} />
-          <Route path="/user/favorites" element={<UserDashboardPage />} />
-          <Route path="/user/impact" element={<UserDashboardPage />} />
-          <Route path="/user/profile" element={<UserDashboardPage />} />
-          <Route path="/user/notifications" element={<UserDashboardPage />} />
-          <Route path="/user/settings" element={<UserDashboardPage />} />
-          <Route path="/user/help" element={<UserDashboardPage />} />
+          <Route path="/user/reservations" element={<UserReservationsPage />} />
+          <Route path="/user/favorites" element={<UserFavoritesPage />} />
+          <Route path="/user/impact" element={<UserImpactPage />} />
+          <Route path="/user/profile" element={<UserProfilePage />} />
+          <Route path="/user/notifications" element={<UserNotificationsPage />} />
+          <Route path="/user/settings" element={<UserSettingsPage />} />
+          <Route path="/user/help" element={<UserHelpPage />} />
           
           {/* Merchant Routes */}
           <Route path="/merchant" element={<MerchantDashboardPage />} />
