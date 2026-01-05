@@ -59,20 +59,35 @@ export const getUserOrders = async (
 };
 
 /**
- * Get merchant's orders
+ * Get active orders for a user (pending, confirmed, ready)
  */
-export const getMerchantOrders = async (
-  merchantId: string,
-  options?: {
-    status?: OrderStatus;
-    page?: number;
-    perPage?: number;
+export const getActiveOrders = async (
+  options: { userId: string }
+): Promise<ApiResponse<Order[]>> => {
+  const { userId } = options;
+  
+  // Get orders with active statuses
+  const result = await getOrdersByUser(userId, undefined, 50, 0); // Get more orders
+  
+  if (!result.success || !result.data) {
+    return {
+      data: [],
+      error: result.error,
+      success: false,
+    };
   }
-): Promise<ApiResponse<PaginatedResponse<Order>>> => {
-  const limit = options?.perPage || 20;
-  const offset = ((options?.page || 1) - 1) * limit;
 
-  return getOrdersByMerchant(merchantId, options?.status, limit, offset);
+  // Filter for active orders only
+  const activeStatuses: OrderStatus[] = ['pending', 'confirmed', 'ready'];
+  const activeOrders = result.data.data.filter(order => 
+    activeStatuses.includes(order.status)
+  );
+
+  return {
+    data: activeOrders,
+    error: null,
+    success: true,
+  };
 };
 
 /**
@@ -192,6 +207,23 @@ export const formatOrderForDisplay = (order: Order) => {
     pickupCode: order.pickup_code,
     createdAt: new Date(order.created_at).toLocaleDateString('fr-FR'),
   };
+};
+
+/**
+ * Get merchant's orders
+ */
+export const getMerchantOrders = async (
+  merchantId: string,
+  options?: {
+    status?: OrderStatus;
+    page?: number;
+    perPage?: number;
+  }
+): Promise<ApiResponse<PaginatedResponse<Order>>> => {
+  const limit = options?.perPage || 20;
+  const offset = ((options?.page || 1) - 1) * limit;
+
+  return getOrdersByMerchant(merchantId, options?.status, limit, offset);
 };
 
 /**
