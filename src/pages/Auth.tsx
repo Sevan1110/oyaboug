@@ -3,7 +3,7 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -22,10 +22,40 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+  const { isAuthenticated, loading, user } = useAuth();
+  const { signIn, signUp, signInWithOTP, isLoading } = useAuthActions();
+
+  // Diagnostic de l'état de connexion au chargement
+  useEffect(() => {
+    console.log('=== DIAGNOSTIC AUTH PAGE ===');
+    console.log('État de connexion:', {
+      isAuthenticated,
+      loading,
+      user: user ? 'connecté' : 'non connecté',
+      userId: user?.id,
+      userEmail: user?.email,
+      userRole: user?.user_metadata?.role
+    });
+
+    // Diagnostic du client Supabase
+    try {
+      const supabaseClient = requireSupabaseClient();
+      console.log('Client Supabase:', supabaseClient ? 'OK' : 'ERREUR');
+      console.log('URL Supabase:', import.meta.env.VITE_SUPABASE_URL);
+    } catch (error) {
+      console.error('Erreur client Supabase:', error);
+    }
+  }, [isAuthenticated, loading, user]);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate]);
+
   const initialRole = searchParams.get("role") === "merchant" ? "merchant" : "user";
   const [role, setRole] = useState<UserRole>(initialRole);
-  const [isLoading, setIsLoading] = useState(false);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -49,7 +79,11 @@ const Auth = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    console.log('=== TENTATIVE DE CONNEXION ===');
+    console.log('Email:', loginEmail);
+    console.log('Password provided:', !!loginPassword);
+
     if (!loginEmail || !loginPassword) {
       toast({
         title: "Erreur",
@@ -178,6 +212,7 @@ const Auth = () => {
         variant: "destructive",
       });
     }
+    // Error handling is done in the hook
   };
 
   const handleOtpLogin = async () => {
@@ -191,7 +226,6 @@ const Auth = () => {
       return;
     }
 
-    setIsLoading(true);
     const type = identifier.includes("@") ? "email" : "phone";
     setOtpMode(type);
     setOtpIdentifier(identifier);

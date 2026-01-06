@@ -18,6 +18,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -98,6 +101,8 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
   const { state } = useSidebar();
   const { unreadCount } = useNotifications();
   const isCollapsed = state === "collapsed";
+  const { toast } = useToast();
+  const { signOut, user } = useAuth();
 
   const isActive = (path: string) => {
     if (path === "/user") {
@@ -126,21 +131,34 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
       <SidebarHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <User className="w-5 h-5 text-primary" />
-          </div>
-          {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-foreground truncate">
-                {userName}
-              </h2>
-              <p className="text-xs text-muted-foreground truncate">
-                Client ouyaboung
-              </p>
+        <SidebarMenuButton 
+          asChild 
+          className="w-full justify-start p-2 h-auto hover:bg-accent/50"
+        >
+          <Link to="/user/profile">
+            <div className="flex items-center gap-3">
+              <Avatar className="w-10 h-10">
+                <AvatarImage 
+                  src={getProfileImageUrl()} 
+                  alt={getDisplayName()}
+                />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
+              {!isCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-semibold text-foreground truncate">
+                    {getDisplayName()}
+                  </h2>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Client ouyaboung
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </Link>
+        </SidebarMenuButton>
       </SidebarHeader>
 
       <SidebarContent>
@@ -219,6 +237,7 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
           onClick={handleLogout}
           tooltip="Déconnexion"
           className="text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={handleLogout}
         >
           <LogOut className="w-4 h-4" />
           <span>Déconnexion</span>

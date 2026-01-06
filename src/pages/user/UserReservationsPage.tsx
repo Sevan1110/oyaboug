@@ -18,6 +18,16 @@ import {
   AlertCircle,
   Package,
 } from "lucide-react";
+import { 
+  getUserOrders, 
+  getCurrentUser,
+  getStatusText,
+  getStatusColor,
+  canCancel,
+  cancelOrder,
+  formatOrderForDisplay
+} from "@/services";
+import type { Order } from "@/types";
 
 import { getAuthUser, getUserOrders, cancelOrder } from '@/services';
 
@@ -120,13 +130,62 @@ const UserReservationsPage = () => {
     }
   };
 
-  const filteredReservations = reservations.filter((res) => {
+    setIsLoading(false);
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir annuler cette commande ?')) return;
+    
+    const result = await cancelOrder(orderId);
+    if (result.success) {
+      // Reload orders
+      loadUserAndOrders();
+    } else {
+      alert('Erreur lors de l\'annulation: ' + result.error?.message);
+    }
+  };
+
+  const filteredOrders = orders.filter(order => {
     if (activeTab === "all") return true;
     if (activeTab === "active") return ["confirmed", "pending", "ready"].includes(res.status);
     if (activeTab === "completed") return ["completed", "picked_up"].includes(res.status);
     if (activeTab === "cancelled") return res.status === "cancelled";
     return true;
   });
+
+  const getStatusBadge = (status: string) => {
+    const colorClass = getStatusColor(status as any);
+    const text = getStatusText(status as any);
+    return <Badge className={colorClass}>{text}</Badge>;
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return <AlertCircle className="h-5 w-5 text-blue-500" />;
+      case "pending":
+        return <Clock className="h-5 w-5 text-yellow-500" />;
+      case "completed":
+      case "picked_up":
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case "cancelled":
+        return <XCircle className="h-5 w-5 text-red-500" />;
+      case "ready":
+        return <Package className="h-5 w-5 text-green-500" />;
+      default:
+        return <Package className="h-5 w-5" />;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <UserLayout title="Mes réservations" subtitle="Chargement...">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </UserLayout>
+    );
+  }
 
   return (
     <UserLayout title="Mes réservations" subtitle="Historique et suivi de vos commandes">
@@ -164,7 +223,7 @@ const UserReservationsPage = () => {
         </Card>
       </div>
 
-      {/* Tabs */}
+        {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-6">
           <TabsTrigger value="all">Toutes</TabsTrigger>
@@ -201,13 +260,13 @@ const UserReservationsPage = () => {
               </CardContent>
             </Card>
           ) : (
-            filteredReservations.map((reservation) => (
-              <Card key={reservation.id} className="overflow-hidden">
+            filteredOrders.map((order) => (
+              <Card key={order.id} className="overflow-hidden">
                 <CardContent className="p-0">
                   <div className="flex flex-col md:flex-row">
                     {/* Left side - Status indicator */}
                     <div className="p-4 flex items-center justify-center bg-muted/30 md:w-16">
-                      {getStatusIcon(reservation.status)}
+                      {getStatusIcon(order.status)}
                     </div>
 
                     {/* Main content */}
@@ -225,11 +284,11 @@ const UserReservationsPage = () => {
                             <p className="font-medium text-foreground">{reservation.merchantName}</p>
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <MapPin className="h-4 w-4" />
-                              <span>{reservation.merchantAddress}</span>
+                              <span>{order.merchant?.address || ''}</span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <Phone className="h-4 w-4" />
-                              <span>{reservation.merchantPhone}</span>
+                              <span>{order.merchant?.phone || ''}</span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <Clock className="h-4 w-4" />
@@ -267,6 +326,7 @@ const UserReservationsPage = () => {
           )}
         </TabsContent>
       </Tabs>
+      </div>
     </UserLayout>
   );
 };

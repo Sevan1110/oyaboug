@@ -13,7 +13,11 @@ import type { AuthCredentials, SignUpData, ApiResponse, User, UserRole } from '@
 export const signInWithEmail = async (
   credentials: AuthCredentials
 ): Promise<ApiResponse<{ user: User; session: unknown }>> => {
+  console.log('=== AUTH.API SIGNINWITHEMAIL ===');
+  console.log('Credentials:', { email: credentials.email, password: '***' });
+  
   if (!isSupabaseConfigured()) {
+    console.error('Supabase non configuré');
     return {
       data: null,
       error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
@@ -21,28 +25,50 @@ export const signInWithEmail = async (
     };
   }
 
-  const client = requireSupabaseClient();
-  const { data, error } = await client.auth.signInWithPassword({
-    email: credentials.email,
-    password: credentials.password,
-  });
+  try {
+    const client = requireSupabaseClient();
+    console.log('Client Supabase obtenu, tentative de connexion...');
+    
+    // Réduire le timeout à 5 secondes pour le navigateur
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Timeout de connexion - Vérifiez votre réseau ou les paramètres CORS')), 5000);
+    });
+    
+    const signInPromise = client.auth.signInWithPassword({
+      email: credentials.email,
+      password: credentials.password,
+    });
+    
+    console.log('Appel de signInWithPassword() en cours...');
+    const { data, error } = await Promise.race([signInPromise, timeoutPromise]) as any;
+    console.log('Réponse Supabase reçue:', { data: !!data, error: error?.message });
 
-  if (error) {
+    if (error) {
+      console.error('Erreur Supabase:', error);
+      return {
+        data: null,
+        error: { code: error.name, message: error.message },
+        success: false,
+      };
+    }
+
+    console.log('Connexion réussie, utilisateur:', data.user?.email);
+    return {
+      data: {
+        user: data.user as unknown as User,
+        session: data.session,
+      },
+      error: null,
+      success: true,
+    };
+  } catch (error) {
+    console.error('Exception dans signInWithEmail:', error);
     return {
       data: null,
-      error: { code: error.name, message: error.message },
+      error: { code: 'EXCEPTION', message: error.message },
       success: false,
     };
   }
-
-  return {
-    data: {
-      user: data.user as unknown as User,
-      session: data.session,
-    },
-    error: null,
-    success: true,
-  };
 };
 
 /**

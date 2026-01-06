@@ -81,12 +81,22 @@ const UserDashboardPage = () => {
       setReservedCountMap(counts);
     }
 
-    if (impactResult.success && impactResult.data) {
-      setUserImpact(impactResult.data);
-    }
+      if (ordersResult.success && ordersResult.data) {
+        setActiveOrders(ordersResult.data);
+      }
 
-    if (itemsResult.success && itemsResult.data) {
-      setFavoriteItems(itemsResult.data.data.slice(0, 4));
+      if (impactResult.success && impactResult.data) {
+        setUserImpact(impactResult.data);
+      }
+
+      if (itemsResult.success && itemsResult.data) {
+        setFavoriteItems(itemsResult.data.data.slice(0, 4));
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      // Redirect to auth on error
+      window.location.href = '/auth';
+      return;
     }
 
     if (favoritesResult.success && favoritesResult.data) {
@@ -191,7 +201,7 @@ const UserDashboardPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-foreground mb-1">
-                    Bonjour, <span className="text-primary">Utilisateur</span> 👋
+                    Bonjour, <span className="text-primary">{currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'Utilisateur'}</span> 👋
                   </h2>
                   <p className="text-muted-foreground">
                     Vous avez {activeOrders.length} réservation(s) en cours

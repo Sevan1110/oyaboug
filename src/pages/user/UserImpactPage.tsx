@@ -3,6 +3,7 @@
 // oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
+import { useState, useEffect } from "react";
 import { UserLayout } from "@/components/user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -207,19 +208,19 @@ const UserImpactPage = () => {
   return (
     <UserLayout title="Mon impact" subtitle="Votre contribution à la planète">
       {/* Main Impact Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
         <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
           <CardContent className="p-4 text-center">
             <ShoppingBag className="h-8 w-8 text-green-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-green-500">{impactData.mealsRescued}</p>
-            <p className="text-xs text-muted-foreground">Repas sauvés</p>
+            <p className="text-2xl font-bold text-green-500">{userImpact.orders_count}</p>
+            <p className="text-xs text-muted-foreground">Commandes</p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20">
           <CardContent className="p-4 text-center">
             <Leaf className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-emerald-500">{impactData.co2Saved} kg</p>
+            <p className="text-2xl font-bold text-emerald-500">{userImpact.co2_avoided_kg.toFixed(1)} kg</p>
             <p className="text-xs text-muted-foreground">CO₂ évités</p>
           </CardContent>
         </Card>
@@ -227,43 +228,27 @@ const UserImpactPage = () => {
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
           <CardContent className="p-4 text-center">
             <Droplets className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-blue-500">{(impactData.waterSaved / 1000).toFixed(1)}k L</p>
-            <p className="text-xs text-muted-foreground">Eau économisée</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/20">
-          <CardContent className="p-4 text-center">
-            <Zap className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-yellow-500">{impactData.energySaved} kWh</p>
-            <p className="text-xs text-muted-foreground">Énergie économisée</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-teal-500/10 to-teal-500/5 border-teal-500/20">
-          <CardContent className="p-4 text-center">
-            <TreePine className="h-8 w-8 text-teal-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-teal-500">{impactData.treesEquivalent}</p>
-            <p className="text-xs text-muted-foreground">Arbres équivalents</p>
+            <p className="text-2xl font-bold text-blue-500">{userImpact.food_saved_kg.toFixed(1)} kg</p>
+            <p className="text-xs text-muted-foreground">Nourriture sauvée</p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
           <CardContent className="p-4 text-center">
             <TrendingUp className="h-8 w-8 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold text-primary">{(impactData.moneySaved / 1000).toFixed(0)}k</p>
+            <p className="text-2xl font-bold text-primary">{(userImpact.money_saved_xaf / 1000).toFixed(0)}k</p>
             <p className="text-xs text-muted-foreground">FCFA économisés</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly Progress */}
+        {/* Impact Summary */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Progression mensuelle
+              Résumé de votre impact
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -295,12 +280,12 @@ const UserImpactPage = () => {
           </CardContent>
         </Card>
 
-        {/* Badges */}
+        {/* Future Features */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Award className="h-5 w-5 text-primary" />
-              Badges & Récompenses
+              Prochaines fonctionnalités
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -350,10 +335,10 @@ const UserImpactPage = () => {
         </Card>
       </div>
 
-      {/* Environmental Equivalents */}
+      {/* Impact Summary */}
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-lg">Votre impact en perspective</CardTitle>
+          <CardTitle className="text-lg">Équivalents environnementaux</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -3,10 +3,13 @@ import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Leaf, Menu, X, User, Store, Shield } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { UserMenu } from "@/components/auth/UserMenu";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
 
   const navLinks = [
     { href: "/", label: "Accueil" },
@@ -44,15 +47,21 @@ const Navbar = () => {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
-          <Link to="/auth?role=merchant">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Store className="w-4 h-4" />
-              Commerçant
-            </Button>
-          </Link>
-          <Link to="/auth">
-            <Button size="sm">Connexion</Button>
-          </Link>
+          {isAuthenticated ? (
+            <UserMenu />
+          ) : (
+            <>
+              <Link to="/auth?role=merchant">
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <Store className="w-4 h-4" />
+                  Commerçant
+                </Button>
+              </Link>
+              <Link to="/auth">
+                <Button size="sm">Connexion</Button>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -87,15 +96,23 @@ const Navbar = () => {
                 </Link>
               ))}
               <hr className="border-border" />
-              <Link to="/auth?role=merchant" onClick={() => setIsOpen(false)}>
-                <Button variant="outline" className="w-full gap-2">
-                  <Store className="w-4 h-4" />
-                  Espace Commerçant
-                </Button>
-              </Link>
-              <Link to="/auth" onClick={() => setIsOpen(false)}>
-                <Button className="w-full">Connexion</Button>
-              </Link>
+              {isAuthenticated ? (
+                <div className="flex items-center gap-3 p-2">
+                  <UserMenu />
+                </div>
+              ) : (
+                <>
+                  <Link to="/auth?role=merchant" onClick={() => setIsOpen(false)}>
+                    <Button variant="outline" className="w-full gap-2">
+                      <Store className="w-4 h-4" />
+                      Espace Commerçant
+                    </Button>
+                  </Link>
+                  <Link to="/auth" onClick={() => setIsOpen(false)}>
+                    <Button className="w-full">Connexion</Button>
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
         )}

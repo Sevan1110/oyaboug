@@ -43,6 +43,9 @@ import {
   AdminSettingsPage,
 } from "./pages/admin";
 import { TermsOfService, PrivacyPolicy, HelpCenter } from "./pages/legal";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute, AdminRoute, MerchantRoute, UserRoute } from "@/components/auth/ProtectedRoute";
+import { AuthRedirectHandler } from "@/components/auth/AuthRedirectHandler";
 
 const queryClient = new QueryClient();
 
