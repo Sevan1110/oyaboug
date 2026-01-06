@@ -14,6 +14,7 @@ import {
   onAuthStateChange,
   signInWithOtp,
   verifyOtp,
+  updateUser,
 } from '@/api';
 import type { AuthCredentials, SignUpData, User, UserRole, ApiResponse } from '@/types';
 
@@ -24,8 +25,21 @@ export const login = async (
   email: string,
   password: string
 ): Promise<ApiResponse<{ user: User; session: unknown }>> => {
+  console.log('=== AUTH.SERVICE LOGIN ===');
+  console.log('Email:', email);
+  console.log('Password provided:', !!password);
+  
   const credentials: AuthCredentials = { email, password };
-  return signInWithEmail(credentials);
+  
+  try {
+    console.log('Appel de signInWithEmail()...');
+    const result = await signInWithEmail(credentials);
+    console.log('Résultat de signInWithEmail():', result);
+    return result;
+  } catch (error) {
+    console.error('Exception dans login():', error);
+    throw error;
+  }
 };
 
 /**
@@ -135,4 +149,13 @@ export const isAuthenticated = async (): Promise<boolean> => {
 export const getUserRole = async (): Promise<UserRole | null> => {
   const { data } = await getCurrentUser();
   return (data?.user?.user_metadata?.role as UserRole) || null;
+};
+
+/**
+ * Update user profile (metadata)
+ */
+export const updateProfile = async (
+  metadata: object
+): Promise<ApiResponse<{ user: User | null }>> => {
+  return import('@/api/auth.api').then(m => m.updateUser({ data: metadata }));
 };

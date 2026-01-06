@@ -24,9 +24,10 @@ export interface FoodItem {
 interface FoodCardProps {
   item: FoodItem;
   onReserve?: () => void;
+  reservedCount?: number;
 }
 
-const FoodCard = ({ item, onReserve }: FoodCardProps) => {
+const FoodCard = ({ item, onReserve, reservedCount = 0 }: FoodCardProps) => {
   const discount = Math.round((1 - item.discountedPrice / item.originalPrice) * 100);
 
   return (
@@ -47,6 +48,7 @@ const FoodCard = ({ item, onReserve }: FoodCardProps) => {
             {item.badges.includes("bio") && <Badge variant="bio">Bio</Badge>}
             {item.badges.includes("lastItems") && <Badge variant="lastItems">Dernières pièces</Badge>}
             {item.badges.includes("free") && <Badge variant="free">Gratuit</Badge>}
+            {reservedCount > 0 && <Badge className="bg-primary/90 text-primary-foreground">Déjà réservé x{reservedCount}</Badge>}
           </div>
           <div className="absolute top-3 right-3 bg-secondary text-secondary-foreground text-sm font-bold px-2 py-1 rounded-lg">
             -{discount}%
@@ -85,11 +87,13 @@ const FoodCard = ({ item, onReserve }: FoodCardProps) => {
           </div>
         </CardContent>
 
-        <CardFooter className="p-4 pt-0">
-          <Button onClick={onReserve} className="w-full" size="sm">
-            Réserver ({item.quantity} restant{item.quantity > 1 ? "s" : ""})
-          </Button>
-        </CardFooter>
+        {item.quantity > 0 && onReserve && (
+          <CardFooter className="p-4 pt-0">
+            <Button onClick={onReserve} className="w-full" size="sm">
+              Réserver ({item.quantity} restant{item.quantity > 1 ? "s" : ""})
+            </Button>
+          </CardFooter>
+        )}
       </Card>
     </motion.div>
   );

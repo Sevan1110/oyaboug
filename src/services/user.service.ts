@@ -5,6 +5,7 @@
 
 import {
   getUserProfile,
+  getUserProfileByUserId,
   updateUserProfile,
   getUserPreferences,
   updateUserPreferences,
@@ -19,7 +20,12 @@ import type { ApiResponse, UserProfile, UserPreferences, UserImpact } from '@/ty
  * Get user profile by ID
  */
 export const getProfile = async (userId: string): Promise<ApiResponse<UserProfile>> => {
-  return getUserProfile(userId);
+  // First try by profile id
+  const resp = await getUserProfile(userId);
+  if (resp?.success && resp.data) return resp;
+
+  // Fallback: try to fetch by auth user id
+  return getUserProfileByUserId(userId);
 };
 
 /**

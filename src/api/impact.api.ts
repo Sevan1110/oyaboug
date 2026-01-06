@@ -87,6 +87,66 @@ export const getGlobalImpact = async (): Promise<ApiResponse<ImpactStats>> => {
 };
 
 /**
+ * Get monthly impact for a user (last N months)
+ */
+export const getUserMonthlyImpact = async (
+  userId: string,
+  months: number = 4
+): Promise<ApiResponse<Array<{ month: string; meals: number; co2: number }>>> => {
+  if (!isSupabaseConfigured()) {
+    // Return mock last `months` months
+    const now = new Date();
+    const res: Array<{ month: string; meals: number; co2: number }> = [];
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthLabel = d.toLocaleString('fr-FR', { month: 'short' });
+      const meals = Math.floor(Math.random() * 10) + 1;
+      res.push({ month: monthLabel, meals, co2: Math.round(meals * AVG_MEAL_WEIGHT_KG * CO2_PER_KG_FOOD) });
+    }
+    return { data: res, error: null, success: true };
+  }
+
+  const client = requireSupabaseClient();
+
+  try {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1).toISOString();
+
+    const { data: orders, error } = await client
+      .from(DB_TABLES.ORDERS)
+      .select('quantity, created_at')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .gte('created_at', start);
+
+    if (error) throw error;
+
+    // group by year-month
+    const buckets: Record<string, { meals: number }> = {};
+    orders?.forEach((o: any) => {
+      const date = new Date(o.created_at);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!buckets[key]) buckets[key] = { meals: 0 };
+      buckets[key].meals += o.quantity || 0;
+    });
+
+    const result: Array<{ month: string; meals: number; co2: number }> = [];
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const meals = buckets[key]?.meals || 0;
+      const monthLabel = d.toLocaleString('fr-FR', { month: 'short' });
+      const co2 = Math.round(meals * AVG_MEAL_WEIGHT_KG * CO2_PER_KG_FOOD);
+      result.push({ month: monthLabel, meals, co2 });
+    }
+
+    return { data: result, error: null, success: true };
+  } catch (error: any) {
+    return { data: null, error: { code: 'FETCH_ERROR', message: error.message }, success: false };
+  }
+};
+
+/**
  * Get user impact statistics
  */
 export const getUserImpact = async (

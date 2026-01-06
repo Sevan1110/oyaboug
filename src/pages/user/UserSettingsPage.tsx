@@ -1,9 +1,9 @@
 // ============================================
 // User Settings Page - App Preferences
-// ouyaboung Platform - Anti-gaspillage alimentaire
+// oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UserLayout } from "@/components/user";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,47 +12,249 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Settings, 
-  Globe, 
-  Moon, 
+import {
+  Settings,
+  Globe,
+  Moon,
   Bell,
   MapPin,
   Lock,
   Trash2,
   Download,
-  Shield
+  Shield,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { changePassword, updateProfile, getAuthUser, logout } from "@/services/auth.service";
+import { getUserNotifications } from "@/services/notification.service";
+import { useNotifications } from "@/hooks/useNotifications";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useNavigate } from "react-router-dom";
 
 const UserSettingsPage = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const {
+    preferences: notifPreferences,
+    updatePreferences: updateNotifPreferences
+  } = useNotifications();
+
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDownloads, setIsDownloading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [settings, setSettings] = useState({
     // Display
     language: "fr",
     darkMode: false,
-    
+
     // Location
     locationEnabled: true,
     defaultRadius: "5",
-    
-    // Notifications
-    pushNotifications: true,
-    emailNotifications: true,
-    smsNotifications: false,
-    
+
     // Privacy
     profilePublic: false,
     shareStats: true,
   });
 
-  const handleSave = () => {
-    toast({
-      title: "Paramètres enregistrés",
-      description: "Vos préférences ont été mises à jour.",
-    });
+  // Load settings from user_metadata
+  useEffect(() => {
+    const loadSettings = async () => {
+      setIsLoading(true);
+      try {
+        const { data } = await getAuthUser();
+        const metadata = data?.user?.user_metadata || {};
+
+        setSettings({
+          language: metadata.language || "fr",
+          darkMode: metadata.darkMode || false,
+          locationEnabled: metadata.locationEnabled !== undefined ? metadata.locationEnabled : true,
+          defaultRadius: metadata.defaultRadius || "5",
+          profilePublic: metadata.profilePublic || false,
+          shareStats: metadata.shareStats !== undefined ? metadata.shareStats : true,
+        });
+      } catch (err) {
+        console.error("Failed to load settings:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      // 1. Save generic settings to user_metadata
+      const profileRes = await updateProfile(settings);
+
+      if (!profileRes.success) {
+        throw new Error("Erreur lors de la sauvegarde du profil");
+      }
+
+      // 2. We don't need to manually save notification preferences here because the hook
+      // handles them dynamically (if we were binding them directly to hook state),
+      // BUT if we want a "global save" feel, we can just acknowledge success.
+      // However, the Switches for notifications below should call updateNotifPreferences directly.
+
+      toast({
+        title: "Paramètres enregistrés",
+        description: "Vos préférences ont été mises à jour avec succès.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Erreur",
+        description: err.message || "Impossible d'enregistrer les paramètres",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  const handleChangePassword = async () => {
+    if (!passwordData.newPassword || !passwordData.confirmPassword) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: "Erreur",
+        description: "Les mots de passe ne correspondent pas",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast({
+        title: "Erreur",
+        description: "Le mot de passe doit contenir au moins 6 caractères",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    const result = await changePassword(passwordData.newPassword);
+    setIsChangingPassword(false);
+
+    if (result.success) {
+      toast({
+        title: "Mot de passe modifié",
+        description: "Votre mot de passe a été mis à jour avec succès.",
+      });
+      setIsPasswordDialogOpen(false);
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } else {
+      toast({
+        title: "Erreur",
+        description: result.error?.message || "Impossible de modifier le mot de passe",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadData = async () => {
+    setIsDownloading(true);
+    try {
+      const { data: userData } = await getAuthUser();
+      const userId = userData?.user?.id;
+
+      if (!userId) throw new Error("Utilisateur non trouvé");
+
+      const notificationsRes = await getUserNotifications(userId);
+
+      const exportData = {
+        user: userData?.user,
+        settings: settings,
+        notifications: notificationsRes.data || [],
+        exportedAt: new Date().toISOString(),
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `oyaboug - data - ${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Téléchargement terminé",
+        description: "Vos données ont été téléchargées avec succès.",
+      });
+    } catch (err) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger les données",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      // Soft disable account via metadata logic
+      await updateProfile({ account_status: 'deleted', deleted_at: new Date() });
+      await logout();
+      navigate('/auth/login');
+      toast({
+        title: "Compte supprimé",
+        description: "Votre compte a été supprimé avec succès. Au revoir !",
+      });
+    } catch (err) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le compte",
+        variant: "destructive",
+      });
+      setIsDeleting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <UserLayout title="Paramètres" subtitle="Chargement...">
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </UserLayout>
+    );
+  }
 
   return (
     <UserLayout title="Paramètres" subtitle="Personnalisez votre expérience">
@@ -129,7 +331,7 @@ const UserSettingsPage = () => {
               <div>
                 <Label>Activer la géolocalisation</Label>
                 <p className="text-xs text-muted-foreground">
-                  Pour trouver les offres près de vous
+                  Pour trouver les offres près de vous (activé par défaut)
                 </p>
               </div>
               <Switch
@@ -178,48 +380,55 @@ const UserSettingsPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Notifications push</Label>
-                <p className="text-xs text-muted-foreground">
-                  Alertes sur votre appareil
-                </p>
-              </div>
-              <Switch
-                checked={settings.pushNotifications}
-                onCheckedChange={(checked) => setSettings({ ...settings, pushNotifications: checked })}
-              />
-            </div>
+            {notifPreferences ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Notifications push</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Alertes sur votre appareil
+                    </p>
+                  </div>
+                  <Switch
+                    checked={notifPreferences.push_enabled}
+                    onCheckedChange={(checked) => updateNotifPreferences({ push_enabled: checked })}
+                  />
+                </div>
 
-            <Separator />
+                <Separator />
 
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Notifications par email</Label>
-                <p className="text-xs text-muted-foreground">
-                  Résumés et confirmations par email
-                </p>
-              </div>
-              <Switch
-                checked={settings.emailNotifications}
-                onCheckedChange={(checked) => setSettings({ ...settings, emailNotifications: checked })}
-              />
-            </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Notifications par email</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Résumés et confirmations par email
+                    </p>
+                  </div>
+                  <Switch
+                    checked={notifPreferences.email_enabled}
+                    onCheckedChange={(checked) => updateNotifPreferences({ email_enabled: checked })}
+                  />
+                </div>
 
-            <Separator />
+                <Separator />
 
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Notifications SMS</Label>
-                <p className="text-xs text-muted-foreground">
-                  Rappels par SMS (peut entraîner des frais)
-                </p>
-              </div>
-              <Switch
-                checked={settings.smsNotifications}
-                onCheckedChange={(checked) => setSettings({ ...settings, smsNotifications: checked })}
-              />
-            </div>
+                {/* SMS typically requires additional costs/setup, flagging as disabled if not active */}
+                <div className="flex items-center justify-between opacity-50 cursor-not-allowed" title="Option non disponible">
+                  <div>
+                    <Label>Notifications SMS</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Rappels par SMS (Bientôt disponible)
+                    </p>
+                  </div>
+                  <Switch
+                    checked={false}
+                    disabled={true}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-muted-foreground">Chargement des préférences de notification...</div>
+            )}
           </CardContent>
         </Card>
 
@@ -277,25 +486,111 @@ const UserSettingsPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button variant="outline" className="w-full justify-start">
-              <Lock className="h-4 w-4 mr-2" />
-              Changer le mot de passe
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <Download className="h-4 w-4 mr-2" />
+            <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full justify-start">
+                  <Lock className="h-4 w-4 mr-2" />
+                  Changer le mot de passe
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Changer le mot de passe</DialogTitle>
+                  <DialogDescription>
+                    Entrez votre nouveau mot de passe. Il doit contenir au moins 6 caractères.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">Nouveau mot de passe</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={passwordData.newPassword}
+                      onChange={(e) =>
+                        setPasswordData({ ...passwordData, newPassword: e.target.value })
+                      }
+                      disabled={isChangingPassword}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirmer le mot de passe</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) =>
+                        setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+                      }
+                      disabled={isChangingPassword}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleChangePassword}
+                    className="w-full"
+                    disabled={isChangingPassword}
+                  >
+                    {isChangingPassword ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Modification...
+                      </>
+                    ) : (
+                      "Modifier le mot de passe"
+                    )}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={handleDownloadData}
+              disabled={isDownloads}
+            >
+              {isDownloads ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
               Télécharger mes données
             </Button>
-            <Button variant="destructive" className="w-full justify-start">
-              <Trash2 className="h-4 w-4 mr-2" />
-              Supprimer mon compte
-            </Button>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full justify-start">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Supprimer mon compte
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action est irréversible. Cela marquera votre compte comme supprimé et vous déconnectera.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Supprimer"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardContent>
         </Card>
 
         {/* Save Button */}
-        <div className="flex justify-end">
-          <Button onClick={handleSave}>
-            Enregistrer les modifications
+        <div className="flex justify-end p-4 bg-muted/20 rounded-lg">
+          <Button onClick={handleSave} disabled={isSaving} size="lg">
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Enregistrement...
+              </>
+            ) : (
+              "Enregistrer les modifications"
+            )}
           </Button>
         </div>
       </div>

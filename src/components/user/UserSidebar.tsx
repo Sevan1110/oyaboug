@@ -1,9 +1,9 @@
 // ============================================
 // User Sidebar - Navigation Component
-// ouyaboung Platform - Anti-gaspillage alimentaire
+// ouyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +18,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -30,6 +33,9 @@ import {
   User,
   Search,
 } from "lucide-react";
+import { logout } from "@/services";
+import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const mainMenuItems = [
   {
@@ -70,6 +76,7 @@ const settingsMenuItems = [
     title: "Notifications",
     url: "/user/notifications",
     icon: Bell,
+    isNotification: true, // Marker for dynamic badge
   },
   {
     title: "Paramètres",
@@ -89,8 +96,13 @@ interface UserSidebarProps {
 
 const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const { state } = useSidebar();
+  const { unreadCount } = useNotifications();
   const isCollapsed = state === "collapsed";
+  const { toast } = useToast();
+  const { signOut, user } = useAuth();
 
   const isActive = (path: string) => {
     if (path === "/user") {
@@ -99,24 +111,54 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
     return location.pathname.startsWith(path);
   };
 
+  const handleLogout = async () => {
+    const result = await logout();
+    if (result.success) {
+      toast({
+        title: "Déconnexion réussie",
+        description: "À bientôt sur ouyaboung !",
+      });
+      navigate("/auth");
+    } else {
+      toast({
+        title: "Erreur de déconnexion",
+        description: result.error?.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
       <SidebarHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <User className="w-5 h-5 text-primary" />
-          </div>
-          {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-foreground truncate">
-                {userName}
-              </h2>
-              <p className="text-xs text-muted-foreground truncate">
-                Client ouyaboung
-              </p>
+        <SidebarMenuButton 
+          asChild 
+          className="w-full justify-start p-2 h-auto hover:bg-accent/50"
+        >
+          <Link to="/user/profile">
+            <div className="flex items-center gap-3">
+              <Avatar className="w-10 h-10">
+                <AvatarImage 
+                  src={getProfileImageUrl()} 
+                  alt={getDisplayName()}
+                />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
+              {!isCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-semibold text-foreground truncate">
+                    {getDisplayName()}
+                  </h2>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Client ouyaboung
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </Link>
+        </SidebarMenuButton>
       </SidebarHeader>
 
       <SidebarContent>
@@ -161,16 +203,26 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
           <SidebarGroupLabel>Paramètres</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {settingsMenuItems.map((item) => (
+              {settingsMenuItems.map((item: any) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.url)}
                     tooltip={item.title}
                   >
-                    <Link to={item.url}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
+                    <Link to={item.url} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </div>
+                      {item.isNotification && unreadCount > 0 && !isCollapsed && (
+                        <Badge
+                          variant="destructive"
+                          className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-[10px]"
+                        >
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </Badge>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -182,14 +234,13 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
 
       <SidebarFooter className="p-4">
         <SidebarMenuButton
-          asChild
+          onClick={handleLogout}
           tooltip="Déconnexion"
           className="text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={handleLogout}
         >
-          <Link to="/auth">
-            <LogOut className="w-4 h-4" />
-            <span>Déconnexion</span>
-          </Link>
+          <LogOut className="w-4 h-4" />
+          <span>Déconnexion</span>
         </SidebarMenuButton>
       </SidebarFooter>
     </Sidebar>

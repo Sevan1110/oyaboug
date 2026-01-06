@@ -13,7 +13,11 @@ import type { AuthCredentials, SignUpData, ApiResponse, User, UserRole } from '@
 export const signInWithEmail = async (
   credentials: AuthCredentials
 ): Promise<ApiResponse<{ user: User; session: unknown }>> => {
+  console.log('=== AUTH.API SIGNINWITHEMAIL ===');
+  console.log('Credentials:', { email: credentials.email, password: '***' });
+  
   if (!isSupabaseConfigured()) {
+    console.error('Supabase non configuré');
     return {
       data: null,
       error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
@@ -21,28 +25,50 @@ export const signInWithEmail = async (
     };
   }
 
-  const client = requireSupabaseClient();
-  const { data, error } = await client.auth.signInWithPassword({
-    email: credentials.email,
-    password: credentials.password,
-  });
+  try {
+    const client = requireSupabaseClient();
+    console.log('Client Supabase obtenu, tentative de connexion...');
+    
+    // Réduire le timeout à 5 secondes pour le navigateur
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Timeout de connexion - Vérifiez votre réseau ou les paramètres CORS')), 5000);
+    });
+    
+    const signInPromise = client.auth.signInWithPassword({
+      email: credentials.email,
+      password: credentials.password,
+    });
+    
+    console.log('Appel de signInWithPassword() en cours...');
+    const { data, error } = await Promise.race([signInPromise, timeoutPromise]) as any;
+    console.log('Réponse Supabase reçue:', { data: !!data, error: error?.message });
 
-  if (error) {
+    if (error) {
+      console.error('Erreur Supabase:', error);
+      return {
+        data: null,
+        error: { code: error.name, message: error.message },
+        success: false,
+      };
+    }
+
+    console.log('Connexion réussie, utilisateur:', data.user?.email);
+    return {
+      data: {
+        user: data.user as unknown as User,
+        session: data.session,
+      },
+      error: null,
+      success: true,
+    };
+  } catch (error) {
+    console.error('Exception dans signInWithEmail:', error);
     return {
       data: null,
-      error: { code: error.name, message: error.message },
+      error: { code: 'EXCEPTION', message: error.message },
       success: false,
     };
   }
-
-  return {
-    data: {
-      user: data.user as unknown as User,
-      session: data.session,
-    },
-    error: null,
-    success: true,
-  };
 };
 
 /**
@@ -60,38 +86,50 @@ export const signUpWithEmail = async (
   }
 
   const client = requireSupabaseClient();
-  const redirectUrl = `${window.location.origin}/`;
+  const redirectUrl = `${import.meta.env.DEV ? 'http://127.0.0.1:3000' : window.location.origin}/auth`;
 
-  const { data, error } = await client.auth.signUp({
-    email: signUpData.email,
-    password: signUpData.password,
-    options: {
-      emailRedirectTo: redirectUrl,
-      data: {
-        full_name: signUpData.full_name,
-        phone: signUpData.phone,
-        role: signUpData.role,
-        business_name: signUpData.business_name,
+  try {
+    const { data, error } = await client.auth.signUp({
+      email: signUpData.email,
+      password: signUpData.password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          full_name: signUpData.full_name,
+          phone: signUpData.phone,
+          role: signUpData.role,
+          business_name: signUpData.business_name,
+        },
       },
-    },
-  });
+    });
 
-  if (error) {
+    if (error) {
+      return {
+        data: null,
+        error: { code: error.name, message: error.message },
+        success: false,
+      };
+    }
+
+    // Si l'email nécessite une confirmation, data.session sera null
+    // mais data.user existe quand même
+    return {
+      data: {
+        user: data.user as unknown as User,
+        session: data.session,
+      },
+      error: null,
+      success: true,
+    };
+  } catch (err) {
+    // Gestion des erreurs réseau ou autres erreurs inattendues
+    const errorMessage = err instanceof Error ? err.message : 'Une erreur réseau est survenue';
     return {
       data: null,
-      error: { code: error.name, message: error.message },
+      error: { code: 'NETWORK_ERROR', message: errorMessage },
       success: false,
     };
   }
-
-  return {
-    data: {
-      user: data.user as unknown as User,
-      session: data.session,
-    },
-    error: null,
-    success: true,
-  };
 };
 
 /**
@@ -211,7 +249,7 @@ export const onAuthStateChange = (
   callback: (event: string, session: unknown) => void
 ) => {
   if (!isSupabaseConfigured()) {
-    return { data: { subscription: { unsubscribe: () => {} } } };
+    return { data: { subscription: { unsubscribe: () => { } } } };
   }
 
   const client = requireSupabaseClient();
@@ -234,7 +272,7 @@ export const signInWithOtp = async (
   }
 
   const client = requireSupabaseClient();
-  const options = type === 'email' 
+  const options = type === 'email'
     ? { email: identifier }
     : { phone: identifier };
 
@@ -287,6 +325,42 @@ export const verifyOtp = async (
       user: data.user as unknown as User,
       session: data.session,
     },
+    error: null,
+    success: true,
+  };
+};
+
+/**
+ * Update user attributes (metadata, email, password, etc.)
+ */
+export const updateUser = async (
+  attributes: {
+    email?: string;
+    password?: string;
+    data?: object; // user_metadata
+  }
+): Promise<ApiResponse<{ user: User | null }>> => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: null,
+      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
+      success: false,
+    };
+  }
+
+  const client = requireSupabaseClient();
+  const { data, error } = await client.auth.updateUser(attributes);
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.name, message: error.message },
+      success: false,
+    };
+  }
+
+  return {
+    data: { user: data.user as unknown as User },
     error: null,
     success: true,
   };

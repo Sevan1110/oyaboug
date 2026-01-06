@@ -10,6 +10,7 @@ export {
   logout,
   getAuthSession,
   getAuthUser,
+  getCurrentUser,
   requestPasswordReset,
   changePassword,
   subscribeToAuthChanges,
@@ -31,6 +32,8 @@ export {
   toggleFavorite,
   getImpactStats,
   formatImpactForDisplay,
+  // profile by auth user id fallback
+  // exported via getProfile which now handles both id and user_id
 } from './user.service';
 
 // Merchant Service
@@ -78,7 +81,7 @@ export {
   markReady as markOrderReady,
   complete as completeOrder,
   addReview,
-  getActive as getActiveOrders,
+  getActiveOrders,
   getStatusText,
   getStatusColor,
   canCancel,
@@ -94,6 +97,7 @@ export {
   getMerchantStats as getMerchantImpactStats,
   calculateCO2,
   getLeaderboard,
+  getUserMonthlyImpact,
   generateReport,
   formatGlobalImpact,
   calculateEquivalents,

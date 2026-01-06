@@ -1,9 +1,4 @@
-// ============================================
-// User Profile Page - Account Information
-// oyaboug Platform - Anti-gaspillage alimentaire
-// ============================================
-
-import { useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { UserLayout } from "@/components/user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,58 +7,287 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { 
-  User, 
-  Mail, 
-  Phone, 
+import {
+  User,
+  Mail,
+  Phone,
   MapPin,
   Calendar,
   Camera,
   Edit,
   Save,
-  Award
+  Award,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-// Mock user data
-const userData = {
-  id: "user-123",
-  firstName: "Jean",
-  lastName: "Dupont",
-  email: "jean.dupont@email.com",
-  phone: "+241 77 12 34 56",
-  address: "123 Rue de l'Exemple, Libreville",
-  bio: "Passionné par l'écologie et la lutte contre le gaspillage alimentaire.",
-  avatar: "",
-  createdAt: "2024-01-01",
-  stats: {
-    mealsRescued: 24,
-    moneySaved: 90000,
-    co2Saved: 48,
-    badgesEarned: 3,
-  },
-};
+import { getAuthUser, updateProfile as updateAuthProfile } from "@/services/auth.service";
+import { updateProfile as updateUserProfile, getProfile as getDbProfile } from "@/services/user.service";
+import { supabaseClient } from "@/api/supabaseClient";
+import { compressImage, isImageFile, getBase64Size } from "@/utils/imageCompression";
 
 const UserProfilePage = () => {
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
   const [formData, setFormData] = useState({
-    firstName: userData.firstName,
-    lastName: userData.lastName,
-    email: userData.email,
-    phone: userData.phone,
-    address: userData.address,
-    bio: userData.bio,
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    bio: "",
+    createdAt: "",
+    avatar: "",
   });
 
-  const handleSave = () => {
-    // TODO: Save to backend
-    setIsEditing(false);
-    toast({
-      title: "Profil mis à jour",
-      description: "Vos informations ont été enregistrées avec succès.",
-    });
+  const loadProfile = async () => {
+    setLoading(true);
+    try {
+      const { data: auth } = await getAuthUser();
+      const authUser = auth?.user;
+
+      if (!authUser) {
+        setLoading(false);
+        return;
+      }
+
+      const metadata = authUser.user_metadata || {};
+      const userId = authUser.id;
+      let profileFirstName = "";
+      let profileLastName = "";
+      let profilePhone = "";
+      let profileAddress = "";
+      let profileAvatar = "";
+      let profileCreatedAt = authUser.created_at || "";
+      const dbResp = await getDbProfile(userId);
+      if (dbResp.success && dbResp.data) {
+        const fullName = dbResp.data.full_name || metadata.full_name || "";
+        const parts = fullName.split(" ");
+        profileFirstName = parts[0] || "";
+        profileLastName = parts.slice(1).join(" ") || "";
+        profilePhone = dbResp.data.phone || metadata.phone || "";
+        profileAddress = dbResp.data.address || metadata.address || "";
+        profileAvatar = dbResp.data.avatar_url || metadata.avatar_url || "";
+      } else {
+        const nameParts = (metadata.full_name || "").split(" ");
+        profileFirstName = nameParts[0] || "";
+        profileLastName = nameParts.slice(1).join(" ") || "";
+        profilePhone = metadata.phone || "";
+        profileAddress = metadata.address || "";
+        profileAvatar = metadata.avatar_url || "";
+      }
+
+      setFormData({
+        firstName: profileFirstName,
+        lastName: profileLastName,
+        email: authUser.email || "",
+        phone: profilePhone,
+        address: profileAddress,
+        bio: metadata.bio || "",
+        createdAt: profileCreatedAt,
+        avatar: profileAvatar,
+      });
+
+    } catch (e) {
+      console.error("Failed to load profile", e);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { data: auth } = await getAuthUser();
+      if (!auth?.user?.id) throw new Error("User not found");
+      const userId = auth.user.id;
+
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+
+      const resp = await updateUserProfile(userId, {
+        fullName: fullName,
+        phone: formData.phone,
+        address: formData.address,
+        // Bio is stored in metadata in this implementation if not in profile
+      });
+
+      if (resp?.success) {
+        const metaUpdate = {
+          full_name: fullName,
+          phone: formData.phone,
+          address: formData.address,
+          bio: formData.bio,
+        };
+        await updateAuthProfile(metaUpdate);
+        setIsEditing(false);
+        toast({
+          title: "Profil mis à jour",
+          description: "Vos informations ont été enregistrées avec succès."
+        });
+      } else {
+        throw new Error(resp.error?.message || "Échec de la mise à jour");
+      }
+    } catch (e: any) {
+      toast({
+        title: "Erreur",
+        description: e.message || "Échec de la mise à jour",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) {
+      return;
+    }
+
+    const file = event.target.files[0];
+    let base64Data: string | null = null;
+    if (!isImageFile(file)) {
+      toast({
+        title: "Fichier invalide",
+        description: "Le fichier doit être une image.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const { data: auth } = await getAuthUser();
+      const userId = auth?.user?.id;
+      if (!userId || !supabaseClient) throw new Error("Erreur d'authentification");
+
+      let uploadBlob: Blob = file;
+      let uploadExt = file.name.split('.').pop();
+      let uploadMime = file.type || 'image/jpeg';
+
+      if (file.size > 2 * 1024 * 1024) {
+        const base64 = await compressImage(file, { maxWidth: 1024, maxHeight: 1024, quality: 0.8, mimeType: 'image/jpeg' });
+        base64Data = base64;
+        const sizeBytes = getBase64Size(base64);
+        if (sizeBytes > 2 * 1024 * 1024) {
+          throw new Error("Impossible de compresser l'image sous 2 Mo.");
+        }
+        const arr = base64.split(',');
+        const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+        const bstr = atob(arr[1]);
+        const u8arr = new Uint8Array(bstr.length);
+        for (let i = 0; i < bstr.length; i++) u8arr[i] = bstr.charCodeAt(i);
+        uploadBlob = new Blob([u8arr], { type: mime });
+        uploadMime = mime;
+        uploadExt = 'jpg';
+      }
+
+      const fileName = `${userId}-${Math.random().toString(36).slice(2)}.${uploadExt}`;
+      const filePath = `${fileName}`;
+
+      // Upload to 'avatars' bucket
+      let publicUrl: string | null = null;
+      {
+        const { error: uploadError } = await supabaseClient.storage
+          .from('avatars')
+          .upload(filePath, uploadBlob, { contentType: uploadMime, upsert: true });
+        if (uploadError && /Bucket not found/i.test(uploadError.message || '')) {
+          const altPath = `avatars/${filePath}`;
+          const { error: altErr } = await supabaseClient.storage
+            .from('public')
+            .upload(altPath, uploadBlob, { contentType: uploadMime, upsert: true });
+          if (altErr) throw altErr;
+          const { data: altUrl } = supabaseClient.storage.from('public').getPublicUrl(altPath);
+          publicUrl = altUrl.publicUrl;
+        } else if (uploadError) {
+          throw uploadError;
+        } else {
+          const { data: urlData } = supabaseClient.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+          publicUrl = urlData.publicUrl;
+        }
+      }
+
+      if (!publicUrl) throw new Error("Impossible d'obtenir l'URL publique de l'image.");
+
+      // Update user metadata with new avatar URL
+      const updateRes = await updateAuthProfile({ avatar_url: publicUrl });
+
+      if (updateRes.success) {
+        await updateUserProfile(userId, { avatarUrl: publicUrl });
+        setFormData(prev => ({ ...prev, avatar: publicUrl }));
+        toast({
+          title: "Photo mise à jour",
+          description: "Votre photo de profil a été modifiée.",
+        });
+      } else {
+        throw new Error("Impossible de mettre à jour le profil avec la nouvelle photo.");
+      }
+
+    } catch (error: any) {
+      let base64Final = base64Data;
+      if (!base64Final) {
+        base64Final = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error("Lecture du fichier échouée"));
+          reader.readAsDataURL(file);
+        });
+      }
+      try {
+        const { data: auth } = await getAuthUser();
+        const userId = auth?.user?.id;
+        if (!userId) throw new Error("Utilisateur non authentifié");
+        const updateRes = await updateAuthProfile({ avatar_url: base64Final });
+        if (updateRes.success) {
+          await updateUserProfile(userId, { avatarUrl: base64Final });
+          setFormData(prev => ({ ...prev, avatar: base64Final }));
+          toast({
+            title: "Photo mise à jour",
+            description: "Votre photo de profil a été modifiée (stockage local).",
+          });
+        } else {
+          throw new Error("Échec de mise à jour de l'avatar.");
+        }
+      } catch (e: any) {
+        console.error("Upload error:", error);
+        toast({
+          title: "Erreur d'upload",
+          description: "Impossible de télécharger l'image. Vérifiez votre connexion ou réessayez.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setUploading(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  if (loading) {
+    return (
+      <UserLayout title="Mon profil" subtitle="Gérez vos informations personnelles">
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </UserLayout>
+    );
+  }
 
   return (
     <UserLayout title="Mon profil" subtitle="Gérez vos informations personnelles">
@@ -72,49 +296,69 @@ const UserProfilePage = () => {
         <Card className="lg:col-span-1">
           <CardContent className="p-6">
             <div className="text-center">
-              {/* Avatar */}
               <div className="relative inline-block mb-4">
                 <Avatar className="h-24 w-24 border-4 border-primary/20">
-                  <AvatarImage src={userData.avatar} alt={userData.firstName} />
+                  <AvatarImage src={formData.avatar} alt={formData.firstName} className="object-cover" />
                   <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                    {userData.firstName.charAt(0)}{userData.lastName.charAt(0)}
+                    {formData.firstName?.charAt(0)}{formData.lastName?.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <Button
                   variant="secondary"
                   size="icon"
-                  className="absolute bottom-0 right-0 h-8 w-8 rounded-full"
+                  className="absolute bottom-0 right-0 h-8 w-8 rounded-full shadow-md"
+                  onClick={triggerFileInput}
+                  disabled={uploading}
                 >
-                  <Camera className="h-4 w-4" />
+                  {uploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
                 </Button>
+                {/* Hidden File Input */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
               </div>
 
+              {/* Informations de la photo */}
+              {(profileImage || userData.avatar) && (
+                <div className="mb-4">
+                  <p className="text-xs text-muted-foreground">
+                    Photo de profil
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Taille maximale: 2Mo
+                  </p>
+                </div>
+              )}
+
               <h2 className="text-xl font-bold text-foreground">
-                {userData.firstName} {userData.lastName}
+                {formData.firstName} {formData.lastName}
               </h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Membre depuis {new Date(userData.createdAt).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
+                Membre depuis {formData.createdAt ? new Date(formData.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : ''}
               </p>
 
               <div className="flex justify-center gap-2 mb-6">
                 <Badge variant="secondary" className="gap-1">
                   <Award className="h-3 w-3" />
-                  {userData.stats.badgesEarned} badges
+                  0 badges
                 </Badge>
               </div>
 
-              {/* Quick Stats */}
               <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">
-                    {userData.stats.mealsRescued}
-                  </p>
+                  <p className="text-2xl font-bold text-primary">0</p>
                   <p className="text-xs text-muted-foreground">Repas sauvés</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-500">
-                    {userData.stats.co2Saved} kg
-                  </p>
+                  <p className="text-2xl font-bold text-green-500">0 kg</p>
                   <p className="text-xs text-muted-foreground">CO₂ évités</p>
                 </div>
               </div>
@@ -136,9 +380,9 @@ const UserProfilePage = () => {
                 <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
                   Annuler
                 </Button>
-                <Button size="sm" onClick={handleSave}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Enregistrer
+                <Button size="sm" onClick={handleSave} disabled={saving}>
+                  {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                  {saving ? 'Enregistrement...' : 'Enregistrer'}
                 </Button>
               </div>
             )}
@@ -183,9 +427,9 @@ const UserProfilePage = () => {
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  disabled={!isEditing}
-                  className="pl-10"
+                  disabled={true} // Email change usually requires separate flow
+                  className="pl-10 bg-muted/50"
+                  title="L'email ne peut pas être modifié ici"
                 />
               </div>
             </div>
@@ -238,7 +482,7 @@ const UserProfilePage = () => {
             <div className="flex items-center gap-2 text-sm text-muted-foreground pt-4 border-t">
               <Calendar className="h-4 w-4" />
               <span>
-                Membre depuis le {new Date(userData.createdAt).toLocaleDateString("fr-FR")}
+                Membre depuis le {formData.createdAt ? new Date(formData.createdAt).toLocaleDateString("fr-FR") : ''}
               </span>
             </div>
           </CardContent>

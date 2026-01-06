@@ -4,7 +4,8 @@
 // ============================================
 
 import { supabaseClient, requireSupabaseClient, isSupabaseConfigured } from './supabaseClient';
-import { DB_TABLES } from './routes';
+import { DB_TABLES, API_ROUTES } from './routes';
+
 import type { ApiResponse, UserProfile, UserPreferences, UserImpact } from '@/types';
 
 /**
@@ -13,13 +14,7 @@ import type { ApiResponse, UserProfile, UserPreferences, UserImpact } from '@/ty
 export const getUserProfile = async (
   userId: string
 ): Promise<ApiResponse<UserProfile>> => {
-  if (!isSupabaseConfigured()) {
-    return {
-      data: null,
-      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
-      success: false,
-    };
-  }
+
 
   const client = requireSupabaseClient();
   const { data, error } = await client
@@ -50,29 +45,29 @@ export const updateUserProfile = async (
   userId: string,
   updates: Partial<UserProfile>
 ): Promise<ApiResponse<UserProfile>> => {
-  if (!isSupabaseConfigured()) {
-    return {
-      data: null,
-      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
-      success: false,
-    };
-  }
 
   const client = requireSupabaseClient();
-  const { data, error } = await client
-    .from(DB_TABLES.PROFILES)
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', userId)
-    .select()
-    .single();
+  const { data: authUser } = await client.auth.getUser();
+  const email = authUser?.user?.email || updates.email || '';
+  const role = (updates.role as UserProfile['role']) || 'user';
+  const payload = {
+    user_id: userId,
+    email,
+    role,
+    ...updates,
+    updated_at: new Date().toISOString(),
+  } as Partial<UserProfile> & { user_id: string; email: string; role: UserProfile['role'] };
 
-  if (error) {
+  const { data, error: upsertErr } = await client
+    .from(DB_TABLES.PROFILES)
+    .upsert(payload, { onConflict: 'user_id' })
+    .select('*')
+    .maybeSingle();
+
+  if (upsertErr) {
     return {
       data: null,
-      error: { code: error.code, message: error.message },
+      error: { code: upsertErr.code, message: upsertErr.message },
       success: false,
     };
   }
@@ -102,7 +97,7 @@ export const getUserPreferences = async (
   const { data, error } = await client
     .from(DB_TABLES.PROFILES)
     .select('preferences')
-    .eq('id', userId)
+    .eq('user_id', userId)
     .maybeSingle();
 
   if (error) {
@@ -140,33 +135,38 @@ export const updateUserPreferences = async (
   // First get current preferences
   const { data: current } = await client
     .from(DB_TABLES.PROFILES)
-    .select('preferences')
-    .eq('id', userId)
+    .select('id, preferences')
+    .eq('user_id', userId)
     .maybeSingle();
+
+  if (!current?.id) {
+    return {
+      data: null,
+      error: { code: 'NOT_FOUND', message: 'Profile not found' },
+      success: false,
+    };
+  }
 
   const updatedPreferences = {
     ...current?.preferences,
     ...preferences,
   };
 
-  const { data, error } = await client
+  const { error } = await client
     .from(DB_TABLES.PROFILES)
-    .update({ preferences: updatedPreferences })
-    .eq('id', userId)
-    .select('preferences')
-    .single();
+    .update({ preferences: updatedPreferences, updated_at: new Date().toISOString() })
+    .eq('id', current.id)
+    .throwOnError();
 
-  if (error) {
-    return {
-      data: null,
-      error: { code: error.code, message: error.message },
-      success: false,
-    };
-  }
+  const { data, error: selectErr } = await client
+    .from(DB_TABLES.PROFILES)
+    .select('preferences')
+    .eq('id', current.id)
+    .maybeSingle();
 
   return {
-    data: data.preferences as UserPreferences,
-    error: null,
+    data: (data?.preferences ?? updatedPreferences) as UserPreferences,
+    error: selectErr ? { code: selectErr.code, message: selectErr.message } : null,
     success: true,
   };
 };
@@ -310,6 +310,42 @@ export const getUserImpact = async (
 
   return {
     data: impact,
+    error: null,
+    success: true,
+  };
+};
+
+/**
+ * Get user profile by auth user id (user_id column)
+ */
+export const getUserProfileByUserId = async (
+  userId: string
+): Promise<ApiResponse<UserProfile>> => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: null,
+      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
+      success: false,
+    };
+  }
+
+  const client = requireSupabaseClient();
+  const { data, error } = await client
+    .from(DB_TABLES.PROFILES)
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.code, message: error.message },
+      success: false,
+    };
+  }
+
+  return {
+    data: data as UserProfile,
     error: null,
     success: true,
   };

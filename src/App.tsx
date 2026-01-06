@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Search from "./pages/Search";
 import Concept from "./pages/Concept";
 import NotFound from "./pages/NotFound";
@@ -41,12 +43,15 @@ import {
   AdminSettingsPage,
 } from "./pages/admin";
 import { TermsOfService, PrivacyPolicy, HelpCenter } from "./pages/legal";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute, AdminRoute, MerchantRoute, UserRoute } from "@/components/auth/ProtectedRoute";
+import { AuthRedirectHandler } from "@/components/auth/AuthRedirectHandler";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -54,6 +59,8 @@ const App = () => (
           {/* Public Routes */}
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/auth/reset" element={<ResetPassword />} />
           <Route path="/search" element={<Search />} />
           <Route path="/concept" element={<Concept />} />
           

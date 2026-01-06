@@ -3,7 +3,7 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -32,6 +32,8 @@ import {
   LogOut,
   HelpCircle,
 } from "lucide-react";
+import { logout } from "@/services";
+import { useToast } from "@/hooks/use-toast";
 
 const mainMenuItems = [
   {
@@ -96,6 +98,8 @@ const MerchantSidebar = ({
   merchantType = "Restaurant",
 }: MerchantSidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
@@ -104,6 +108,23 @@ const MerchantSidebar = ({
       return location.pathname === "/merchant";
     }
     return location.pathname.startsWith(path);
+  };
+
+  const handleLogout = async () => {
+    const result = await logout();
+    if (result.success) {
+      toast({
+        title: "Déconnexion réussie",
+        description: "À bientôt sur ouyaboung !",
+      });
+      navigate("/auth");
+    } else {
+      toast({
+        title: "Erreur de déconnexion",
+        description: result.error?.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -201,14 +222,12 @@ const MerchantSidebar = ({
 
       <SidebarFooter className="p-4">
         <SidebarMenuButton
-          asChild
+          onClick={handleLogout}
           tooltip="Déconnexion"
           className="text-destructive hover:text-destructive hover:bg-destructive/10"
         >
-          <Link to="/auth">
-            <LogOut className="w-4 h-4" />
-            <span>Déconnexion</span>
-          </Link>
+          <LogOut className="w-4 h-4" />
+          <span>Déconnexion</span>
         </SidebarMenuButton>
       </SidebarFooter>
     </Sidebar>

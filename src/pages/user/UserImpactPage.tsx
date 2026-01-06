@@ -3,105 +3,224 @@
 // oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
+import { useState, useEffect } from "react";
 import { UserLayout } from "@/components/user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Leaf, 
-  Droplets, 
+import {
+  Leaf,
+  Droplets,
   Zap,
   TreePine,
   Award,
   TrendingUp,
   ShoppingBag,
-  Calendar
+  Calendar,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getAuthUser } from "@/services";
+import { getUserStats, getUserMonthlyImpact } from "@/services";
+import {
+  mealsToCo2Kg,
+  mealsToWaterL,
+  mealsToEnergyKwh,
+  co2KgToTrees,
+  co2KgToCarKm,
+  co2KgToShowers,
+  co2KgToPhoneCharges,
+} from "@/lib/impactCalculations";
 
-// Mock impact data
-const impactData = {
-  mealsRescued: 24,
-  co2Saved: 48, // kg
-  waterSaved: 12000, // liters
-  energySaved: 96, // kWh
-  moneySaved: 90000, // FCFA
-  treesEquivalent: 2.4,
-};
-
-const monthlyImpact = [
-  { month: "Jan", meals: 4, co2: 8 },
-  { month: "Fév", meals: 6, co2: 12 },
-  { month: "Mar", meals: 5, co2: 10 },
-  { month: "Avr", meals: 9, co2: 18 },
-];
-
-const badges = [
-  {
-    id: "1",
-    name: "Premier pas",
-    description: "Première réservation effectuée",
-    icon: ShoppingBag,
-    earned: true,
-    earnedDate: "2024-01-05",
-  },
-  {
-    id: "2",
-    name: "Éco-warrior",
-    description: "10 repas sauvés",
-    icon: Leaf,
-    earned: true,
-    earnedDate: "2024-02-15",
-  },
-  {
-    id: "3",
-    name: "Super saver",
-    description: "50 000 FCFA économisés",
-    icon: TrendingUp,
-    earned: true,
-    earnedDate: "2024-03-01",
-  },
-  {
-    id: "4",
-    name: "Champion vert",
-    description: "50 kg de CO₂ évités",
-    icon: TreePine,
-    earned: false,
-    progress: 96, // 48/50 * 100
-  },
-  {
-    id: "5",
-    name: "Fidèle",
-    description: "30 jours consécutifs d'activité",
-    icon: Calendar,
-    earned: false,
-    progress: 60,
-  },
-  {
-    id: "6",
-    name: "Ambassadeur",
-    description: "Parrainez 5 amis",
-    icon: Award,
-    earned: false,
-    progress: 20,
-  },
+const defaultMonthly = [
+  { month: 'Jan', meals: 0, co2: 0 },
+  { month: 'Fév', meals: 0, co2: 0 },
+  { month: 'Mar', meals: 0, co2: 0 },
+  { month: 'Avr', meals: 0, co2: 0 },
 ];
 
 const UserImpactPage = () => {
+  const [loading, setLoading] = useState(true);
+  const [impact, setImpact] = useState<any | null>(null);
+  const [monthlyData, setMonthlyData] = useState<typeof defaultMonthly>(defaultMonthly);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const { data: userData } = await getAuthUser();
+        const userId = userData?.user?.id;
+        if (!userId) {
+          setImpact(null);
+          setLoading(false);
+          return;
+        }
+
+        const resp = await getUserStats(userId);
+        if (resp?.success && resp.data) {
+          setImpact(resp.data);
+        } else {
+          setImpact(null);
+        }
+        // fetch monthly progression for the last 4 months
+        try {
+          const mResp = await getUserMonthlyImpact(userId, 4);
+          if (mResp?.success && mResp.data) setMonthlyData(mResp.data as any);
+        } catch (e) {
+          // ignore, keep defaults
+        }
+      } catch (err) {
+        setImpact(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const impactData = impact
+    ? {
+        mealsRescued: impact.orders_count || 0,
+        co2Saved: impact.co2_avoided_kg || 0,
+        waterSaved: mealsToWaterL(impact.orders_count || 0),
+        energySaved: mealsToEnergyKwh(impact.orders_count || 0),
+        moneySaved: impact.money_saved_xaf || 0,
+        treesEquivalent: co2KgToTrees(impact.co2_avoided_kg || 0),
+      }
+    : {
+        mealsRescued: 0,
+        co2Saved: 0,
+        waterSaved: 0,
+        energySaved: 0,
+        moneySaved: 0,
+        treesEquivalent: 0,
+      };
+
+  const badges = [
+    {
+      id: "1",
+      name: "Premier pas",
+      description: "Première réservation effectuée",
+      icon: ShoppingBag,
+      earned: impactData.mealsRescued > 0,
+      earnedDate: impactData.mealsRescued > 0 ? new Date().toISOString() : undefined,
+    },
+    {
+      id: "2",
+      name: "Éco-warrior",
+      description: "10 repas sauvés",
+      icon: Leaf,
+      earned: impactData.mealsRescued >= 10,
+      earnedDate: impactData.mealsRescued >= 10 ? new Date().toISOString() : undefined,
+    },
+    {
+      id: "3",
+      name: "Super saver",
+      description: "50 000 FCFA économisés",
+      icon: TrendingUp,
+      earned: impactData.moneySaved >= 50000,
+      earnedDate: impactData.moneySaved >= 50000 ? new Date().toISOString() : undefined,
+    },
+    {
+      id: "4",
+      name: "Champion vert",
+      description: "50 kg de CO₂ évités",
+      icon: TreePine,
+      earned: impactData.co2Saved >= 50,
+      progress: Math.min(100, Math.round((impactData.co2Saved / 50) * 100)),
+    },
+    {
+      id: "5",
+      name: "Fidèle",
+      description: "30 jours consécutifs d'activité",
+      icon: Calendar,
+      earned: false,
+      progress: 0,
+    },
+    {
+      id: "6",
+      name: "Ambassadeur",
+      description: "Parrainez 5 amis",
+      icon: Award,
+      earned: false,
+      progress: 0,
+    },
+  ];
+
+  // Dynamic monthly objective and badge thresholds
+  const monthsToShow = monthlyData.length || 4;
+  const monthsObserved = monthlyData.filter((m) => m.meals > 0).length || monthsToShow;
+  const currentMonth = monthlyData[monthlyData.length - 1] || { meals: 0 };
+  const monthlyObjective = Math.max(
+    10,
+    Math.ceil(((impactData.mealsRescued || 0) / Math.max(1, monthsObserved)) * 1.2)
+  );
+  const monthlyProgress = Math.min(
+    100,
+    Math.round(((currentMonth.meals || 0) / monthlyObjective) * 100)
+  );
+
+  const ecoThreshold = Math.max(10, Math.round((impactData.mealsRescued || 0) * 0.2) || 10);
+  const moneyThreshold = Math.max(50000, Math.round((impactData.moneySaved || 0) * 0.5) || 50000);
+  const co2Threshold = Math.max(50, Math.round((impactData.co2Saved || 0) * 0.5) || 50);
+
+  const dynamicBadges = [
+    {
+      id: '1',
+      name: 'Premier pas',
+      description: 'Première réservation effectuée',
+      icon: ShoppingBag,
+      earned: impactData.mealsRescued > 0,
+      earnedDate: impactData.mealsRescued > 0 ? new Date().toISOString() : undefined,
+    },
+    {
+      id: '2',
+      name: 'Éco-warrior',
+      description: `${ecoThreshold} repas sauvés`,
+      icon: Leaf,
+      earned: impactData.mealsRescued >= ecoThreshold,
+      earnedDate: impactData.mealsRescued >= ecoThreshold ? new Date().toISOString() : undefined,
+    },
+    {
+      id: '3',
+      name: 'Super saver',
+      description: `${moneyThreshold.toLocaleString()} FCFA économisés`,
+      icon: TrendingUp,
+      earned: impactData.moneySaved >= moneyThreshold,
+      earnedDate: impactData.moneySaved >= moneyThreshold ? new Date().toISOString() : undefined,
+    },
+    {
+      id: '4',
+      name: 'Champion vert',
+      description: `${co2Threshold} kg de CO₂ évités`,
+      icon: TreePine,
+      earned: impactData.co2Saved >= co2Threshold,
+      progress: Math.min(100, Math.round((impactData.co2Saved / co2Threshold) * 100)),
+    },
+  ];
+
+  if (loading) {
+    return (
+      <UserLayout title="Mon impact" subtitle="Votre contribution à la planète">
+        <div className="p-8">Chargement des statistiques...</div>
+      </UserLayout>
+    );
+  }
+
   return (
     <UserLayout title="Mon impact" subtitle="Votre contribution à la planète">
       {/* Main Impact Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
         <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
           <CardContent className="p-4 text-center">
             <ShoppingBag className="h-8 w-8 text-green-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-green-500">{impactData.mealsRescued}</p>
-            <p className="text-xs text-muted-foreground">Repas sauvés</p>
+            <p className="text-2xl font-bold text-green-500">{userImpact.orders_count}</p>
+            <p className="text-xs text-muted-foreground">Commandes</p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20">
           <CardContent className="p-4 text-center">
             <Leaf className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-emerald-500">{impactData.co2Saved} kg</p>
+            <p className="text-2xl font-bold text-emerald-500">{userImpact.co2_avoided_kg.toFixed(1)} kg</p>
             <p className="text-xs text-muted-foreground">CO₂ évités</p>
           </CardContent>
         </Card>
@@ -109,48 +228,32 @@ const UserImpactPage = () => {
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
           <CardContent className="p-4 text-center">
             <Droplets className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-blue-500">{(impactData.waterSaved / 1000).toFixed(1)}k L</p>
-            <p className="text-xs text-muted-foreground">Eau économisée</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/20">
-          <CardContent className="p-4 text-center">
-            <Zap className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-yellow-500">{impactData.energySaved} kWh</p>
-            <p className="text-xs text-muted-foreground">Énergie économisée</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-teal-500/10 to-teal-500/5 border-teal-500/20">
-          <CardContent className="p-4 text-center">
-            <TreePine className="h-8 w-8 text-teal-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-teal-500">{impactData.treesEquivalent}</p>
-            <p className="text-xs text-muted-foreground">Arbres équivalents</p>
+            <p className="text-2xl font-bold text-blue-500">{userImpact.food_saved_kg.toFixed(1)} kg</p>
+            <p className="text-xs text-muted-foreground">Nourriture sauvée</p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
           <CardContent className="p-4 text-center">
             <TrendingUp className="h-8 w-8 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold text-primary">{(impactData.moneySaved / 1000).toFixed(0)}k</p>
+            <p className="text-2xl font-bold text-primary">{(userImpact.money_saved_xaf / 1000).toFixed(0)}k</p>
             <p className="text-xs text-muted-foreground">FCFA économisés</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly Progress */}
+        {/* Impact Summary */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Progression mensuelle
+              Résumé de votre impact
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {monthlyImpact.map((month) => (
+              {monthlyData.map((month) => (
                 <div key={month.month} className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium">{month.month}</span>
@@ -166,28 +269,28 @@ const UserImpactPage = () => {
             <div className="mt-6 p-4 rounded-lg bg-muted/50">
               <h4 className="font-semibold mb-2">🎯 Objectif du mois</h4>
               <p className="text-sm text-muted-foreground mb-2">
-                Sauvez 10 repas ce mois-ci pour débloquer le badge "Champion vert"
+                Sauvez {monthlyObjective} repas ce mois-ci pour atteindre votre objectif
               </p>
               <div className="flex items-center justify-between text-sm mb-1">
                 <span>Progression</span>
-                <span className="font-medium">9/10 repas</span>
+                <span className="font-medium">{currentMonth.meals}/{monthlyObjective} repas</span>
               </div>
-              <Progress value={90} className="h-2" />
+              <Progress value={monthlyProgress} className="h-2" />
             </div>
           </CardContent>
         </Card>
 
-        {/* Badges */}
+        {/* Future Features */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Award className="h-5 w-5 text-primary" />
-              Badges & Récompenses
+              Prochaines fonctionnalités
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
-              {badges.map((badge) => (
+              {dynamicBadges.map((badge) => (
                 <div
                   key={badge.id}
                   className={`p-4 rounded-lg border transition-all ${
@@ -232,34 +335,37 @@ const UserImpactPage = () => {
         </Card>
       </div>
 
-      {/* Environmental Equivalents */}
+      {/* Impact Summary */}
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-lg">Votre impact en perspective</CardTitle>
+          <CardTitle className="text-lg">Équivalents environnementaux</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-4 rounded-lg bg-muted/30">
-              <p className="text-3xl mb-2">🚗</p>
-              <p className="text-xl font-bold text-foreground">192 km</p>
-              <p className="text-sm text-muted-foreground">
-                de trajet en voiture évités
-              </p>
-            </div>
-            <div className="text-center p-4 rounded-lg bg-muted/30">
-              <p className="text-3xl mb-2">💡</p>
-              <p className="text-xl font-bold text-foreground">480 heures</p>
-              <p className="text-sm text-muted-foreground">
-                d'éclairage LED économisées
-              </p>
-            </div>
-            <div className="text-center p-4 rounded-lg bg-muted/30">
-              <p className="text-3xl mb-2">🌳</p>
-              <p className="text-xl font-bold text-foreground">2.4 arbres</p>
-              <p className="text-sm text-muted-foreground">
-                plantés en équivalent CO₂
-              </p>
-            </div>
+            {(() => {
+              const carKm = co2KgToCarKm(impactData.co2Saved || 0);
+              const ledHours = Math.round((impactData.energySaved || 0) * 100); // assume 10W LED -> 0.01 kW
+              const trees = co2KgToTrees(impactData.co2Saved || 0);
+              return (
+                <>
+                  <div className="text-center p-4 rounded-lg bg-muted/30">
+                    <p className="text-3xl mb-2">🚗</p>
+                    <p className="text-xl font-bold text-foreground">{carKm} km</p>
+                    <p className="text-sm text-muted-foreground">de trajet en voiture évités</p>
+                  </div>
+                  <div className="text-center p-4 rounded-lg bg-muted/30">
+                    <p className="text-3xl mb-2">💡</p>
+                    <p className="text-xl font-bold text-foreground">{ledHours} heures</p>
+                    <p className="text-sm text-muted-foreground">d'éclairage LED économisées</p>
+                  </div>
+                  <div className="text-center p-4 rounded-lg bg-muted/30">
+                    <p className="text-3xl mb-2">🌳</p>
+                    <p className="text-xl font-bold text-foreground">{trees} arbres</p>
+                    <p className="text-sm text-muted-foreground">plantés en équivalent CO₂</p>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </CardContent>
       </Card>
