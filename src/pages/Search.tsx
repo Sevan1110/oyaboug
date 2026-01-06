@@ -389,6 +389,7 @@ const SearchPage = () => {
               {items.map((item, index) => (
                 <motion.div
                   key={item.id}
+                  data-food-id={item.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
@@ -422,7 +423,13 @@ const SearchPage = () => {
                   items={items}
                   selectedCity={selectedCity === "all" ? "" : selectedCity}
                   onItemSelect={(item) => {
-                    console.log("Selected item:", item);
+                    setViewMode("grid");
+                    setTimeout(() => {
+                      const el = document.querySelector(`[data-food-id="${item.id}"]`);
+                      if (el) {
+                        el.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }
+                    }, 0);
                   }}
                 />
               </div>

@@ -21,8 +21,9 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthUser, updateProfile as updateAuthProfile } from "@/services/auth.service";
-import { updateProfile as updateUserProfile } from "@/services/user.service";
+import { updateProfile as updateUserProfile, getProfile as getDbProfile } from "@/services/user.service";
 import { supabaseClient } from "@/api/supabaseClient";
+import { compressImage, isImageFile, getBase64Size } from "@/utils/imageCompression";
 
 const UserProfilePage = () => {
   const { toast } = useToast();
@@ -56,17 +57,40 @@ const UserProfilePage = () => {
       }
 
       const metadata = authUser.user_metadata || {};
-      const nameParts = (metadata.full_name || "").split(" ");
+      const userId = authUser.id;
+      let profileFirstName = "";
+      let profileLastName = "";
+      let profilePhone = "";
+      let profileAddress = "";
+      let profileAvatar = "";
+      let profileCreatedAt = authUser.created_at || "";
+      const dbResp = await getDbProfile(userId);
+      if (dbResp.success && dbResp.data) {
+        const fullName = dbResp.data.full_name || metadata.full_name || "";
+        const parts = fullName.split(" ");
+        profileFirstName = parts[0] || "";
+        profileLastName = parts.slice(1).join(" ") || "";
+        profilePhone = dbResp.data.phone || metadata.phone || "";
+        profileAddress = dbResp.data.address || metadata.address || "";
+        profileAvatar = dbResp.data.avatar_url || metadata.avatar_url || "";
+      } else {
+        const nameParts = (metadata.full_name || "").split(" ");
+        profileFirstName = nameParts[0] || "";
+        profileLastName = nameParts.slice(1).join(" ") || "";
+        profilePhone = metadata.phone || "";
+        profileAddress = metadata.address || "";
+        profileAvatar = metadata.avatar_url || "";
+      }
 
       setFormData({
-        firstName: nameParts[0] || "",
-        lastName: nameParts.slice(1).join(" ") || "",
+        firstName: profileFirstName,
+        lastName: profileLastName,
         email: authUser.email || "",
-        phone: metadata.phone || "",
-        address: metadata.address || "",
+        phone: profilePhone,
+        address: profileAddress,
         bio: metadata.bio || "",
-        createdAt: authUser.created_at || "",
-        avatar: metadata.avatar_url || "",
+        createdAt: profileCreatedAt,
+        avatar: profileAvatar,
       });
 
     } catch (e) {
@@ -97,6 +121,13 @@ const UserProfilePage = () => {
       });
 
       if (resp?.success) {
+        const metaUpdate = {
+          full_name: fullName,
+          phone: formData.phone,
+          address: formData.address,
+          bio: formData.bio,
+        };
+        await updateAuthProfile(metaUpdate);
         setIsEditing(false);
         toast({
           title: "Profil mis à jour",
@@ -122,12 +153,11 @@ const UserProfilePage = () => {
     }
 
     const file = event.target.files[0];
-    const fileSize = file.size / 1024 / 1024; // MB
-
-    if (fileSize > 5) {
+    let base64Data: string | null = null;
+    if (!isImageFile(file)) {
       toast({
-        title: "Fichier trop volumineux",
-        description: "L'image ne doit pas dépasser 5 Mo.",
+        title: "Fichier invalide",
+        description: "Le fichier doit être une image.",
         variant: "destructive",
       });
       return;
@@ -139,29 +169,61 @@ const UserProfilePage = () => {
       const userId = auth?.user?.id;
       if (!userId || !supabaseClient) throw new Error("Erreur d'authentification");
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}-${Math.random()}.${fileExt}`;
+      let uploadBlob: Blob = file;
+      let uploadExt = file.name.split('.').pop();
+      let uploadMime = file.type || 'image/jpeg';
+
+      if (file.size > 2 * 1024 * 1024) {
+        const base64 = await compressImage(file, { maxWidth: 1024, maxHeight: 1024, quality: 0.8, mimeType: 'image/jpeg' });
+        base64Data = base64;
+        const sizeBytes = getBase64Size(base64);
+        if (sizeBytes > 2 * 1024 * 1024) {
+          throw new Error("Impossible de compresser l'image sous 2 Mo.");
+        }
+        const arr = base64.split(',');
+        const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+        const bstr = atob(arr[1]);
+        const u8arr = new Uint8Array(bstr.length);
+        for (let i = 0; i < bstr.length; i++) u8arr[i] = bstr.charCodeAt(i);
+        uploadBlob = new Blob([u8arr], { type: mime });
+        uploadMime = mime;
+        uploadExt = 'jpg';
+      }
+
+      const fileName = `${userId}-${Math.random().toString(36).slice(2)}.${uploadExt}`;
       const filePath = `${fileName}`;
 
       // Upload to 'avatars' bucket
-      const { error: uploadError } = await supabaseClient.storage
-        .from('avatars')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        // Fallback or retry logic could go here, but usually it means bucket doesn't exist or RLS issue.
-        // For this demo, let's assume it might fail if bucket missing.
-        throw uploadError;
+      let publicUrl: string | null = null;
+      {
+        const { error: uploadError } = await supabaseClient.storage
+          .from('avatars')
+          .upload(filePath, uploadBlob, { contentType: uploadMime, upsert: true });
+        if (uploadError && /Bucket not found/i.test(uploadError.message || '')) {
+          const altPath = `avatars/${filePath}`;
+          const { error: altErr } = await supabaseClient.storage
+            .from('public')
+            .upload(altPath, uploadBlob, { contentType: uploadMime, upsert: true });
+          if (altErr) throw altErr;
+          const { data: altUrl } = supabaseClient.storage.from('public').getPublicUrl(altPath);
+          publicUrl = altUrl.publicUrl;
+        } else if (uploadError) {
+          throw uploadError;
+        } else {
+          const { data: urlData } = supabaseClient.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+          publicUrl = urlData.publicUrl;
+        }
       }
 
-      const { data: { publicUrl } } = supabaseClient.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+      if (!publicUrl) throw new Error("Impossible d'obtenir l'URL publique de l'image.");
 
       // Update user metadata with new avatar URL
       const updateRes = await updateAuthProfile({ avatar_url: publicUrl });
 
       if (updateRes.success) {
+        await updateUserProfile(userId, { avatarUrl: publicUrl });
         setFormData(prev => ({ ...prev, avatar: publicUrl }));
         toast({
           title: "Photo mise à jour",
@@ -172,12 +234,38 @@ const UserProfilePage = () => {
       }
 
     } catch (error: any) {
-      console.error("Upload error:", error);
-      toast({
-        title: "Erreur d'upload",
-        description: "Impossible de télécharger l'image. Vérifiez votre connexion ou réessayez.",
-        variant: "destructive",
-      });
+      let base64Final = base64Data;
+      if (!base64Final) {
+        base64Final = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error("Lecture du fichier échouée"));
+          reader.readAsDataURL(file);
+        });
+      }
+      try {
+        const { data: auth } = await getAuthUser();
+        const userId = auth?.user?.id;
+        if (!userId) throw new Error("Utilisateur non authentifié");
+        const updateRes = await updateAuthProfile({ avatar_url: base64Final });
+        if (updateRes.success) {
+          await updateUserProfile(userId, { avatarUrl: base64Final });
+          setFormData(prev => ({ ...prev, avatar: base64Final }));
+          toast({
+            title: "Photo mise à jour",
+            description: "Votre photo de profil a été modifiée (stockage local).",
+          });
+        } else {
+          throw new Error("Échec de mise à jour de l'avatar.");
+        }
+      } catch (e: any) {
+        console.error("Upload error:", error);
+        toast({
+          title: "Erreur d'upload",
+          description: "Impossible de télécharger l'image. Vérifiez votre connexion ou réessayez.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setUploading(false);
       // Reset input

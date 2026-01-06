@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, Store, Crosshair, Loader2 } from "lucide-react";
 import type { FoodItem, GabonCity } from "@/types";
+import { format, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
 
 // Fix for default marker icons in React-Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -134,6 +136,27 @@ const calculateDistance = (
   return R * c;
 };
 
+const isTimeOnly = (v: string) => /^\d{2}:\d{2}(?::\d{2})?$/.test(v);
+
+const formatPickupRange = (start: string, end: string) => {
+  if (isTimeOnly(start) && isTimeOnly(end)) {
+    return `${start} - ${end}`;
+  }
+  let ds = parseISO(start);
+  let de = parseISO(end);
+  if (isNaN(ds.getTime()) || isNaN(de.getTime())) {
+    return `${start} - ${end}`;
+  }
+  const sameDay =
+    ds.getFullYear() === de.getFullYear() &&
+    ds.getMonth() === de.getMonth() &&
+    ds.getDate() === de.getDate();
+  if (sameDay) {
+    return `${format(ds, "dd/MM, HH:mm", { locale: fr })} - ${format(de, "HH:mm", { locale: fr })}`;
+  }
+  return `${format(ds, "dd/MM HH:mm", { locale: fr })} - ${format(de, "dd/MM HH:mm", { locale: fr })}`;
+};
+
 const MapItemPopup = ({ item, onSelect, userLocation }: MapItemPopupProps) => {
   const discount = Math.round(
     ((item.original_price - item.discounted_price) / item.original_price) * 100
@@ -197,7 +220,7 @@ const MapItemPopup = ({ item, onSelect, userLocation }: MapItemPopupProps) => {
       <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
         <Clock className="w-3 h-3" />
         <span>
-          {item.pickup_start} - {item.pickup_end}
+          {formatPickupRange(item.pickup_start, item.pickup_end)}
         </span>
       </div>
 
