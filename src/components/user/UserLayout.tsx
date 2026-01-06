@@ -1,19 +1,13 @@
-// ============================================
-// User Layout - Dashboard Layout Wrapper
-// ouyaboung Platform - Anti-gaspillage alimentaire
-// ============================================
-
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import UserSidebar from "./UserSidebar";
-import { Bell, Search, LogOut } from "lucide-react";
+import NotificationBell from "@/components/notifications/NotificationBell";
+import { Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { getAuthUser } from "@/services/auth.service";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { Link } from "react-router-dom";
 
 interface UserLayoutProps {
   children: ReactNode;
@@ -22,62 +16,45 @@ interface UserLayoutProps {
 }
 
 const UserLayout = ({ children, title, subtitle }: UserLayoutProps) => {
-  const { toast } = useToast();
-  const { signOut, user } = useAuth();
+  const [user, setUser] = useState<{
+    firstName: string;
+    lastName: string;
+    avatarUrl: string;
+  } | null>(null);
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      toast({
-        title: "Déconnexion réussie",
-        description: "Vous avez été déconnecté avec succès.",
-      });
-      // La redirection vers la page d'accueil sera gérée par AuthRedirectHandler
-    } catch (error) {
-      toast({
-        title: "Erreur de déconnexion",
-        description: "Une erreur est survenue lors de la déconnexion.",
-        variant: "destructive",
-      });
-    }
-  };
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const { data } = await getAuthUser();
+        if (data?.user) {
+          const metadata = data.user.user_metadata || {};
+          const fullName = metadata.full_name || "";
+          const [firstName = "U", lastName = ""] = fullName.split(" ");
 
-  // Obtenir les initiales de l'utilisateur pour l'avatar
-  const getUserInitials = () => {
-    if (user?.user_metadata?.full_name) {
-      return user.user_metadata.full_name
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    if (user?.email) {
-      return user.email[0].toUpperCase();
-    }
-    return 'U';
-  };
+          setUser({
+            firstName,
+            lastName,
+            avatarUrl: metadata.avatar_url || "",
+          });
+        }
+      } catch (e) {
+        console.error("Failed to load user for layout", e);
+      }
+    };
+    loadUser();
+  }, []);
 
-  // Obtenir l'URL de l'image de profil
-  const getProfileImageUrl = () => {
-    return user?.user_metadata?.avatar_url || null;
-  };
-
-  // Obtenir le nom d'affichage de l'utilisateur
-  const getDisplayName = () => {
-    return user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Utilisateur';
-  };
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <UserSidebar />
-        
+        <UserSidebar userName={user ? `${user.firstName} ${user.lastName} ` : undefined} />
+
         <SidebarInset className="flex-1">
           {/* Top Header */}
           <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-14 items-center gap-4 px-4">
               <SidebarTrigger className="-ml-1" />
-              
+
               {/* Search */}
               <div className="flex-1 max-w-md">
                 <div className="relative">
@@ -91,46 +68,16 @@ const UserLayout = ({ children, title, subtitle }: UserLayoutProps) => {
 
               <div className="ml-auto flex items-center gap-2">
                 {/* Notifications */}
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="w-5 h-5" />
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]"
-                  >
-                    2
-                  </Badge>
-                </Button>
+                <NotificationBell />
 
                 {/* User Avatar */}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="rounded-full"
-                  asChild
-                  title="Mon profil"
-                >
-                  <Link to="/user/profile">
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage 
-                        src={getProfileImageUrl()} 
-                        alt={getDisplayName()}
-                      />
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {getUserInitials()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Link>
-                </Button>
-
-                {/* Logout Button */}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  onClick={handleLogout}
-                  title="Se déconnecter"
-                >
-                  <LogOut className="w-5 h-5" />
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.avatarUrl} alt={user?.firstName} className="object-cover" />
+                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                      {user ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)} ` : "U"}
+                    </AvatarFallback>
+                  </Avatar>
                 </Button>
               </div>
             </div>

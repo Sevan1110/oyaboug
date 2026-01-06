@@ -32,6 +32,8 @@ export {
   toggleFavorite,
   getImpactStats,
   formatImpactForDisplay,
+  // profile by auth user id fallback
+  // exported via getProfile which now handles both id and user_id
 } from './user.service';
 
 // Merchant Service
@@ -95,6 +97,7 @@ export {
   getMerchantStats as getMerchantImpactStats,
   calculateCO2,
   getLeaderboard,
+  getUserMonthlyImpact,
   generateReport,
   formatGlobalImpact,
   calculateEquivalents,

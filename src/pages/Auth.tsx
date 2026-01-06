@@ -13,11 +13,9 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Leaf, User, Store, Mail, Lock, Phone, ArrowLeft, Loader2, Calendar, UserCircle } from "lucide-react";
+import { Leaf, User, Store, Mail, Lock, Phone, ArrowLeft, Loader2, Calendar, UserCircle, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuthActions } from "@/hooks/useAuthActions";
-import { useAuth } from "@/hooks/useAuth";
-import { requireSupabaseClient } from "@/api/supabaseClient";
+import { login, register, loginWithOtp, verifyOtpCode } from "@/services";
 import type { UserRole } from "@/types";
 
 const Auth = () => {
@@ -72,6 +70,12 @@ const Auth = () => {
   const [birthDate, setBirthDate] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  
+  // OTP state
+  const [otpMode, setOtpMode] = useState<'email' | 'phone' | null>(null);
+  const [otpIdentifier, setOtpIdentifier] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,23 +93,45 @@ const Auth = () => {
       return;
     }
 
+    setIsLoading(true);
     try {
-      // Diagnostic avant l'appel API
-      console.log('Appel de signIn avec:', { email: loginEmail, password: '***' });
-      
-      const result = await signIn(loginEmail, loginPassword);
-      
-      console.log('Résultat signIn:', result);
+      const result = await login(loginEmail, loginPassword);
+      setIsLoading(false);
 
       if (result.success) {
-        console.log('Connexion réussie, redirection...');
-        // Redirect will be handled by AuthRedirectHandler
-        return;
+        toast({
+          title: "Connexion réussie",
+          description: "Bienvenue sur ouyaboung !",
+        });
+        // Redirect based on role
+        navigate(role === "merchant" ? "/merchant" : "/user");
       } else {
-        console.error('Échec de connexion:', result.error);
+        // Gestion des erreurs spécifiques
+        let errorMessage = result.error?.message || "Email ou mot de passe incorrect";
+        
+        if (result.error?.code === 'NOT_CONFIGURED') {
+          errorMessage = "La configuration du serveur n'est pas disponible. Veuillez contacter le support.";
+        } else if (result.error?.code === 'NETWORK_ERROR' || errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_NAME_NOT_RESOLVED')) {
+          errorMessage = "Erreur de connexion. Vérifiez votre connexion internet et que les variables d'environnement Supabase sont correctement configurées.";
+        } else if (errorMessage.includes('Invalid login credentials') || errorMessage.includes('invalid_credentials')) {
+          errorMessage = "Email ou mot de passe incorrect";
+        } else if (errorMessage.includes('Email not confirmed')) {
+          errorMessage = "Veuillez confirmer votre email avant de vous connecter";
+        }
+        
+        toast({
+          title: "Erreur de connexion",
+          description: errorMessage,
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      console.error('Erreur exception dans handleLogin:', error);
+    } catch (err) {
+      setIsLoading(false);
+      toast({
+        title: "Erreur de connexion",
+        description: "Une erreur inattendue est survenue. Veuillez réessayer.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -130,22 +156,67 @@ const Auth = () => {
       return;
     }
 
-    const result = await signUp(signupEmail, signupPassword, {
-      fullName: `${firstName} ${lastName}`,
-      phone: signupPhone,
-      role,
-      businessName: role === "merchant" ? businessName : undefined,
-    });
+    setIsLoading(true);
+    try {
+      const result = await register(signupEmail, signupPassword, {
+        fullName: `${firstName} ${lastName}`,
+        phone: signupPhone,
+        role,
+        businessName: role === "merchant" ? businessName : undefined,
+      });
+      setIsLoading(false);
 
-    if (result.success) {
-      // Success handling is done in the hook
-      return;
+      if (result.success) {
+        // Toujours rediriger vers la page de connexion après inscription
+        toast({
+          title: "Inscription réussie",
+          description: "Un email de confirmation a été envoyé. Connectez-vous après confirmation.",
+        });
+        // Réinitialiser le formulaire
+        setSignupEmail("");
+        setSignupPassword("");
+        setSignupPhone("");
+        setFirstName("");
+        setLastName("");
+        setBirthDate("");
+        setBusinessName("");
+        setAcceptedTerms(false);
+        // Rediriger vers la page d'authentification (onglet Connexion)
+        navigate("/auth");
+      } else {
+        // Gestion des erreurs spécifiques
+        let errorMessage = result.error?.message || "Une erreur est survenue";
+        
+        // Messages d'erreur plus conviviaux
+        if (result.error?.code === 'NOT_CONFIGURED') {
+          errorMessage = "La configuration du serveur n'est pas disponible. Veuillez contacter le support.";
+        } else if (result.error?.code === 'NETWORK_ERROR' || errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_NAME_NOT_RESOLVED')) {
+          errorMessage = "Erreur de connexion. Vérifiez votre connexion internet et que les variables d'environnement Supabase sont correctement configurées.";
+        } else if (errorMessage.includes('already registered') || errorMessage.includes('already exists')) {
+          errorMessage = "Cet email est déjà utilisé. Essayez de vous connecter ou utilisez un autre email.";
+        } else if (errorMessage.includes('Password')) {
+          errorMessage = "Le mot de passe doit contenir au moins 6 caractères.";
+        }
+        
+        toast({
+          title: "Erreur d'inscription",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      setIsLoading(false);
+      toast({
+        title: "Erreur d'inscription",
+        description: "Une erreur inattendue est survenue. Veuillez réessayer.",
+        variant: "destructive",
+      });
     }
     // Error handling is done in the hook
   };
 
   const handleOtpLogin = async () => {
-    const identifier = loginEmail || signupPhone;
+    const identifier = otpIdentifier || loginEmail || signupPhone;
     if (!identifier) {
       toast({
         title: "Erreur",
@@ -156,7 +227,71 @@ const Auth = () => {
     }
 
     const type = identifier.includes("@") ? "email" : "phone";
-    await signInWithOTP(identifier, type);
+    setOtpMode(type);
+    setOtpIdentifier(identifier);
+    
+    const result = await loginWithOtp(identifier, type);
+    setIsLoading(false);
+
+    if (result.success) {
+      setOtpSent(true);
+      toast({
+        title: "Code envoyé",
+        description: type === "email" 
+          ? "Vérifiez votre email pour le code de connexion"
+          : "Vérifiez votre téléphone pour le code de connexion",
+      });
+    } else {
+      toast({
+        title: "Erreur",
+        description: result.error?.message || "Impossible d'envoyer le code",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!otpCode || otpCode.length < 6) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez entrer le code à 6 chiffres",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    const result = await verifyOtpCode(otpIdentifier, otpCode, otpMode || "email");
+    setIsLoading(false);
+
+    if (result.success) {
+      toast({
+        title: "Connexion réussie",
+        description: "Bienvenue sur ouyaboung !",
+      });
+      // Reset OTP state
+      setOtpSent(false);
+      setOtpCode("");
+      setOtpMode(null);
+      setOtpIdentifier("");
+      // Redirect based on role
+      navigate(role === "merchant" ? "/merchant/dashboard" : "/user/dashboard");
+    } else {
+      toast({
+        title: "Code incorrect",
+        description: result.error?.message || "Le code saisi est incorrect",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelOtp = () => {
+    setOtpSent(false);
+    setOtpCode("");
+    setOtpMode(null);
+    setOtpIdentifier("");
   };
 
   return (
@@ -431,23 +566,123 @@ const Auth = () => {
               </TabsContent>
             </Tabs>
 
-            <div className="relative my-6">
-              <Separator />
-              <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
-                ou
-              </span>
-            </div>
+            {!otpSent ? (
+              <>
+                <div className="relative my-6">
+                  <Separator />
+                  <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
+                    ou
+                  </span>
+                </div>
 
-            <Button 
-              variant="outline" 
-              className="w-full gap-2" 
-              size="lg"
-              onClick={handleOtpLogin}
-              disabled={isLoading}
-            >
-              <Phone className="w-4 h-4" />
-              Continuer avec OTP
-            </Button>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="otp-identifier">
+                      {otpMode === "phone" ? "Numéro de téléphone" : "Email"}
+                    </Label>
+                    <div className="relative">
+                      {otpMode === "phone" ? (
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      )}
+                      <Input
+                        id="otp-identifier"
+                        type={otpMode === "phone" ? "tel" : "email"}
+                        placeholder={otpMode === "phone" ? "+241 XX XX XX XX" : "votre@email.com"}
+                        className="pl-10"
+                        value={otpIdentifier}
+                        onChange={(e) => {
+                          setOtpIdentifier(e.target.value);
+                          setOtpMode(e.target.value.includes("@") ? "email" : "phone");
+                        }}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full gap-2" 
+                    size="lg"
+                    onClick={handleOtpLogin}
+                    disabled={isLoading || !otpIdentifier}
+                  >
+                    <Phone className="w-4 h-4" />
+                    Continuer avec OTP
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="mt-6 space-y-4">
+                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        Code envoyé
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {otpMode === "email" 
+                          ? `Un code a été envoyé à ${otpIdentifier}`
+                          : `Un code SMS a été envoyé à ${otpIdentifier}`
+                        }
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={handleCancelOtp}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="otp-code">Code de vérification</Label>
+                    <Input
+                      id="otp-code"
+                      type="text"
+                      placeholder="000000"
+                      className="text-center text-2xl tracking-widest font-mono"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                      disabled={isLoading}
+                      autoFocus
+                    />
+                    <p className="text-xs text-muted-foreground text-center">
+                      Entrez le code à 6 chiffres reçu
+                    </p>
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    size="lg"
+                    disabled={isLoading || otpCode.length !== 6}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Vérification...
+                      </>
+                    ) : (
+                      "Vérifier le code"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full"
+                    onClick={handleCancelOtp}
+                    disabled={isLoading}
+                  >
+                    Annuler
+                  </Button>
+                </form>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

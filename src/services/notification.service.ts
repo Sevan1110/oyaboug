@@ -3,6 +3,7 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
+import { supabaseClient } from '@/api/supabaseClient';
 import type { ApiResponse } from '@/types';
 import type {
   AppNotification,
@@ -11,8 +12,7 @@ import type {
   NotificationCategory,
 } from '@/types/notification.types';
 
-// Mock data
-const mockNotifications: AppNotification[] = [];
+// Mock preferences cache for now, as we focus on notifications table first
 const mockPreferences: Map<string, NotificationPreferences> = new Map();
 
 /**
@@ -26,29 +26,46 @@ export const getUserNotifications = async (
     limit?: number;
   }
 ): Promise<ApiResponse<AppNotification[]>> => {
-  let notifications = mockNotifications.filter(
-    (n) => n.user_id === userId && !n.is_archived
-  );
-
-  if (options?.unreadOnly) {
-    notifications = notifications.filter((n) => !n.is_read);
+  if (!supabaseClient) {
+    return {
+      data: [],
+      error: { code: 'CONFIG_ERROR', message: 'Supabase client not configured' },
+      success: false
+    };
   }
 
-  if (options?.category) {
-    notifications = notifications.filter((n) => n.category === options.category);
+  try {
+    let query = supabaseClient
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (options?.unreadOnly) {
+      query = query.eq('is_read', false);
+    }
+
+    // Category filtering skipped for current schema
+
+    // Sort by creation date (newest first)
+    query = query.order('created_at', { ascending: false });
+
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    return { data: data as AppNotification[], error: null, success: true };
+  } catch (err) {
+    console.error('Error fetching notifications:', err);
+    return {
+      data: [],
+      error: { code: 'FETCH_ERROR', message: 'Erreur lors de la récupération des notifications' },
+      success: false,
+    };
   }
-
-  // Sort by creation date (newest first)
-  notifications.sort(
-    (a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
-
-  if (options?.limit) {
-    notifications = notifications.slice(0, options.limit);
-  }
-
-  return { data: notifications, error: null, success: true };
 };
 
 /**
@@ -57,11 +74,24 @@ export const getUserNotifications = async (
 export const getUnreadCount = async (
   userId: string
 ): Promise<ApiResponse<number>> => {
-  const count = mockNotifications.filter(
-    (n) => n.user_id === userId && !n.is_read && !n.is_archived
-  ).length;
+  if (!supabaseClient) {
+    return { data: 0, error: null, success: true };
+  }
 
-  return { data: count, error: null, success: true };
+  try {
+    const { count, error } = await supabaseClient
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+
+    if (error) throw error;
+
+    return { data: count || 0, error: null, success: true };
+  } catch (err) {
+    console.error('Error fetching unread count:', err);
+    return { data: 0, error: null, success: false };
+  }
 };
 
 /**
@@ -71,22 +101,22 @@ export const markAsRead = async (
   notificationId: string,
   userId: string
 ): Promise<ApiResponse<null>> => {
-  const notification = mockNotifications.find(
-    (n) => n.id === notificationId && n.user_id === userId
-  );
+  if (!supabaseClient) return { data: null, error: null, success: false };
 
-  if (!notification) {
-    return {
-      data: null,
-      error: { code: 'NOT_FOUND', message: 'Notification introuvable' },
-      success: false,
-    };
+  try {
+    const { error } = await supabaseClient
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+
+    return { data: null, error: null, success: true };
+  } catch (err) {
+    console.error('Error marking as read:', err);
+    return { data: null, error: { code: 'UPDATE_ERROR', message: 'Update failed' }, success: false };
   }
-
-  notification.is_read = true;
-  notification.read_at = new Date().toISOString();
-
-  return { data: null, error: null, success: true };
 };
 
 /**
@@ -95,16 +125,22 @@ export const markAsRead = async (
 export const markAllAsRead = async (
   userId: string
 ): Promise<ApiResponse<null>> => {
-  const now = new Date().toISOString();
+  if (!supabaseClient) return { data: null, error: null, success: false };
 
-  mockNotifications
-    .filter((n) => n.user_id === userId && !n.is_read)
-    .forEach((n) => {
-      n.is_read = true;
-      n.read_at = now;
-    });
+  try {
+    const { error } = await supabaseClient
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
 
-  return { data: null, error: null, success: true };
+    if (error) throw error;
+
+    return { data: null, error: null, success: true };
+  } catch (err) {
+    console.error('Error marking all as read:', err);
+    return { data: null, error: { code: 'UPDATE_ERROR', message: 'Update failed' }, success: false };
+  }
 };
 
 /**
@@ -114,21 +150,6 @@ export const archiveNotification = async (
   notificationId: string,
   userId: string
 ): Promise<ApiResponse<null>> => {
-  const notification = mockNotifications.find(
-    (n) => n.id === notificationId && n.user_id === userId
-  );
-
-  if (!notification) {
-    return {
-      data: null,
-      error: { code: 'NOT_FOUND', message: 'Notification introuvable' },
-      success: false,
-    };
-  }
-
-  notification.is_archived = true;
-  notification.archived_at = new Date().toISOString();
-
   return { data: null, error: null, success: true };
 };
 
@@ -139,21 +160,22 @@ export const deleteNotification = async (
   notificationId: string,
   userId: string
 ): Promise<ApiResponse<null>> => {
-  const index = mockNotifications.findIndex(
-    (n) => n.id === notificationId && n.user_id === userId
-  );
+  if (!supabaseClient) return { data: null, error: null, success: false };
 
-  if (index === -1) {
-    return {
-      data: null,
-      error: { code: 'NOT_FOUND', message: 'Notification introuvable' },
-      success: false,
-    };
+  try {
+    const { error } = await supabaseClient
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+
+    return { data: null, error: null, success: true };
+  } catch (err) {
+    console.error('Error deleting notification:', err);
+    return { data: null, error: { code: 'DELETE_ERROR', message: 'Delete failed' }, success: false };
   }
-
-  mockNotifications.splice(index, 1);
-
-  return { data: null, error: null, success: true };
 };
 
 /**
@@ -162,28 +184,31 @@ export const deleteNotification = async (
 export const createNotification = async (
   input: CreateNotificationInput
 ): Promise<ApiResponse<AppNotification>> => {
-  const notification: AppNotification = {
-    id: `notif_${Date.now()}`,
-    user_id: input.user_id,
-    type: input.type,
-    category: input.category,
-    priority: input.priority || 'medium',
-    title: input.title,
-    message: input.message,
-    icon: input.icon,
-    image_url: input.image_url,
-    action_url: input.action_url,
-    action_label: input.action_label,
-    data: input.data,
-    is_read: false,
-    is_archived: false,
-    expires_at: input.expires_at,
-    created_at: new Date().toISOString(),
-  };
+  if (!supabaseClient) return { data: null, error: { code: 'CONFIG_ERROR', message: 'No Supabase client' }, success: false };
 
-  mockNotifications.push(notification);
+  try {
+    const notification = {
+      user_id: input.user_id,
+      type: input.type,
+      title: input.title,
+      message: input.message,
+      data: input.data,
+      is_read: false,
+    };
 
-  return { data: notification, error: null, success: true };
+    const { data, error } = await supabaseClient
+      .from('notifications')
+      .insert(notification)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { data: data as AppNotification, error: null, success: true };
+  } catch (err) {
+    console.error('Error creating notification:', err);
+    return { data: null, error: { code: 'CREATE_ERROR', message: 'Create failed' }, success: false };
+  }
 };
 
 /**
@@ -192,10 +217,26 @@ export const createNotification = async (
 export const getPreferences = async (
   userId: string
 ): Promise<ApiResponse<NotificationPreferences>> => {
-  let prefs = mockPreferences.get(userId);
+  if (!supabaseClient) return { data: null, error: null, success: false };
 
-  if (!prefs) {
-    prefs = {
+  try {
+    const { data, error } = await supabaseClient
+      .from('profiles')
+      .select('id, preferences')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    type PreferencesPayload = { [key: string]: unknown; notification_preferences?: NotificationPreferences };
+    const prefs = (data?.preferences ?? {}) as PreferencesPayload;
+    const existing = prefs.notification_preferences;
+    if (existing) {
+      return { data: existing, error: null, success: true };
+    }
+
+    // Default preferences if not found
+    const defaultPrefs: NotificationPreferences = {
       user_id: userId,
       push_enabled: true,
       email_enabled: true,
@@ -216,10 +257,18 @@ export const getPreferences = async (
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    mockPreferences.set(userId, prefs);
-  }
 
-  return { data: prefs, error: null, success: true };
+    const mergedPrefs = { ...(data?.preferences || {}), notification_preferences: defaultPrefs };
+    await supabaseClient
+      .from('profiles')
+      .update({ preferences: mergedPrefs, updated_at: new Date().toISOString() })
+      .eq('user_id', userId);
+
+    return { data: defaultPrefs, error: null, success: true };
+  } catch (err) {
+    console.error('Error fetching preferences:', err);
+    return { data: null, error: { code: 'FETCH_ERROR', message: 'Failed to fetch preferences' }, success: false };
+  }
 };
 
 /**
@@ -229,37 +278,41 @@ export const updatePreferences = async (
   userId: string,
   updates: Partial<NotificationPreferences>
 ): Promise<ApiResponse<NotificationPreferences>> => {
-  const current = mockPreferences.get(userId) || {
-    user_id: userId,
-    push_enabled: true,
-    email_enabled: true,
-    sms_enabled: false,
-    categories: {
-      order: true,
-      payment: true,
-      promotion: true,
-      system: true,
-      merchant: true,
-      impact: true,
-    },
-    quiet_hours: {
-      enabled: false,
-      start: '22:00',
-      end: '08:00',
-    },
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
+  if (!supabaseClient) return { data: null, error: null, success: false };
 
-  const updated: NotificationPreferences = {
-    ...current,
-    ...updates,
-    updated_at: new Date().toISOString(),
-  };
+  try {
+    // First get current or default to ensure we have a record
+    const { data: current } = await getPreferences(userId);
 
-  mockPreferences.set(userId, updated);
+    if (!current) {
+      throw new Error("Could not load current preferences to update");
+    }
 
-  return { data: updated, error: null, success: true };
+    const updated = {
+      ...current,
+      ...updates,
+      updated_at: new Date().toISOString()
+    };
+
+    const { data: profileData, error } = await supabaseClient
+      .from('profiles')
+      .select('preferences')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const mergedPrefs = { ...(profileData?.preferences || {}), notification_preferences: updated };
+    await supabaseClient
+      .from('profiles')
+      .update({ preferences: mergedPrefs, updated_at: new Date().toISOString() })
+      .eq('user_id', userId);
+
+    return { data: updated as NotificationPreferences, error: null, success: true };
+  } catch (err) {
+    console.error('Error updating preferences:', err);
+    return { data: null, error: { code: 'UPDATE_ERROR', message: 'Failed to update preferences' }, success: false };
+  }
 };
 
 /**

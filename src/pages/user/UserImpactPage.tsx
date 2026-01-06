@@ -7,78 +7,200 @@ import { useState, useEffect } from "react";
 import { UserLayout } from "@/components/user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Leaf, 
-  Droplets, 
+import {
+  Leaf,
+  Droplets,
   Zap,
   TreePine,
   Award,
   TrendingUp,
   ShoppingBag,
   Calendar,
-  Loader2
 } from "lucide-react";
-import { getCurrentUser, getUserStats } from "@/services";
-import type { UserImpact } from "@/types";
+import { useEffect, useState } from "react";
+import { getAuthUser } from "@/services";
+import { getUserStats, getUserMonthlyImpact } from "@/services";
+import {
+  mealsToCo2Kg,
+  mealsToWaterL,
+  mealsToEnergyKwh,
+  co2KgToTrees,
+  co2KgToCarKm,
+  co2KgToShowers,
+  co2KgToPhoneCharges,
+} from "@/lib/impactCalculations";
+
+const defaultMonthly = [
+  { month: 'Jan', meals: 0, co2: 0 },
+  { month: 'Fév', meals: 0, co2: 0 },
+  { month: 'Mar', meals: 0, co2: 0 },
+  { month: 'Avr', meals: 0, co2: 0 },
+];
 
 const UserImpactPage = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [userImpact, setUserImpact] = useState<UserImpact | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [impact, setImpact] = useState<any | null>(null);
+  const [monthlyData, setMonthlyData] = useState<typeof defaultMonthly>(defaultMonthly);
 
   useEffect(() => {
-    loadUserAndImpact();
+    const load = async () => {
+      setLoading(true);
+      try {
+        const { data: userData } = await getAuthUser();
+        const userId = userData?.user?.id;
+        if (!userId) {
+          setImpact(null);
+          setLoading(false);
+          return;
+        }
+
+        const resp = await getUserStats(userId);
+        if (resp?.success && resp.data) {
+          setImpact(resp.data);
+        } else {
+          setImpact(null);
+        }
+        // fetch monthly progression for the last 4 months
+        try {
+          const mResp = await getUserMonthlyImpact(userId, 4);
+          if (mResp?.success && mResp.data) setMonthlyData(mResp.data as any);
+        } catch (e) {
+          // ignore, keep defaults
+        }
+      } catch (err) {
+        setImpact(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, []);
 
-  const loadUserAndImpact = async () => {
-    setIsLoading(true);
-    
-    try {
-      // Get current user
-      const userResult = await getCurrentUser();
-      if (!userResult.data?.user) {
-        window.location.href = '/auth';
-        return;
+  const impactData = impact
+    ? {
+        mealsRescued: impact.orders_count || 0,
+        co2Saved: impact.co2_avoided_kg || 0,
+        waterSaved: mealsToWaterL(impact.orders_count || 0),
+        energySaved: mealsToEnergyKwh(impact.orders_count || 0),
+        moneySaved: impact.money_saved_xaf || 0,
+        treesEquivalent: co2KgToTrees(impact.co2_avoided_kg || 0),
       }
-      
-      const user = userResult.data.user;
-      setCurrentUser(user);
-      const userId = user.id;
+    : {
+        mealsRescued: 0,
+        co2Saved: 0,
+        waterSaved: 0,
+        energySaved: 0,
+        moneySaved: 0,
+        treesEquivalent: 0,
+      };
 
-      // Load impact data
-      const impactResult = await getUserStats(userId);
-      if (impactResult.success && impactResult.data) {
-        setUserImpact(impactResult.data);
-      }
-    } catch (error) {
-      console.error('Error loading impact data:', error);
-    }
+  const badges = [
+    {
+      id: "1",
+      name: "Premier pas",
+      description: "Première réservation effectuée",
+      icon: ShoppingBag,
+      earned: impactData.mealsRescued > 0,
+      earnedDate: impactData.mealsRescued > 0 ? new Date().toISOString() : undefined,
+    },
+    {
+      id: "2",
+      name: "Éco-warrior",
+      description: "10 repas sauvés",
+      icon: Leaf,
+      earned: impactData.mealsRescued >= 10,
+      earnedDate: impactData.mealsRescued >= 10 ? new Date().toISOString() : undefined,
+    },
+    {
+      id: "3",
+      name: "Super saver",
+      description: "50 000 FCFA économisés",
+      icon: TrendingUp,
+      earned: impactData.moneySaved >= 50000,
+      earnedDate: impactData.moneySaved >= 50000 ? new Date().toISOString() : undefined,
+    },
+    {
+      id: "4",
+      name: "Champion vert",
+      description: "50 kg de CO₂ évités",
+      icon: TreePine,
+      earned: impactData.co2Saved >= 50,
+      progress: Math.min(100, Math.round((impactData.co2Saved / 50) * 100)),
+    },
+    {
+      id: "5",
+      name: "Fidèle",
+      description: "30 jours consécutifs d'activité",
+      icon: Calendar,
+      earned: false,
+      progress: 0,
+    },
+    {
+      id: "6",
+      name: "Ambassadeur",
+      description: "Parrainez 5 amis",
+      icon: Award,
+      earned: false,
+      progress: 0,
+    },
+  ];
 
-    setIsLoading(false);
-  };
+  // Dynamic monthly objective and badge thresholds
+  const monthsToShow = monthlyData.length || 4;
+  const monthsObserved = monthlyData.filter((m) => m.meals > 0).length || monthsToShow;
+  const currentMonth = monthlyData[monthlyData.length - 1] || { meals: 0 };
+  const monthlyObjective = Math.max(
+    10,
+    Math.ceil(((impactData.mealsRescued || 0) / Math.max(1, monthsObserved)) * 1.2)
+  );
+  const monthlyProgress = Math.min(
+    100,
+    Math.round(((currentMonth.meals || 0) / monthlyObjective) * 100)
+  );
 
-  if (isLoading) {
-    return (
-      <UserLayout title="Mon impact" subtitle="Chargement...">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      </UserLayout>
-    );
-  }
+  const ecoThreshold = Math.max(10, Math.round((impactData.mealsRescued || 0) * 0.2) || 10);
+  const moneyThreshold = Math.max(50000, Math.round((impactData.moneySaved || 0) * 0.5) || 50000);
+  const co2Threshold = Math.max(50, Math.round((impactData.co2Saved || 0) * 0.5) || 50);
 
-  if (!userImpact) {
+  const dynamicBadges = [
+    {
+      id: '1',
+      name: 'Premier pas',
+      description: 'Première réservation effectuée',
+      icon: ShoppingBag,
+      earned: impactData.mealsRescued > 0,
+      earnedDate: impactData.mealsRescued > 0 ? new Date().toISOString() : undefined,
+    },
+    {
+      id: '2',
+      name: 'Éco-warrior',
+      description: `${ecoThreshold} repas sauvés`,
+      icon: Leaf,
+      earned: impactData.mealsRescued >= ecoThreshold,
+      earnedDate: impactData.mealsRescued >= ecoThreshold ? new Date().toISOString() : undefined,
+    },
+    {
+      id: '3',
+      name: 'Super saver',
+      description: `${moneyThreshold.toLocaleString()} FCFA économisés`,
+      icon: TrendingUp,
+      earned: impactData.moneySaved >= moneyThreshold,
+      earnedDate: impactData.moneySaved >= moneyThreshold ? new Date().toISOString() : undefined,
+    },
+    {
+      id: '4',
+      name: 'Champion vert',
+      description: `${co2Threshold} kg de CO₂ évités`,
+      icon: TreePine,
+      earned: impactData.co2Saved >= co2Threshold,
+      progress: Math.min(100, Math.round((impactData.co2Saved / co2Threshold) * 100)),
+    },
+  ];
+
+  if (loading) {
     return (
       <UserLayout title="Mon impact" subtitle="Votre contribution à la planète">
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Leaf className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold text-lg mb-2">Aucun impact enregistré</h3>
-            <p className="text-muted-foreground mb-4">
-              Commencez à faire des réservations pour voir votre impact environnemental.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="p-8">Chargement des statistiques...</div>
       </UserLayout>
     );
   }
@@ -131,25 +253,29 @@ const UserImpactPage = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="text-center p-6">
-                <Leaf className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Excellent travail !</h3>
-                <p className="text-muted-foreground text-sm">
-                  Vous avez contribué à réduire le gaspillage alimentaire et à préserver l'environnement.
-                  Continuez vos bonnes actions !
-                </p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 bg-muted/50 rounded-lg">
-                  <p className="text-2xl font-bold text-primary">{userImpact.orders_count}</p>
-                  <p className="text-xs text-muted-foreground">Commandes totales</p>
+              {monthlyData.map((month) => (
+                <div key={month.month} className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{month.month}</span>
+                    <span className="text-muted-foreground">
+                      {month.meals} repas • {month.co2} kg CO₂
+                    </span>
+                  </div>
+                  <Progress value={(month.meals / 10) * 100} className="h-2" />
                 </div>
-                <div className="text-center p-3 bg-muted/50 rounded-lg">
-                  <p className="text-2xl font-bold text-emerald-500">{userImpact.co2_avoided_kg.toFixed(1)}kg</p>
-                  <p className="text-xs text-muted-foreground">CO₂ évité</p>
-                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 p-4 rounded-lg bg-muted/50">
+              <h4 className="font-semibold mb-2">🎯 Objectif du mois</h4>
+              <p className="text-sm text-muted-foreground mb-2">
+                Sauvez {monthlyObjective} repas ce mois-ci pour atteindre votre objectif
+              </p>
+              <div className="flex items-center justify-between text-sm mb-1">
+                <span>Progression</span>
+                <span className="font-medium">{currentMonth.meals}/{monthlyObjective} repas</span>
               </div>
+              <Progress value={monthlyProgress} className="h-2" />
             </div>
           </CardContent>
         </Card>
@@ -163,27 +289,47 @@ const UserImpactPage = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="p-4 border rounded-lg">
-                <h4 className="font-medium mb-2">🏆 Système de badges</h4>
-                <p className="text-sm text-muted-foreground">
-                  Gagnez des badges en atteignant des objectifs environnementaux.
-                </p>
-              </div>
-              
-              <div className="p-4 border rounded-lg">
-                <h4 className="font-medium mb-2">📊 Statistiques mensuelles</h4>
-                <p className="text-sm text-muted-foreground">
-                  Suivez votre progression mois par mois.
-                </p>
-              </div>
-              
-              <div className="p-4 border rounded-lg">
-                <h4 className="font-medium mb-2">🌍 Classement communautaire</h4>
-                <p className="text-sm text-muted-foreground">
-                  Comparez-vous avec d'autres utilisateurs engagés.
-                </p>
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+              {dynamicBadges.map((badge) => (
+                <div
+                  key={badge.id}
+                  className={`p-4 rounded-lg border transition-all ${
+                    badge.earned
+                      ? "bg-primary/5 border-primary/20"
+                      : "bg-muted/30 border-border opacity-60"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div
+                      className={`p-2 rounded-full ${
+                        badge.earned ? "bg-primary/10" : "bg-muted"
+                      }`}
+                    >
+                      <badge.icon
+                        className={`h-5 w-5 ${
+                          badge.earned ? "text-primary" : "text-muted-foreground"
+                        }`}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm truncate">{badge.name}</h4>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {badge.description}
+                      </p>
+                    </div>
+                  </div>
+                  {badge.earned ? (
+                    <p className="text-xs text-primary">
+                      Obtenu le {new Date(badge.earnedDate!).toLocaleDateString("fr-FR")}
+                    </p>
+                  ) : (
+                    <div className="space-y-1">
+                      <Progress value={badge.progress} className="h-1.5" />
+                      <p className="text-xs text-muted-foreground">{badge.progress}%</p>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -195,12 +341,31 @@ const UserImpactPage = () => {
           <CardTitle className="text-lg">Équivalents environnementaux</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center p-6">
-            <Leaf className="h-12 w-12 text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              Les équivalents environnementaux détaillés seront bientôt disponibles.
-              Votre impact positif sur l'environnement est déjà remarquable !
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {(() => {
+              const carKm = co2KgToCarKm(impactData.co2Saved || 0);
+              const ledHours = Math.round((impactData.energySaved || 0) * 100); // assume 10W LED -> 0.01 kW
+              const trees = co2KgToTrees(impactData.co2Saved || 0);
+              return (
+                <>
+                  <div className="text-center p-4 rounded-lg bg-muted/30">
+                    <p className="text-3xl mb-2">🚗</p>
+                    <p className="text-xl font-bold text-foreground">{carKm} km</p>
+                    <p className="text-sm text-muted-foreground">de trajet en voiture évités</p>
+                  </div>
+                  <div className="text-center p-4 rounded-lg bg-muted/30">
+                    <p className="text-3xl mb-2">💡</p>
+                    <p className="text-xl font-bold text-foreground">{ledHours} heures</p>
+                    <p className="text-sm text-muted-foreground">d'éclairage LED économisées</p>
+                  </div>
+                  <div className="text-center p-4 rounded-lg bg-muted/30">
+                    <p className="text-3xl mb-2">🌳</p>
+                    <p className="text-xl font-bold text-foreground">{trees} arbres</p>
+                    <p className="text-sm text-muted-foreground">plantés en équivalent CO₂</p>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </CardContent>
       </Card>

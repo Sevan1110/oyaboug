@@ -133,7 +133,7 @@ export const getOrderById = async (
   const client = requireSupabaseClient();
   const { data, error } = await client
     .from(DB_TABLES.ORDERS)
-    .select('*, food_items(*), merchants(*), profiles(*)')
+    .select('*, food_items(*), merchants(*)')
     .eq('id', orderId)
     .maybeSingle();
 
@@ -149,7 +149,6 @@ export const getOrderById = async (
     ...data,
     food_item: data.food_items,
     merchant: data.merchants,
-    user: data.profiles,
   } : null;
 
   return {
@@ -527,7 +526,7 @@ export const getActiveOrders = async (
   const client = requireSupabaseClient();
   let query = client
     .from(DB_TABLES.ORDERS)
-    .select('*, food_items(*), merchants(*), profiles(*)')
+    .select('*, food_items(*), merchants(*)')
     .in('status', ['pending', 'confirmed', 'ready']);
 
   if (userId) {
@@ -551,7 +550,6 @@ export const getActiveOrders = async (
     ...o,
     food_item: o.food_items,
     merchant: o.merchants,
-    user: o.profiles,
   })) as Order[];
 
   return {

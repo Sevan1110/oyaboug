@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Check,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -146,6 +147,8 @@ const NotificationList = () => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    isLoading,
+    error,
   } = useNotifications();
 
   const hasNotifications = groupedNotifications.some(
@@ -170,7 +173,13 @@ const NotificationList = () => {
       </div>
 
       <ScrollArea className="h-80">
-        {hasNotifications ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center h-80">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-80 p-4 text-sm text-destructive">{error}</div>
+        ) : hasNotifications ? (
           <AnimatePresence mode="popLayout">
             {groupedNotifications.map((group) => (
               <div key={group.date}>
@@ -200,7 +209,7 @@ const NotificationList = () => {
 
       <Separator />
       <Link
-        to="/notifications"
+        to="/user/notifications"
         className="flex items-center justify-center gap-2 p-3 text-sm text-primary hover:bg-muted/50 transition-colors"
       >
         Voir toutes les notifications

@@ -3,21 +3,20 @@
 // oyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { UserLayout } from "@/components/user";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Clock, 
-  MapPin, 
+import {
+  Clock,
+  MapPin,
   Phone,
   CheckCircle,
   XCircle,
   AlertCircle,
   Package,
-  Loader2
 } from "lucide-react";
 import { 
   getUserOrders, 
@@ -30,39 +29,106 @@ import {
 } from "@/services";
 import type { Order } from "@/types";
 
+import { getAuthUser, getUserOrders, cancelOrder } from '@/services';
+
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case "confirmed":
+      return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Confirmée</Badge>;
+    case "pending":
+      return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">En attente</Badge>;
+    case "completed":
+    case "picked_up":
+      return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Récupérée</Badge>;
+    case "cancelled":
+      return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">Annulée</Badge>;
+    default:
+      return <Badge variant="secondary">{status}</Badge>;
+  }
+};
+
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case "confirmed":
+      return <AlertCircle className="h-5 w-5 text-blue-500" />;
+    case "pending":
+      return <Clock className="h-5 w-5 text-yellow-500" />;
+    case "completed":
+    case "picked_up":
+      return <CheckCircle className="h-5 w-5 text-green-500" />;
+    case "cancelled":
+      return <XCircle className="h-5 w-5 text-red-500" />;
+    default:
+      return <Package className="h-5 w-5" />;
+  }
+};
+
 const UserReservationsPage = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [reservations, setReservations] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadUserAndOrders();
+    const load = async () => {
+      setLoading(true);
+      try {
+        const { data: userData } = await getAuthUser();
+        const userId = userData?.user?.id;
+        if (!userId) {
+          setReservations([]);
+          setLoading(false);
+          return;
+        }
+
+        const resp = await getUserOrders(userId);
+        if (!resp || !resp.success) {
+          setError(resp?.error?.message || 'Impossible de charger les réservations');
+          setReservations([]);
+          setLoading(false);
+          return;
+        }
+
+        const orders = resp.data?.data || [];
+
+        const mapped = orders.map((o: any) => ({
+          id: o.id,
+          merchantName: o.merchant?.business_name || o.merchant?.name || 'Commerce',
+          merchantAddress: o.merchant?.address || '',
+          merchantPhone: o.merchant?.phone || '',
+          productName: o.food_item?.name || o.food_item?.title || 'Article',
+          description: o.food_item?.description || '',
+          price: o.total_price || 0,
+          originalPrice: o.original_total || o.food_item?.original_price || 0,
+          pickupTime: o.food_item ? `${o.food_item.pickup_start} - ${o.food_item.pickup_end}` : (o.pickup_time || ''),
+          pickupDate: o.created_at ? new Date(o.created_at).toLocaleDateString('fr-FR') : '',
+          status: o.status,
+          createdAt: o.created_at,
+        }));
+
+        setReservations(mapped);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
   }, []);
 
-  const loadUserAndOrders = async () => {
-    setIsLoading(true);
-    
+  const handleCancel = async (reservationId: string) => {
     try {
-      // Get current user
-      const userResult = await getCurrentUser();
-      if (!userResult.data?.user) {
-        window.location.href = '/auth';
-        return;
+      const resp = await cancelOrder(reservationId);
+      if (resp && resp.success && resp.data) {
+        setReservations((prev) =>
+          prev.map((r) => (r.id === reservationId ? { ...r, status: 'cancelled' } : r))
+        );
       }
-      
-      const user = userResult.data.user;
-      setCurrentUser(user);
-      const userId = user.id;
-
-      // Load orders
-      const ordersResult = await getUserOrders(userId);
-      if (ordersResult.success && ordersResult.data) {
-        setOrders(ordersResult.data.data);
-      }
-    } catch (error) {
-      console.error('Error loading orders:', error);
+    } catch {
+      // noop
     }
+  };
 
     setIsLoading(false);
   };
@@ -81,9 +147,9 @@ const UserReservationsPage = () => {
 
   const filteredOrders = orders.filter(order => {
     if (activeTab === "all") return true;
-    if (activeTab === "active") return ["confirmed", "pending", "ready"].includes(order.status);
-    if (activeTab === "completed") return ["completed", "picked_up"].includes(order.status);
-    if (activeTab === "cancelled") return order.status === "cancelled";
+    if (activeTab === "active") return ["confirmed", "pending", "ready"].includes(res.status);
+    if (activeTab === "completed") return ["completed", "picked_up"].includes(res.status);
+    if (activeTab === "cancelled") return res.status === "cancelled";
     return true;
   });
 
@@ -122,40 +188,40 @@ const UserReservationsPage = () => {
   }
 
   return (
-    <UserLayout title="Mes réservations" subtitle="Historique de vos commandes">
-      <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-foreground">{orders.length}</p>
-              <p className="text-sm text-muted-foreground">Total</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-blue-500">
-                {orders.filter(o => ["confirmed", "pending", "ready"].includes(o.status)).length}
-              </p>
-              <p className="text-sm text-muted-foreground">En cours</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-green-500">
-                {orders.filter(o => ["completed", "picked_up"].includes(o.status)).length}
-              </p>
-              <p className="text-sm text-muted-foreground">Récupérées</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-red-500">
-                {orders.filter(o => o.status === "cancelled").length}
-              </p>
-              <p className="text-sm text-muted-foreground">Annulées</p>
-            </CardContent>
-          </Card>
-        </div>
+    <UserLayout title="Mes réservations" subtitle="Historique et suivi de vos commandes">
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-foreground">{reservations.length}</p>
+            <p className="text-sm text-muted-foreground">Total</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-blue-500">
+              {reservations.filter((r) => ["confirmed", "pending", "ready"].includes(r.status)).length}
+            </p>
+            <p className="text-sm text-muted-foreground">En cours</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-green-500">
+              {reservations.filter((r) => ["completed", "picked_up"].includes(r.status)).length}
+            </p>
+            <p className="text-sm text-muted-foreground">Récupérées</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-red-500">
+              {reservations.filter((r) => r.status === "cancelled").length}
+            </p>
+            <p className="text-sm text-muted-foreground">Annulées</p>
+          </CardContent>
+        </Card>
+      </div>
 
         {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -167,14 +233,27 @@ const UserReservationsPage = () => {
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4">
-          {filteredOrders.length === 0 ? (
+          {loading ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="font-semibold text-lg mb-2">Chargement...</h3>
+                <p className="text-muted-foreground mb-4">Veuillez patienter pendant le chargement de vos réservations.</p>
+              </CardContent>
+            </Card>
+          ) : error ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <h3 className="font-semibold text-lg mb-2">Erreur</h3>
+                <p className="text-muted-foreground mb-4">{error}</p>
+              </CardContent>
+            </Card>
+          ) : filteredReservations.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="font-semibold text-lg mb-2">Aucune réservation</h3>
-                <p className="text-muted-foreground mb-4">
-                  Vous n'avez pas encore de réservation dans cette catégorie.
-                </p>
+                <p className="text-muted-foreground mb-4">Vous n'avez pas encore de réservation dans cette catégorie.</p>
                 <Button asChild>
                   <a href="/search">Explorer les offres</a>
                 </Button>
@@ -195,20 +274,14 @@ const UserReservationsPage = () => {
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold text-foreground">
-                              {order.food_item?.name || 'Article'}
-                            </h3>
-                            {getStatusBadge(order.status)}
+                            <h3 className="font-semibold text-foreground">{reservation.productName}</h3>
+                            {getStatusBadge(reservation.status)}
                           </div>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            {order.food_item?.description || ''}
-                          </p>
+                          <p className="text-sm text-muted-foreground mb-3">{reservation.description}</p>
 
                           {/* Merchant info */}
                           <div className="space-y-1 text-sm">
-                            <p className="font-medium text-foreground">
-                              {order.merchant?.business_name || 'Commerce'}
-                            </p>
+                            <p className="font-medium text-foreground">{reservation.merchantName}</p>
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <MapPin className="h-4 w-4" />
                               <span>{order.merchant?.address || ''}</span>
@@ -219,36 +292,26 @@ const UserReservationsPage = () => {
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <Clock className="h-4 w-4" />
-                              <span>
-                                Récupération: {order.food_item?.pickup_start} - {order.food_item?.pickup_end}
-                              </span>
+                              <span>Récupération: {reservation.pickupDate} • {reservation.pickupTime}</span>
                             </div>
                           </div>
                         </div>
 
                         {/* Price and actions */}
                         <div className="text-right space-y-2">
-                          <p className="text-xs text-muted-foreground">
-                            Réf: {order.id}
-                          </p>
-                          <p className="text-2xl font-bold text-primary">
-                            {order.total_price?.toLocaleString() || 0} FCFA
-                          </p>
-                          <p className="text-sm text-muted-foreground line-through">
-                            {order.original_total?.toLocaleString() || 0} FCFA
-                          </p>
-                          
-                          {order.status === "ready" && (
-                            <Button variant="outline" size="sm" className="w-full mt-2">
-                              Code: {order.pickup_code}
-                            </Button>
+                          <p className="text-xs text-muted-foreground">Réf: {reservation.id}</p>
+                          <p className="text-2xl font-bold text-primary">{reservation.price.toLocaleString()} FCFA</p>
+                          <p className="text-sm text-muted-foreground line-through">{reservation.originalPrice.toLocaleString()} FCFA</p>
+
+                          {reservation.status === "confirmed" && (
+                            <Button variant="outline" size="sm" className="w-full mt-2">Voir le code</Button>
                           )}
-                          {canCancel(order) && (
+                          {reservation.status === "pending" && (
                             <Button 
                               variant="destructive" 
                               size="sm" 
                               className="w-full mt-2"
-                              onClick={() => handleCancelOrder(order.id)}
+                              onClick={() => handleCancel(reservation.id)}
                             >
                               Annuler
                             </Button>

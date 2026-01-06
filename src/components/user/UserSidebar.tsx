@@ -1,9 +1,9 @@
 // ============================================
 // User Sidebar - Navigation Component
-// ouyaboung Platform - Anti-gaspillage alimentaire
+// ouyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -33,6 +33,9 @@ import {
   User,
   Search,
 } from "lucide-react";
+import { logout } from "@/services";
+import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const mainMenuItems = [
   {
@@ -73,6 +76,7 @@ const settingsMenuItems = [
     title: "Notifications",
     url: "/user/notifications",
     icon: Bell,
+    isNotification: true, // Marker for dynamic badge
   },
   {
     title: "Paramètres",
@@ -92,7 +96,10 @@ interface UserSidebarProps {
 
 const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const { state } = useSidebar();
+  const { unreadCount } = useNotifications();
   const isCollapsed = state === "collapsed";
   const { toast } = useToast();
   const { signOut, user } = useAuth();
@@ -104,44 +111,18 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
     return location.pathname.startsWith(path);
   };
 
-  // Obtenir les initiales de l'utilisateur pour l'avatar
-  const getUserInitials = () => {
-    if (user?.user_metadata?.full_name) {
-      return user.user_metadata.full_name
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    if (user?.email) {
-      return user.email[0].toUpperCase();
-    }
-    return 'U';
-  };
-
-  // Obtenir le nom d'affichage de l'utilisateur
-  const getDisplayName = () => {
-    return user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Utilisateur';
-  };
-
-  // Obtenir l'URL de l'image de profil
-  const getProfileImageUrl = () => {
-    return user?.user_metadata?.avatar_url || null;
-  };
-
   const handleLogout = async () => {
-    try {
-      await signOut();
+    const result = await logout();
+    if (result.success) {
       toast({
         title: "Déconnexion réussie",
-        description: "Vous avez été déconnecté avec succès.",
+        description: "À bientôt sur ouyaboung !",
       });
-      // La redirection vers la page d'accueil sera gérée par AuthRedirectHandler
-    } catch (error) {
+      navigate("/auth");
+    } else {
       toast({
         title: "Erreur de déconnexion",
-        description: "Une erreur est survenue lors de la déconnexion.",
+        description: result.error?.message || "Une erreur est survenue",
         variant: "destructive",
       });
     }
@@ -222,16 +203,26 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
           <SidebarGroupLabel>Paramètres</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {settingsMenuItems.map((item) => (
+              {settingsMenuItems.map((item: any) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.url)}
                     tooltip={item.title}
                   >
-                    <Link to={item.url}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
+                    <Link to={item.url} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </div>
+                      {item.isNotification && unreadCount > 0 && !isCollapsed && (
+                        <Badge
+                          variant="destructive"
+                          className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-[10px]"
+                        >
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </Badge>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -243,6 +234,8 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
 
       <SidebarFooter className="p-4">
         <SidebarMenuButton
+          onClick={handleLogout}
+          tooltip="Déconnexion"
           className="text-destructive hover:text-destructive hover:bg-destructive/10"
           onClick={handleLogout}
         >

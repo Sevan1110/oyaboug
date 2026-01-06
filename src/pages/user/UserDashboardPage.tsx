@@ -27,7 +27,9 @@ import {
   formatOrderForDisplay,
   formatPrice,
   getAvailableItems,
-  getCurrentUser,
+  getAuthUser,
+  createReservation,
+  getFavorites,
 } from "@/services";
 import type { Order, FoodItem, UserImpact } from "@/types";
 
@@ -36,34 +38,48 @@ const UserDashboardPage = () => {
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<FoodItem[]>([]);
   const [userImpact, setUserImpact] = useState<UserImpact | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [favoritesCount, setFavoritesCount] = useState<number>(0);
+  const [reservedCountMap, setReservedCountMap] = useState<Record<string, number>>({});
   
+  const [userId, setUserId] = useState<string | null>(null);
+
   useEffect(() => {
-    loadUserAndDashboardData();
+    const fetchUser = async () => {
+      const { data } = await getAuthUser();
+      if (data?.user?.id) {
+        setUserId(data.user.id);
+      }
+    };
+    fetchUser();
   }, []);
 
-  const loadUserAndDashboardData = async () => {
+  useEffect(() => {
+    if (userId) {
+      loadDashboardData();
+    }
+  }, [userId]);
+
+  const loadDashboardData = async () => {
+    if (!userId) return;
     setIsLoading(true);
     
-    try {
-      // Get current user
-      const userResult = await getCurrentUser();
-      if (!userResult.data?.user) {
-        // Redirect to auth if not authenticated
-        window.location.href = '/auth';
-        return;
-      }
-      
-      const user = userResult.data.user;
-      setCurrentUser(user);
-      const userId = user.id;
+    // Load in parallel
+    const [ordersResult, impactResult, itemsResult, favoritesResult] = await Promise.all([
+      getActiveOrders({ userId }),
+      getUserStats(userId),
+      getAvailableItems({ perPage: 4 }),
+      getFavorites(userId),
+    ]);
 
-      // Load dashboard data in parallel
-      const [ordersResult, impactResult, itemsResult] = await Promise.all([
-        getActiveOrders({ userId }),
-        getUserStats(userId),
-        getAvailableItems({ perPage: 4 }),
-      ]);
+    if (ordersResult.success && ordersResult.data) {
+      setActiveOrders(ordersResult.data);
+      const counts: Record<string, number> = {};
+      ordersResult.data.forEach((o) => {
+        const key = `${o.food_item_id}:${o.merchant_id}`;
+        counts[key] = (counts[key] || 0) + (o.quantity || 1);
+      });
+      setReservedCountMap(counts);
+    }
 
       if (ordersResult.success && ordersResult.data) {
         setActiveOrders(ordersResult.data);
@@ -83,7 +99,31 @@ const UserDashboardPage = () => {
       return;
     }
 
+    if (favoritesResult.success && favoritesResult.data) {
+      setFavoritesCount(favoritesResult.data.length);
+    }
+
     setIsLoading(false);
+  };
+
+  const handleReserve = async (item: FoodItem) => {
+    if (!userId) return;
+    const resp = await createReservation(userId, item.id, 1);
+    if (resp.success && resp.data) {
+      setActiveOrders((prev) => [resp.data as Order, ...prev]);
+      const key = `${item.id}:${resp.data?.merchant_id}`;
+      setReservedCountMap((prev) => ({
+        ...prev,
+        [key]: (prev[key] || 0) + 1,
+      }));
+      setFavoriteItems((prev) =>
+        prev.map((fi) =>
+          fi.id === item.id
+            ? { ...fi, quantity_available: Math.max(0, (fi.quantity_available || 0) - 1) }
+            : fi
+        )
+      );
+    }
   };
 
   const stats = [
@@ -107,10 +147,10 @@ const UserDashboardPage = () => {
       label: "CO₂ évité", 
       color: "text-green-600",
       bgColor: "bg-green-100",
-    },
+    }, 
     { 
       icon: Heart, 
-      value: "5", 
+      value: favoritesCount.toString(), 
       label: "Favoris", 
       color: "text-destructive",
       bgColor: "bg-destructive/10",
@@ -222,7 +262,16 @@ const UserDashboardPage = () => {
               <CardContent>
                 {activeOrders.length > 0 ? (
                   <div className="space-y-3">
-                    {activeOrders.slice(0, 3).map((order) => {
+                  {Object.values(
+                      activeOrders.reduce((acc, o) => {
+                        const key = `${o.food_item_id}:${o.merchant_id}`;
+                        if (!acc[key]) acc[key] = { order: o, total: 0 };
+                        acc[key].total += o.quantity || 1;
+                        return acc;
+                      }, {} as Record<string, { order: Order; total: number }>)
+                    )
+                      .slice(0, 3)
+                      .map(({ order, total }) => {
                       const formatted = formatOrderForDisplay(order);
                       return (
                         <div 
@@ -237,7 +286,7 @@ const UserDashboardPage = () => {
                               <p className="font-medium text-foreground text-sm">{formatted.merchantName}</p>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <Clock className="w-3 h-3" />
-                                {formatted.itemName}
+                                {formatted.itemName} • x{total}
                               </div>
                             </div>
                           </div>
@@ -338,7 +387,12 @@ const UserDashboardPage = () => {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {favoriteItems.map((item) => (
-              <FoodCard key={item.id} item={toFoodCardItem(item)} />
+              <FoodCard 
+                key={item.id} 
+                item={toFoodCardItem(item)} 
+                onReserve={item.quantity_available > 0 ? () => handleReserve(item) : undefined}
+                reservedCount={reservedCountMap[`${item.id}:${item.merchant?.id || item.merchant_id}`] || 0}
+              />
             ))}
           </div>
         </motion.div>

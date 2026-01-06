@@ -4,7 +4,8 @@
 // ============================================
 
 import { supabaseClient, requireSupabaseClient, isSupabaseConfigured } from './supabaseClient';
-import { DB_TABLES } from './routes';
+import { DB_TABLES, API_ROUTES } from './routes';
+
 import type { 
   ApiResponse, 
   Merchant, 
@@ -25,13 +26,7 @@ export const getMerchants = async (filters?: {
   limit?: number;
   offset?: number;
 }): Promise<ApiResponse<PaginatedResponse<Merchant>>> => {
-  if (!isSupabaseConfigured()) {
-    return {
-      data: null,
-      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
-      success: false,
-    };
-  }
+
 
   const client = requireSupabaseClient();
   let query = client
@@ -85,13 +80,7 @@ export const getMerchants = async (filters?: {
 export const getMerchantById = async (
   merchantId: string
 ): Promise<ApiResponse<Merchant>> => {
-  if (!isSupabaseConfigured()) {
-    return {
-      data: null,
-      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
-      success: false,
-    };
-  }
+
 
   const client = requireSupabaseClient();
   const { data, error } = await client
