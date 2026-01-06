@@ -4,11 +4,11 @@
 // ============================================
 
 // Supabase Client
-export { 
-  supabaseClient, 
-  getSupabaseClient, 
+export {
+  supabaseClient,
+  getSupabaseClient,
   isSupabaseConfigured,
-  requireSupabaseClient 
+  requireSupabaseClient
 } from './supabaseClient';
 
 // Routes & Tables
@@ -27,6 +27,7 @@ export {
   onAuthStateChange,
   signInWithOtp,
   verifyOtp,
+  updateUser,
 } from './auth.api';
 
 // Users API
@@ -39,6 +40,7 @@ export {
   addToFavorites,
   removeFromFavorites,
   getUserImpact as getUserImpactApi,
+  getUserProfileByUserId,
 } from './users.api';
 
 // Merchants API
@@ -99,4 +101,5 @@ export {
   getImpactLeaderboard,
   logImpact,
   generateImpactReport,
+  getUserMonthlyImpact,
 } from './impact.api';

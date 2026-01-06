@@ -4,7 +4,8 @@
 // ============================================
 
 import { supabaseClient, requireSupabaseClient, isSupabaseConfigured } from './supabaseClient';
-import { DB_TABLES } from './routes';
+import { DB_TABLES, API_ROUTES } from './routes';
+
 import type { ApiResponse, UserProfile, UserPreferences, UserImpact } from '@/types';
 
 /**
@@ -13,13 +14,7 @@ import type { ApiResponse, UserProfile, UserPreferences, UserImpact } from '@/ty
 export const getUserProfile = async (
   userId: string
 ): Promise<ApiResponse<UserProfile>> => {
-  if (!isSupabaseConfigured()) {
-    return {
-      data: null,
-      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
-      success: false,
-    };
-  }
+
 
   const client = requireSupabaseClient();
   const { data, error } = await client
@@ -50,13 +45,7 @@ export const updateUserProfile = async (
   userId: string,
   updates: Partial<UserProfile>
 ): Promise<ApiResponse<UserProfile>> => {
-  if (!isSupabaseConfigured()) {
-    return {
-      data: null,
-      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
-      success: false,
-    };
-  }
+
 
   const client = requireSupabaseClient();
   const { data, error } = await client
@@ -310,6 +299,42 @@ export const getUserImpact = async (
 
   return {
     data: impact,
+    error: null,
+    success: true,
+  };
+};
+
+/**
+ * Get user profile by auth user id (user_id column)
+ */
+export const getUserProfileByUserId = async (
+  userId: string
+): Promise<ApiResponse<UserProfile>> => {
+  if (!isSupabaseConfigured()) {
+    return {
+      data: null,
+      error: { code: 'NOT_CONFIGURED', message: 'Supabase is not configured' },
+      success: false,
+    };
+  }
+
+  const client = requireSupabaseClient();
+  const { data, error } = await client
+    .from(DB_TABLES.PROFILES)
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.code, message: error.message },
+      success: false,
+    };
+  }
+
+  return {
+    data: data as UserProfile,
     error: null,
     success: true,
   };

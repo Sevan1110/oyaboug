@@ -1,83 +1,118 @@
+
 // ============================================
 // Notifications Hook
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useState, useCallback, useMemo } from 'react';
-import type { AppNotification, NotificationGroup } from '@/types/notification.types';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import type { AppNotification, NotificationGroup, NotificationPreferences } from '@/types/notification.types';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
-
-// Mock notifications for demo
-const mockNotifications: AppNotification[] = [
-  {
-    id: '1',
-    user_id: 'user-1',
-    type: 'order_confirmed',
-    category: 'order',
-    priority: 'high',
-    title: 'Commande confirmée',
-    message: 'Votre panier surprise chez Boulangerie du Coin est prêt à être récupéré',
-    action_url: '/user/orders/1',
-    action_label: 'Voir ma commande',
-    is_read: false,
-    is_archived: false,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    user_id: 'user-1',
-    type: 'qr_generated',
-    category: 'payment',
-    priority: 'high',
-    title: 'QR Code généré',
-    message: 'Votre QR code de récupération est disponible. Présentez-le au commerçant.',
-    action_url: '/user/transactions',
-    action_label: 'Voir mon QR',
-    is_read: false,
-    is_archived: false,
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: '3',
-    user_id: 'user-1',
-    type: 'impact_milestone',
-    category: 'impact',
-    priority: 'medium',
-    title: 'Bravo ! 🎉',
-    message: 'Vous avez sauvé 10 kg de nourriture ! Continuez comme ça.',
-    is_read: true,
-    is_archived: false,
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: '4',
-    user_id: 'user-1',
-    type: 'new_food_nearby',
-    category: 'promotion',
-    priority: 'low',
-    title: 'Nouveau panier disponible',
-    message: 'Restaurant Le Gabonais a ajouté un nouveau panier surprise à -50%',
-    action_url: '/search',
-    action_label: 'Découvrir',
-    is_read: true,
-    is_archived: false,
-    created_at: new Date(Date.now() - 172800000).toISOString(),
-  },
-];
+import {
+  getUserNotifications,
+  markAsRead as apiMarkAsRead,
+  markAllAsRead as apiMarkAllAsRead,
+  deleteNotification as apiDeleteNotification,
+  archiveNotification as apiArchiveNotification,
+  getPreferences as apiGetPreferences,
+  updatePreferences as apiUpdatePreferences,
+} from '@/services/notification.service';
+import { getAuthUser } from '@/services';
+import { supabaseClient } from '@/api/supabaseClient';
 
 export const useNotifications = () => {
-  const [notifications, setNotifications] = useState<AppNotification[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const unreadCount = useMemo(
-    () => notifications.filter((n) => !n.is_read && !n.is_archived).length,
-    [notifications]
-  );
+  const load = useCallback(async (opts?: { unreadOnly?: boolean; limit?: number }) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Correctly extract user from Supabase response
+      const { data } = await getAuthUser();
+      const userId = data?.user?.id;
+
+      if (!userId) {
+        setNotifications([]);
+        setPreferences(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Load notifications and preferences in parallel
+      const [notifRes, prefRes] = await Promise.all([
+        getUserNotifications(userId, {
+          unreadOnly: opts?.unreadOnly,
+          limit: opts?.limit,
+        }),
+        apiGetPreferences(userId)
+      ]);
+
+      if (notifRes.success && notifRes.data) {
+        setNotifications(notifRes.data);
+      } else {
+        setError(notifRes.error?.message || 'Erreur lors du chargement des notifications');
+      }
+
+      if (prefRes.success && prefRes.data) {
+        setPreferences(prefRes.data);
+      }
+
+    } catch (err: any) {
+      setError(err?.message || 'Erreur inattendue');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+
+    // Set up real-time subscription
+    let subscription: any = null;
+
+    const setupSubscription = async () => {
+      const { data } = await getAuthUser();
+      const userId = data?.user?.id;
+
+      if (!userId || !supabaseClient) return;
+
+      subscription = supabaseClient
+        .channel('public:notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            // Reload on any change to user's notifications
+            if (payload.new || payload.old) {
+              load();
+            }
+          }
+        )
+        .subscribe();
+    };
+
+    setupSubscription();
+
+    return () => {
+      if (subscription) {
+        supabaseClient?.removeChannel(subscription);
+      }
+    };
+  }, [load]);
+
+  const unreadCount = useMemo(() => notifications.filter((n) => !n.is_read && !n.is_archived).length, [notifications]);
 
   const groupedNotifications = useMemo((): NotificationGroup[] => {
     const groups: Record<string, AppNotification[]> = {};
-    
+
     notifications
       .filter((n) => !n.is_archived)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -105,61 +140,118 @@ export const useNotifications = () => {
     }));
   }, [notifications]);
 
-  const markAsRead = useCallback((notificationId: string) => {
-    setNotifications((prev) =>
-      prev.map((n) =>
-        n.id === notificationId
-          ? { ...n, is_read: true, read_at: new Date().toISOString() }
-          : n
-      )
-    );
-  }, []);
+  const markAsRead = useCallback(async (notificationId: string) => {
+    try {
+      const { data } = await getAuthUser();
+      const userId = data?.user?.id;
+      if (!userId) return;
 
-  const markAllAsRead = useCallback(() => {
-    const now = new Date().toISOString();
-    setNotifications((prev) =>
-      prev.map((n) => ({ ...n, is_read: true, read_at: now }))
-    );
-  }, []);
+      // Optimistic update
+      setNotifications((prev) => prev.map((n) => n.id === notificationId ? { ...n, is_read: true, read_at: new Date().toISOString() } : n));
 
-  const archiveNotification = useCallback((notificationId: string) => {
-    setNotifications((prev) =>
-      prev.map((n) =>
-        n.id === notificationId
-          ? { ...n, is_archived: true, archived_at: new Date().toISOString() }
-          : n
-      )
-    );
-  }, []);
+      const res = await apiMarkAsRead(notificationId, userId);
+      if (!res.success) {
+        // Revert on failure (could implement more robust rollback)
+        load();
+      }
+    } catch (err) {
+      load();
+    }
+  }, [load]);
 
-  const deleteNotification = useCallback((notificationId: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
-  }, []);
+  const markAllAsRead = useCallback(async () => {
+    try {
+      const { data } = await getAuthUser();
+      const userId = data?.user?.id;
+      if (!userId) return;
 
-  const clearAll = useCallback(() => {
-    const now = new Date().toISOString();
-    setNotifications((prev) =>
-      prev.map((n) => ({ ...n, is_archived: true, archived_at: now }))
-    );
-  }, []);
+      const now = new Date().toISOString();
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true, read_at: now })));
 
-  const refreshNotifications = useCallback(async () => {
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsLoading(false);
-  }, []);
+      const res = await apiMarkAllAsRead(userId);
+      if (!res.success) {
+        load();
+      }
+    } catch (err) {
+      load();
+    }
+  }, [load]);
+
+  const deleteNotification = useCallback(async (notificationId: string) => {
+    try {
+      const { data } = await getAuthUser();
+      const userId = data?.user?.id;
+      if (!userId) return;
+
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+
+      const res = await apiDeleteNotification(notificationId, userId);
+      if (!res.success) {
+        load();
+      }
+    } catch (err) {
+      load();
+    }
+  }, [load]);
+
+  const archive = useCallback(async (notificationId: string) => {
+    try {
+      const { data } = await getAuthUser();
+      const userId = data?.user?.id;
+      if (!userId) return;
+
+      setNotifications((prev) => prev.map((n) => n.id === notificationId ? { ...n, is_archived: true, archived_at: new Date().toISOString() } : n));
+
+      const res = await apiArchiveNotification(notificationId, userId);
+      if (!res.success) {
+        load();
+      }
+    } catch (err) {
+      load();
+    }
+  }, [load]);
+
+  const updatePreferences = useCallback(async (updates: Partial<NotificationPreferences>) => {
+    try {
+      const { data } = await getAuthUser();
+      const userId = data?.user?.id;
+      if (!userId) return;
+
+      // Optimistic update
+      setPreferences((prev) => prev ? { ...prev, ...updates } : null);
+
+      const res = await apiUpdatePreferences(userId, updates);
+      if (res.success && res.data) {
+        setPreferences(res.data);
+      } else {
+        // Revert or reload
+        load();
+      }
+    } catch (err) {
+      load();
+    }
+  }, [load]);
+
+  const refreshNotifications = useCallback(() => load(), [load]);
 
   return {
     notifications,
+    preferences,
     groupedNotifications,
     unreadCount,
     isLoading,
+    error,
     markAsRead,
     markAllAsRead,
-    archiveNotification,
+    archiveNotification: archive,
     deleteNotification,
-    clearAll,
+    updatePreferences,
+    clearAll: async () => {
+      // archive all locally and call markAllAsRead as a proximate action
+      const now = new Date().toISOString();
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_archived: true, archived_at: now })));
+      await markAllAsRead();
+    },
     refreshNotifications,
   };
 };

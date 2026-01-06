@@ -14,6 +14,7 @@ import {
   onAuthStateChange,
   signInWithOtp,
   verifyOtp,
+  updateUser,
 } from '@/api';
 import type { AuthCredentials, SignUpData, User, UserRole, ApiResponse } from '@/types';
 
@@ -135,4 +136,13 @@ export const isAuthenticated = async (): Promise<boolean> => {
 export const getUserRole = async (): Promise<UserRole | null> => {
   const { data } = await getCurrentUser();
   return (data?.user?.user_metadata?.role as UserRole) || null;
+};
+
+/**
+ * Update user profile (metadata)
+ */
+export const updateProfile = async (
+  metadata: object
+): Promise<ApiResponse<{ user: User | null }>> => {
+  return import('@/api/auth.api').then(m => m.updateUser({ data: metadata }));
 };

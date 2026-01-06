@@ -27,6 +27,7 @@ import {
   formatOrderForDisplay,
   formatPrice,
   getAvailableItems,
+  getAuthUser,
 } from "@/services";
 import type { Order, FoodItem, UserImpact } from "@/types";
 
@@ -36,14 +37,26 @@ const UserDashboardPage = () => {
   const [favoriteItems, setFavoriteItems] = useState<FoodItem[]>([]);
   const [userImpact, setUserImpact] = useState<UserImpact | null>(null);
   
-  // Mock user ID - in real app, get from auth context
-  const userId = "mock-user-id";
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadDashboardData();
+    const fetchUser = async () => {
+      const { data } = await getAuthUser();
+      if (data?.user?.id) {
+        setUserId(data.user.id);
+      }
+    };
+    fetchUser();
   }, []);
 
+  useEffect(() => {
+    if (userId) {
+      loadDashboardData();
+    }
+  }, [userId]);
+
   const loadDashboardData = async () => {
+    if (!userId) return;
     setIsLoading(true);
     
     // Load in parallel

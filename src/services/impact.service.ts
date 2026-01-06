@@ -10,6 +10,7 @@ import {
   calculateCO2Impact,
   getImpactLeaderboard,
   generateImpactReport,
+  getUserMonthlyImpact as getUserMonthlyImpactApi,
 } from '@/api';
 import type { ApiResponse, ImpactStats, UserImpact, MerchantImpact } from '@/types';
 
@@ -65,6 +66,16 @@ export const generateReport = async (
   merchantId?: string
 ) => {
   return generateImpactReport({ start_date: startDate, end_date: endDate, merchant_id: merchantId });
+};
+
+/**
+ * Get user's monthly impact (last N months)
+ */
+export const getUserMonthlyImpact = async (
+  userId: string,
+  months: number = 4
+): Promise<ApiResponse<Array<{ month: string; meals: number; co2: number }>>> => {
+  return getUserMonthlyImpactApi(userId, months);
 };
 
 /**

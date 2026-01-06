@@ -1,9 +1,9 @@
 // ============================================
 // User Sidebar - Navigation Component
-// ouyaboung Platform - Anti-gaspillage alimentaire
+// ouyaboug Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -30,6 +30,9 @@ import {
   User,
   Search,
 } from "lucide-react";
+import { logout } from "@/services";
+import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const mainMenuItems = [
   {
@@ -70,6 +73,7 @@ const settingsMenuItems = [
     title: "Notifications",
     url: "/user/notifications",
     icon: Bell,
+    isNotification: true, // Marker for dynamic badge
   },
   {
     title: "Paramètres",
@@ -89,7 +93,10 @@ interface UserSidebarProps {
 
 const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const { state } = useSidebar();
+  const { unreadCount } = useNotifications();
   const isCollapsed = state === "collapsed";
 
   const isActive = (path: string) => {
@@ -97,6 +104,23 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
       return location.pathname === "/user";
     }
     return location.pathname.startsWith(path);
+  };
+
+  const handleLogout = async () => {
+    const result = await logout();
+    if (result.success) {
+      toast({
+        title: "Déconnexion réussie",
+        description: "À bientôt sur ouyaboung !",
+      });
+      navigate("/auth");
+    } else {
+      toast({
+        title: "Erreur de déconnexion",
+        description: result.error?.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -161,16 +185,26 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
           <SidebarGroupLabel>Paramètres</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {settingsMenuItems.map((item) => (
+              {settingsMenuItems.map((item: any) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.url)}
                     tooltip={item.title}
                   >
-                    <Link to={item.url}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
+                    <Link to={item.url} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </div>
+                      {item.isNotification && unreadCount > 0 && !isCollapsed && (
+                        <Badge
+                          variant="destructive"
+                          className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-[10px]"
+                        >
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </Badge>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -182,14 +216,12 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
 
       <SidebarFooter className="p-4">
         <SidebarMenuButton
-          asChild
+          onClick={handleLogout}
           tooltip="Déconnexion"
           className="text-destructive hover:text-destructive hover:bg-destructive/10"
         >
-          <Link to="/auth">
-            <LogOut className="w-4 h-4" />
-            <span>Déconnexion</span>
-          </Link>
+          <LogOut className="w-4 h-4" />
+          <span>Déconnexion</span>
         </SidebarMenuButton>
       </SidebarFooter>
     </Sidebar>

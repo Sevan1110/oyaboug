@@ -23,6 +23,9 @@ import {
   Mail,
 } from "lucide-react";
 import { toast } from "sonner";
+import { changePassword } from "@/services";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
 
 const MerchantSettingsPage = () => {
   const [notifications, setNotifications] = useState({
@@ -40,8 +43,47 @@ const MerchantSettingsPage = () => {
     twoFactor: false,
   });
 
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
   const handleSave = () => {
     toast.success("Paramètres enregistrés");
+  };
+
+  const handleChangePassword = async () => {
+    if (!passwordData.newPassword || !passwordData.confirmPassword) {
+      toast.error("Veuillez remplir tous les champs");
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error("Les mots de passe ne correspondent pas");
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    const result = await changePassword(passwordData.newPassword);
+    setIsChangingPassword(false);
+
+    if (result.success) {
+      toast.success("Mot de passe modifié avec succès");
+      setIsPasswordDialogOpen(false);
+      setPasswordData({
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } else {
+      toast.error(result.error?.message || "Impossible de modifier le mot de passe");
+    }
   };
 
   return (
@@ -205,13 +247,64 @@ const MerchantSettingsPage = () => {
 
               <div className="space-y-2">
                 <Label>Changer le mot de passe</Label>
-                <div className="flex gap-2">
-                  <Input type="password" placeholder="Nouveau mot de passe" />
-                  <Button variant="outline" className="gap-2">
-                    <Key className="w-4 h-4" />
-                    Modifier
-                  </Button>
-                </div>
+                <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full gap-2">
+                      <Key className="w-4 h-4" />
+                      Modifier le mot de passe
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Changer le mot de passe</DialogTitle>
+                      <DialogDescription>
+                        Entrez votre nouveau mot de passe. Il doit contenir au moins 6 caractères.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="merchant-new-password">Nouveau mot de passe</Label>
+                        <Input
+                          id="merchant-new-password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={passwordData.newPassword}
+                          onChange={(e) =>
+                            setPasswordData({ ...passwordData, newPassword: e.target.value })
+                          }
+                          disabled={isChangingPassword}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="merchant-confirm-password">Confirmer le mot de passe</Label>
+                        <Input
+                          id="merchant-confirm-password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={passwordData.confirmPassword}
+                          onChange={(e) =>
+                            setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+                          }
+                          disabled={isChangingPassword}
+                        />
+                      </div>
+                      <Button
+                        onClick={handleChangePassword}
+                        className="w-full"
+                        disabled={isChangingPassword}
+                      >
+                        {isChangingPassword ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Modification...
+                          </>
+                        ) : (
+                          "Modifier le mot de passe"
+                        )}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardContent>
           </Card>
