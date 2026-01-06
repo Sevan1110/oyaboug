@@ -15,7 +15,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import FoodCard, { FoodItem as FoodCardItem } from "@/components/FoodCard";
 import { Search as SearchIcon, MapPin, Grid, Map, SlidersHorizontal, Store, Loader2 } from "lucide-react";
-import { getAvailableItems, searchInventory, getCategoryName, formatPrice } from "@/services";
+import { getAvailableItems, searchInventory, getCategoryName, formatPrice, getAuthUser, getActiveOrders, createReservation } from "@/services";
 import type { FoodItem, FoodCategory, GabonCity, MerchantType } from "@/types";
 
 // Lazy load map component to avoid SSR issues
@@ -61,6 +61,8 @@ const SearchPage = () => {
   const [priceRange, setPriceRange] = useState([0, 20000]); // XAF
   const [isLoading, setIsLoading] = useState(true);
   const [items, setItems] = useState<FoodItem[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [reservedCountMap, setReservedCountMap] = useState<Record<string, number>>({});
 
   // Filter states
   const [selectedCity, setSelectedCity] = useState<GabonCity | "all">("all");
@@ -73,6 +75,26 @@ const SearchPage = () => {
   useEffect(() => {
     loadItems();
   }, [selectedCity, selectedCategory, selectedMerchantType, priceRange, sortBy]);
+
+  useEffect(() => {
+    const init = async () => {
+      const { data } = await getAuthUser();
+      const uid = data?.user?.id || null;
+      setUserId(uid);
+      if (uid) {
+        const res = await getActiveOrders({ userId: uid });
+        if (res.success && res.data) {
+          const counts: Record<string, number> = {};
+          res.data.forEach((o) => {
+            const key = `${o.food_item_id}:${o.merchant_id}`;
+            counts[key] = (counts[key] || 0) + (o.quantity || 1);
+          });
+          setReservedCountMap(counts);
+        }
+      }
+    };
+    init();
+  }, []);
 
   const loadItems = async () => {
     setIsLoading(true);
@@ -115,6 +137,26 @@ const SearchPage = () => {
       setItems(filtered);
     }
     setIsLoading(false);
+  };
+
+  const handleReserve = async (item: FoodItem) => {
+    if (!userId) return;
+    if ((item.quantity_available || 0) <= 0) return;
+    const resp = await createReservation(userId, item.id, 1);
+    if (resp.success && resp.data) {
+      const key = `${item.id}:${resp.data?.merchant_id}`;
+      setReservedCountMap((prev) => ({
+        ...prev,
+        [key]: (prev[key] || 0) + 1,
+      }));
+      setItems((prev) =>
+        prev.map((fi) =>
+          fi.id === item.id
+            ? { ...fi, quantity_available: Math.max(0, (fi.quantity_available || 0) - 1) }
+            : fi
+        )
+      );
+    }
   };
 
   // Convert FoodItem to FoodCardItem format
@@ -351,7 +393,11 @@ const SearchPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <FoodCard item={toFoodCardItem(item)} />
+                  <FoodCard 
+                    item={toFoodCardItem(item)} 
+                    onReserve={item.quantity_available > 0 ? () => handleReserve(item) : undefined}
+                    reservedCount={reservedCountMap[`${item.id}:${item.merchant_id}`] || 0}
+                  />
                 </motion.div>
               ))}
               {items.length === 0 && (

@@ -19,7 +19,7 @@ import {
   Package,
 } from "lucide-react";
 
-import { getAuthUser, getUserOrders } from '@/services';
+import { getAuthUser, getUserOrders, cancelOrder } from '@/services';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -106,6 +106,19 @@ const UserReservationsPage = () => {
 
     load();
   }, []);
+
+  const handleCancel = async (reservationId: string) => {
+    try {
+      const resp = await cancelOrder(reservationId);
+      if (resp && resp.success && resp.data) {
+        setReservations((prev) =>
+          prev.map((r) => (r.id === reservationId ? { ...r, status: 'cancelled' } : r))
+        );
+      }
+    } catch {
+      // noop
+    }
+  };
 
   const filteredReservations = reservations.filter((res) => {
     if (activeTab === "all") return true;
@@ -235,7 +248,14 @@ const UserReservationsPage = () => {
                             <Button variant="outline" size="sm" className="w-full mt-2">Voir le code</Button>
                           )}
                           {reservation.status === "pending" && (
-                            <Button variant="destructive" size="sm" className="w-full mt-2">Annuler</Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              className="w-full mt-2"
+                              onClick={() => handleCancel(reservation.id)}
+                            >
+                              Annuler
+                            </Button>
                           )}
                         </div>
                       </div>

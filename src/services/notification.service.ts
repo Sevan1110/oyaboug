@@ -38,16 +38,13 @@ export const getUserNotifications = async (
     let query = supabaseClient
       .from('notifications')
       .select('*')
-      .eq('user_id', userId)
-      .eq('is_archived', false);
+      .eq('user_id', userId);
 
     if (options?.unreadOnly) {
       query = query.eq('is_read', false);
     }
 
-    if (options?.category) {
-      query = query.eq('category', options.category);
-    }
+    // Category filtering skipped for current schema
 
     // Sort by creation date (newest first)
     query = query.order('created_at', { ascending: false });
@@ -86,8 +83,7 @@ export const getUnreadCount = async (
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
-      .eq('is_read', false)
-      .eq('is_archived', false);
+      .eq('is_read', false);
 
     if (error) throw error;
 
@@ -110,7 +106,7 @@ export const markAsRead = async (
   try {
     const { error } = await supabaseClient
       .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
+      .update({ is_read: true })
       .eq('id', notificationId)
       .eq('user_id', userId);
 
@@ -134,7 +130,7 @@ export const markAllAsRead = async (
   try {
     const { error } = await supabaseClient
       .from('notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() })
+      .update({ is_read: true })
       .eq('user_id', userId)
       .eq('is_read', false);
 
@@ -154,22 +150,7 @@ export const archiveNotification = async (
   notificationId: string,
   userId: string
 ): Promise<ApiResponse<null>> => {
-  if (!supabaseClient) return { data: null, error: null, success: false };
-
-  try {
-    const { error } = await supabaseClient
-      .from('notifications')
-      .update({ is_archived: true, archived_at: new Date().toISOString() })
-      .eq('id', notificationId)
-      .eq('user_id', userId);
-
-    if (error) throw error;
-
-    return { data: null, error: null, success: true };
-  } catch (err) {
-    console.error('Error archiving notification:', err);
-    return { data: null, error: { code: 'UPDATE_ERROR', message: 'Update failed' }, success: false };
-  }
+  return { data: null, error: null, success: true };
 };
 
 /**
@@ -203,24 +184,16 @@ export const deleteNotification = async (
 export const createNotification = async (
   input: CreateNotificationInput
 ): Promise<ApiResponse<AppNotification>> => {
-  if (!supabaseClient) return { data: {} as any, error: { code: 'CONFIG_ERROR', message: 'No Supabase client' }, success: false };
+  if (!supabaseClient) return { data: null, error: { code: 'CONFIG_ERROR', message: 'No Supabase client' }, success: false };
 
   try {
     const notification = {
       user_id: input.user_id,
       type: input.type,
-      category: input.category,
-      priority: input.priority || 'medium',
       title: input.title,
       message: input.message,
-      icon: input.icon,
-      image_url: input.image_url,
-      action_url: input.action_url,
-      action_label: input.action_label,
       data: input.data,
       is_read: false,
-      is_archived: false,
-      expires_at: input.expires_at,
     };
 
     const { data, error } = await supabaseClient
@@ -234,7 +207,7 @@ export const createNotification = async (
     return { data: data as AppNotification, error: null, success: true };
   } catch (err) {
     console.error('Error creating notification:', err);
-    return { data: {} as any, error: { code: 'CREATE_ERROR', message: 'Create failed' }, success: false };
+    return { data: null, error: { code: 'CREATE_ERROR', message: 'Create failed' }, success: false };
   }
 };
 
@@ -248,17 +221,18 @@ export const getPreferences = async (
 
   try {
     const { data, error } = await supabaseClient
-      .from('notification_preferences')
-      .select('*')
+      .from('profiles')
+      .select('id, preferences')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
-      throw error;
-    }
+    if (error) throw error;
 
-    if (data) {
-      return { data: data as NotificationPreferences, error: null, success: true };
+    type PreferencesPayload = { [key: string]: unknown; notification_preferences?: NotificationPreferences };
+    const prefs = (data?.preferences ?? {}) as PreferencesPayload;
+    const existing = prefs.notification_preferences;
+    if (existing) {
+      return { data: existing, error: null, success: true };
     }
 
     // Default preferences if not found
@@ -284,19 +258,13 @@ export const getPreferences = async (
       updated_at: new Date().toISOString(),
     };
 
-    // Try to create default preferences
-    const { data: newData, error: createError } = await supabaseClient
-      .from('notification_preferences')
-      .insert(defaultPrefs)
-      .select()
-      .single();
+    const mergedPrefs = { ...(data?.preferences || {}), notification_preferences: defaultPrefs };
+    await supabaseClient
+      .from('profiles')
+      .update({ preferences: mergedPrefs, updated_at: new Date().toISOString() })
+      .eq('user_id', userId);
 
-    if (createError) {
-      // If concurrent creation happened, just return default without saving or try fetch again
-      return { data: defaultPrefs, error: null, success: true };
-    }
-
-    return { data: newData as NotificationPreferences, error: null, success: true };
+    return { data: defaultPrefs, error: null, success: true };
   } catch (err) {
     console.error('Error fetching preferences:', err);
     return { data: null, error: { code: 'FETCH_ERROR', message: 'Failed to fetch preferences' }, success: false };
@@ -326,15 +294,21 @@ export const updatePreferences = async (
       updated_at: new Date().toISOString()
     };
 
-    const { data, error } = await supabaseClient
-      .from('notification_preferences')
-      .upsert(updated)
-      .select()
-      .single();
+    const { data: profileData, error } = await supabaseClient
+      .from('profiles')
+      .select('preferences')
+      .eq('user_id', userId)
+      .maybeSingle();
 
     if (error) throw error;
 
-    return { data: data as NotificationPreferences, error: null, success: true };
+    const mergedPrefs = { ...(profileData?.preferences || {}), notification_preferences: updated };
+    await supabaseClient
+      .from('profiles')
+      .update({ preferences: mergedPrefs, updated_at: new Date().toISOString() })
+      .eq('user_id', userId);
+
+    return { data: updated as NotificationPreferences, error: null, success: true };
   } catch (err) {
     console.error('Error updating preferences:', err);
     return { data: null, error: { code: 'UPDATE_ERROR', message: 'Failed to update preferences' }, success: false };

@@ -60,7 +60,7 @@ export const signUpWithEmail = async (
   }
 
   const client = requireSupabaseClient();
-  const redirectUrl = `${window.location.origin}/auth`;
+  const redirectUrl = `${import.meta.env.DEV ? 'http://127.0.0.1:3000' : window.location.origin}/auth`;
 
   try {
     const { data, error } = await client.auth.signUp({
