@@ -17,19 +17,14 @@ import {
   XCircle,
   AlertCircle,
   Package,
+  Loader2,
 } from "lucide-react";
 import { 
+  getAuthUser,
   getUserOrders, 
-  getCurrentUser,
-  getStatusText,
-  getStatusColor,
-  canCancel,
   cancelOrder,
-  formatOrderForDisplay
 } from "@/services";
 import type { Order } from "@/types";
-
-import { getAuthUser, getUserOrders, cancelOrder } from '@/services';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -37,6 +32,8 @@ const getStatusBadge = (status: string) => {
       return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Confirmée</Badge>;
     case "pending":
       return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">En attente</Badge>;
+    case "ready":
+      return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Prête</Badge>;
     case "completed":
     case "picked_up":
       return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Récupérée</Badge>;
@@ -53,6 +50,8 @@ const getStatusIcon = (status: string) => {
       return <AlertCircle className="h-5 w-5 text-blue-500" />;
     case "pending":
       return <Clock className="h-5 w-5 text-yellow-500" />;
+    case "ready":
+      return <Package className="h-5 w-5 text-green-500" />;
     case "completed":
     case "picked_up":
       return <CheckCircle className="h-5 w-5 text-green-500" />;
@@ -66,26 +65,30 @@ const getStatusIcon = (status: string) => {
 const UserReservationsPage = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [reservations, setReservations] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
+    const loadReservations = async () => {
+      setIsLoading(true);
+      setError(null);
+      
       try {
         const { data: userData } = await getAuthUser();
         const userId = userData?.user?.id;
+        
         if (!userId) {
           setReservations([]);
-          setLoading(false);
+          setIsLoading(false);
           return;
         }
 
         const resp = await getUserOrders(userId);
+        
         if (!resp || !resp.success) {
           setError(resp?.error?.message || 'Impossible de charger les réservations');
           setReservations([]);
-          setLoading(false);
+          setIsLoading(false);
           return;
         }
 
@@ -104,78 +107,48 @@ const UserReservationsPage = () => {
           pickupDate: o.created_at ? new Date(o.created_at).toLocaleDateString('fr-FR') : '',
           status: o.status,
           createdAt: o.created_at,
+          merchant: o.merchant,
         }));
 
         setReservations(mapped);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erreur inconnue');
+        setReservations([]);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
-    load();
+    loadReservations();
   }, []);
 
   const handleCancel = async (reservationId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir annuler cette réservation ?')) {
+      return;
+    }
+    
     try {
       const resp = await cancelOrder(reservationId);
-      if (resp && resp.success && resp.data) {
+      if (resp && resp.success) {
         setReservations((prev) =>
           prev.map((r) => (r.id === reservationId ? { ...r, status: 'cancelled' } : r))
         );
+      } else {
+        alert('Erreur lors de l\'annulation: ' + (resp?.error?.message || 'Erreur inconnue'));
       }
-    } catch {
-      // noop
+    } catch (err) {
+      console.error('Error cancelling reservation:', err);
+      alert('Erreur lors de l\'annulation de la réservation');
     }
   };
 
-    setIsLoading(false);
-  };
-
-  const handleCancelOrder = async (orderId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir annuler cette commande ?')) return;
-    
-    const result = await cancelOrder(orderId);
-    if (result.success) {
-      // Reload orders
-      loadUserAndOrders();
-    } else {
-      alert('Erreur lors de l\'annulation: ' + result.error?.message);
-    }
-  };
-
-  const filteredOrders = orders.filter(order => {
+  const filteredReservations = reservations.filter((reservation) => {
     if (activeTab === "all") return true;
-    if (activeTab === "active") return ["confirmed", "pending", "ready"].includes(res.status);
-    if (activeTab === "completed") return ["completed", "picked_up"].includes(res.status);
-    if (activeTab === "cancelled") return res.status === "cancelled";
+    if (activeTab === "active") return ["confirmed", "pending", "ready"].includes(reservation.status);
+    if (activeTab === "completed") return ["completed", "picked_up"].includes(reservation.status);
+    if (activeTab === "cancelled") return reservation.status === "cancelled";
     return true;
   });
-
-  const getStatusBadge = (status: string) => {
-    const colorClass = getStatusColor(status as any);
-    const text = getStatusText(status as any);
-    return <Badge className={colorClass}>{text}</Badge>;
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "confirmed":
-        return <AlertCircle className="h-5 w-5 text-blue-500" />;
-      case "pending":
-        return <Clock className="h-5 w-5 text-yellow-500" />;
-      case "completed":
-      case "picked_up":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case "cancelled":
-        return <XCircle className="h-5 w-5 text-red-500" />;
-      case "ready":
-        return <Package className="h-5 w-5 text-green-500" />;
-      default:
-        return <Package className="h-5 w-5" />;
-    }
-  };
 
   if (isLoading) {
     return (
@@ -233,10 +206,10 @@ const UserReservationsPage = () => {
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4">
-          {loading ? (
+          {isLoading ? (
             <Card>
               <CardContent className="p-8 text-center">
-                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <Loader2 className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-spin" />
                 <h3 className="font-semibold text-lg mb-2">Chargement...</h3>
                 <p className="text-muted-foreground mb-4">Veuillez patienter pendant le chargement de vos réservations.</p>
               </CardContent>
@@ -244,6 +217,7 @@ const UserReservationsPage = () => {
           ) : error ? (
             <Card>
               <CardContent className="p-8 text-center">
+                <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
                 <h3 className="font-semibold text-lg mb-2">Erreur</h3>
                 <p className="text-muted-foreground mb-4">{error}</p>
               </CardContent>
@@ -260,13 +234,13 @@ const UserReservationsPage = () => {
               </CardContent>
             </Card>
           ) : (
-            filteredOrders.map((order) => (
-              <Card key={order.id} className="overflow-hidden">
+            filteredReservations.map((reservation) => (
+              <Card key={reservation.id} className="overflow-hidden">
                 <CardContent className="p-0">
                   <div className="flex flex-col md:flex-row">
                     {/* Left side - Status indicator */}
                     <div className="p-4 flex items-center justify-center bg-muted/30 md:w-16">
-                      {getStatusIcon(order.status)}
+                      {getStatusIcon(reservation.status)}
                     </div>
 
                     {/* Main content */}
@@ -284,11 +258,11 @@ const UserReservationsPage = () => {
                             <p className="font-medium text-foreground">{reservation.merchantName}</p>
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <MapPin className="h-4 w-4" />
-                              <span>{order.merchant?.address || ''}</span>
+                              <span>{reservation.merchantAddress || ''}</span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <Phone className="h-4 w-4" />
-                              <span>{order.merchant?.phone || ''}</span>
+                              <span>{reservation.merchantPhone || ''}</span>
                             </div>
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <Clock className="h-4 w-4" />
@@ -326,7 +300,6 @@ const UserReservationsPage = () => {
           )}
         </TabsContent>
       </Tabs>
-      </div>
     </UserLayout>
   );
 };

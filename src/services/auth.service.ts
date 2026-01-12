@@ -8,7 +8,7 @@ import {
   signUpWithEmail,
   signOut as apiSignOut,
   getSession,
-  getCurrentUser,
+  getCurrentUser as apiGetCurrentUser,
   resetPassword as apiResetPassword,
   updatePassword as apiUpdatePassword,
   onAuthStateChange,
@@ -84,8 +84,13 @@ export const getAuthSession = async () => {
  * Get current authenticated user
  */
 export const getAuthUser = async () => {
-  return getCurrentUser();
+  return apiGetCurrentUser();
 };
+
+/**
+ * Get current user (re-exported from API for backward compatibility)
+ */
+export const getCurrentUser = apiGetCurrentUser;
 
 /**
  * Request password reset
@@ -147,7 +152,7 @@ export const isAuthenticated = async (): Promise<boolean> => {
  * Get user role from session
  */
 export const getUserRole = async (): Promise<UserRole | null> => {
-  const { data } = await getCurrentUser();
+  const { data } = await apiGetCurrentUser();
   return (data?.user?.user_metadata?.role as UserRole) || null;
 };
 

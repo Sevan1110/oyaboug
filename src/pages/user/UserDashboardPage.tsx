@@ -31,9 +31,11 @@ import {
   createReservation,
   getFavorites,
 } from "@/services";
+import { useAuth } from "@/hooks/useAuth";
 import type { Order, FoodItem, UserImpact } from "@/types";
 
 const UserDashboardPage = () => {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<FoodItem[]>([]);
@@ -41,17 +43,7 @@ const UserDashboardPage = () => {
   const [favoritesCount, setFavoritesCount] = useState<number>(0);
   const [reservedCountMap, setReservedCountMap] = useState<Record<string, number>>({});
   
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data } = await getAuthUser();
-      if (data?.user?.id) {
-        setUserId(data.user.id);
-      }
-    };
-    fetchUser();
-  }, []);
+  const userId = user?.id || null;
 
   useEffect(() => {
     if (userId) {
@@ -61,28 +53,26 @@ const UserDashboardPage = () => {
 
   const loadDashboardData = async () => {
     if (!userId) return;
+    
     setIsLoading(true);
     
-    // Load in parallel
-    const [ordersResult, impactResult, itemsResult, favoritesResult] = await Promise.all([
-      getActiveOrders({ userId }),
-      getUserStats(userId),
-      getAvailableItems({ perPage: 4 }),
-      getFavorites(userId),
-    ]);
-
-    if (ordersResult.success && ordersResult.data) {
-      setActiveOrders(ordersResult.data);
-      const counts: Record<string, number> = {};
-      ordersResult.data.forEach((o) => {
-        const key = `${o.food_item_id}:${o.merchant_id}`;
-        counts[key] = (counts[key] || 0) + (o.quantity || 1);
-      });
-      setReservedCountMap(counts);
-    }
+    try {
+      // Load in parallel
+      const [ordersResult, impactResult, itemsResult, favoritesResult] = await Promise.all([
+        getActiveOrders({ userId }),
+        getUserStats(userId),
+        getAvailableItems({ perPage: 4 }),
+        getFavorites(userId),
+      ]);
 
       if (ordersResult.success && ordersResult.data) {
         setActiveOrders(ordersResult.data);
+        const counts: Record<string, number> = {};
+        ordersResult.data.forEach((o) => {
+          const key = `${o.food_item_id}:${o.merchant_id}`;
+          counts[key] = (counts[key] || 0) + (o.quantity || 1);
+        });
+        setReservedCountMap(counts);
       }
 
       if (impactResult.success && impactResult.data) {
@@ -92,18 +82,17 @@ const UserDashboardPage = () => {
       if (itemsResult.success && itemsResult.data) {
         setFavoriteItems(itemsResult.data.data.slice(0, 4));
       }
+
+      if (favoritesResult.success && favoritesResult.data) {
+        setFavoritesCount(favoritesResult.data.length);
+      }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       // Redirect to auth on error
       window.location.href = '/auth';
-      return;
+    } finally {
+      setIsLoading(false);
     }
-
-    if (favoritesResult.success && favoritesResult.data) {
-      setFavoritesCount(favoritesResult.data.length);
-    }
-
-    setIsLoading(false);
   };
 
   const handleReserve = async (item: FoodItem) => {
@@ -201,7 +190,7 @@ const UserDashboardPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-foreground mb-1">
-                    Bonjour, <span className="text-primary">{currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'Utilisateur'}</span> 👋
+                    Bonjour, <span className="text-primary">{user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Utilisateur'}</span> 👋
                   </h2>
                   <p className="text-muted-foreground">
                     Vous avez {activeOrders.length} réservation(s) en cours
