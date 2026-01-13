@@ -57,22 +57,22 @@ const UserDashboardPage = () => {
     setIsLoading(true);
     
     try {
-      // Load in parallel
-      const [ordersResult, impactResult, itemsResult, favoritesResult] = await Promise.all([
-        getActiveOrders({ userId }),
-        getUserStats(userId),
-        getAvailableItems({ perPage: 4 }),
-        getFavorites(userId),
-      ]);
+    // Load in parallel
+    const [ordersResult, impactResult, itemsResult, favoritesResult] = await Promise.all([
+      getActiveOrders({ userId }),
+      getUserStats(userId),
+      getAvailableItems({ perPage: 4 }),
+      getFavorites(userId),
+    ]);
 
-      if (ordersResult.success && ordersResult.data) {
-        setActiveOrders(ordersResult.data);
-        const counts: Record<string, number> = {};
-        ordersResult.data.forEach((o) => {
-          const key = `${o.food_item_id}:${o.merchant_id}`;
-          counts[key] = (counts[key] || 0) + (o.quantity || 1);
-        });
-        setReservedCountMap(counts);
+    if (ordersResult.success && ordersResult.data) {
+      setActiveOrders(ordersResult.data);
+      const counts: Record<string, number> = {};
+      ordersResult.data.forEach((o) => {
+        const key = `${o.food_item_id}:${o.merchant_id}`;
+        counts[key] = (counts[key] || 0) + (o.quantity || 1);
+      });
+      setReservedCountMap(counts);
       }
 
       if (impactResult.success && impactResult.data) {

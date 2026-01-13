@@ -13,7 +13,8 @@ import type {
   MerchantValidationAction,
   SalesStats,
   TopMerchant,
-  MerchantStatus
+  MerchantStatus,
+  AdminClient
 } from '@/types/admin.types';
 
 // Transform DB merchant to MerchantRegistration
@@ -45,6 +46,89 @@ const transformMerchant = (dbMerchant: any): MerchantRegistration => ({
 
 // Service Functions
 export const adminService = {
+  // Get all clients (profiles with role = 'user') with aggregated orders
+  getClients: async (): Promise<AdminClient[]> => {
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase not configured');
+      return [];
+    }
+
+    const client = requireSupabaseClient();
+
+    // Fetch user profiles
+    const { data: profiles, error: profilesError } = await client
+      .from(DB_TABLES.PROFILES)
+      .select('id, user_id, email, phone, full_name, city, quartier, created_at')
+      .eq('role', 'user');
+
+    if (profilesError) {
+      console.error('Error fetching client profiles:', profilesError);
+      throw profilesError;
+    }
+
+    const userIds = (profiles || []).map((p) => p.user_id).filter(Boolean);
+
+    if (userIds.length === 0) {
+      return [];
+    }
+
+    // Fetch orders for these users and aggregate in memory
+    const { data: orders, error: ordersError } = await client
+      .from(DB_TABLES.ORDERS)
+      .select('user_id, total_price');
+
+    if (ordersError) {
+      console.error('Error fetching client orders:', ordersError);
+      throw ordersError;
+    }
+
+    const ordersByUser: Record<
+      string,
+      { ordersCount: number; totalSpent: number }
+    > = {};
+
+    (orders || []).forEach((order: any) => {
+      const userId = order.user_id as string | null;
+      if (!userId) return;
+
+      if (!ordersByUser[userId]) {
+        ordersByUser[userId] = { ordersCount: 0, totalSpent: 0 };
+      }
+
+      ordersByUser[userId].ordersCount += 1;
+      ordersByUser[userId].totalSpent += order.total_price || 0;
+    });
+
+    // Map profiles to AdminClient objects
+    return (profiles || []).map((p: any) => {
+      const agg = ordersByUser[p.user_id] || {
+        ordersCount: 0,
+        totalSpent: 0,
+      };
+
+      const fullName =
+        p.full_name ||
+        (p.email ? (p.email as string).split('@')[0] : 'Client');
+
+      const status: AdminClient['status'] =
+        agg.ordersCount > 0 ? 'active' : 'inactive';
+
+      return {
+        id: p.user_id,
+        profileId: p.id,
+        fullName,
+        email: p.email,
+        phone: p.phone || undefined,
+        city: p.city || undefined,
+        quartier: p.quartier || undefined,
+        createdAt: p.created_at ? new Date(p.created_at) : new Date(),
+        ordersCount: agg.ordersCount,
+        totalSpent: agg.totalSpent,
+        status,
+      };
+    });
+  },
+
   // Get all merchants with optional status filter
   getMerchants: async (status?: MerchantStatus): Promise<MerchantRegistration[]> => {
     if (!isSupabaseConfigured()) {

@@ -3,7 +3,7 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,70 +20,53 @@ import {
 import { Search, Users, Eye, Mail, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-
-// Mock data
-const mockClients = [
-  {
-    id: '1',
-    firstName: 'Jean',
-    lastName: 'Dupont',
-    email: 'jean.dupont@email.com',
-    phone: '+241 01 23 45 67',
-    createdAt: new Date('2024-01-10'),
-    ordersCount: 15,
-    totalSpent: 75000,
-    status: 'active',
-  },
-  {
-    id: '2',
-    firstName: 'Marie',
-    lastName: 'Koumba',
-    email: 'marie.k@email.com',
-    phone: '+241 01 98 76 54',
-    createdAt: new Date('2024-01-12'),
-    ordersCount: 8,
-    totalSpent: 42000,
-    status: 'active',
-  },
-  {
-    id: '3',
-    firstName: 'Paul',
-    lastName: 'Nguema',
-    email: 'paul.nguema@email.com',
-    phone: '+241 01 11 22 33',
-    createdAt: new Date('2024-01-15'),
-    ordersCount: 3,
-    totalSpent: 15000,
-    status: 'active',
-  },
-  {
-    id: '4',
-    firstName: 'Claire',
-    lastName: 'Obiang',
-    email: 'claire.obiang@email.com',
-    phone: '+241 01 44 55 66',
-    createdAt: new Date('2024-01-18'),
-    ordersCount: 0,
-    totalSpent: 0,
-    status: 'inactive',
-  },
-];
+import { adminService } from "@/services/admin.service";
+import type { AdminClient } from "@/types/admin.types";
+import { toast } from "sonner";
 
 const AdminClientsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [clients] = useState(mockClients);
+  const [clients, setClients] = useState<AdminClient[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const filteredClients = clients.filter(client => {
+  useEffect(() => {
+    const loadClients = async () => {
+      setIsLoading(true);
+      try {
+        const data = await adminService.getClients();
+        setClients(data);
+      } catch (error) {
+        console.error("Error loading clients:", error);
+        toast.error("Erreur lors du chargement des clients");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadClients();
+  }, []);
+
+  const filteredClients = clients.filter((client) => {
     const query = searchQuery.toLowerCase();
     return (
-      client.firstName.toLowerCase().includes(query) ||
-      client.lastName.toLowerCase().includes(query) ||
+      client.fullName.toLowerCase().includes(query) ||
       client.email.toLowerCase().includes(query)
     );
   });
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR').format(amount) + ' FCFA';
+    return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
+  };
+
+  const getNewClientsThisMonth = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    return clients.filter((c) => {
+      const d = c.createdAt;
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    }).length;
   };
 
   return (
@@ -123,7 +106,7 @@ const AdminClientsPage = () => {
               <Calendar className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">12</p>
+              <p className="text-2xl font-bold">{getNewClientsThisMonth()}</p>
               <p className="text-sm text-muted-foreground">Nouveaux ce mois</p>
             </div>
           </CardContent>
@@ -149,67 +132,89 @@ const AdminClientsPage = () => {
           <CardTitle className="text-base">Liste des clients</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Client</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Inscription</TableHead>
-                <TableHead className="text-center">Commandes</TableHead>
-                <TableHead className="text-right">Total dépensé</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClients.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-sm font-medium text-primary">
-                          {client.firstName[0]}{client.lastName[0]}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="font-medium">
-                          {client.firstName} {client.lastName}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {client.phone}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Mail className="w-3 h-3" />
-                      {client.email}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {format(client.createdAt, "d MMM yyyy", { locale: fr })}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {client.ordersCount}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {formatCurrency(client.totalSpent)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={client.status === 'active' ? 'default' : 'secondary'}>
-                      {client.status === 'active' ? 'Actif' : 'Inactif'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              Chargement des clients...
+            </div>
+          ) : filteredClients.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <Users className="w-10 h-10 mb-3 opacity-50" />
+              <p>
+                {searchQuery
+                  ? "Aucun client ne correspond à votre recherche"
+                  : "Aucun client trouvé pour le moment"}
+              </p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Inscription</TableHead>
+                  <TableHead className="text-center">Commandes</TableHead>
+                  <TableHead className="text-right">Total dépensé</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredClients.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-sm font-medium text-primary">
+                            {client.fullName
+                              .split(" ")
+                              .map((p) => p[0])
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{client.fullName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {client.phone || "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Mail className="w-3 h-3" />
+                        {client.email}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {format(client.createdAt, "d MMM yyyy", { locale: fr })}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {client.ordersCount}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatCurrency(client.totalSpent)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          client.status === "active" ? "default" : "secondary"
+                        }
+                      >
+                        {client.status === "active" ? "Actif" : "Inactif"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </AdminLayout>

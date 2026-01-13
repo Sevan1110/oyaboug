@@ -93,3 +93,23 @@ export interface TopMerchant {
   revenue: number;
   productsCount: number;
 }
+
+// ============================================
+// Admin Client
+// ============================================
+
+export type AdminClientStatus = 'active' | 'inactive';
+
+export interface AdminClient {
+  id: string;            // auth user id
+  profileId: string;     // profiles.id
+  fullName: string;
+  email: string;
+  phone?: string;
+  city?: string;
+  quartier?: string;
+  createdAt: Date;
+  ordersCount: number;
+  totalSpent: number;
+  status: AdminClientStatus;
+}
