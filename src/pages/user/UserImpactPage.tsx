@@ -10,24 +10,19 @@ import { Progress } from "@/components/ui/progress";
 import {
   Leaf,
   Droplets,
-  Zap,
   TreePine,
   Award,
   TrendingUp,
   ShoppingBag,
   Calendar,
 } from "lucide-react";
-import { useEffect, useState } from "react";
 import { getAuthUser } from "@/services";
 import { getUserStats, getUserMonthlyImpact } from "@/services";
 import {
-  mealsToCo2Kg,
   mealsToWaterL,
   mealsToEnergyKwh,
   co2KgToTrees,
   co2KgToCarKm,
-  co2KgToShowers,
-  co2KgToPhoneCharges,
 } from "@/lib/impactCalculations";
 
 const defaultMonthly = [
@@ -84,6 +79,7 @@ const UserImpactPage = () => {
         energySaved: mealsToEnergyKwh(impact.orders_count || 0),
         moneySaved: impact.money_saved_xaf || 0,
         treesEquivalent: co2KgToTrees(impact.co2_avoided_kg || 0),
+        foodSavedKg: impact.food_saved_kg || 0,
       }
     : {
         mealsRescued: 0,
@@ -92,58 +88,8 @@ const UserImpactPage = () => {
         energySaved: 0,
         moneySaved: 0,
         treesEquivalent: 0,
+        foodSavedKg: 0,
       };
-
-  const badges = [
-    {
-      id: "1",
-      name: "Premier pas",
-      description: "Première réservation effectuée",
-      icon: ShoppingBag,
-      earned: impactData.mealsRescued > 0,
-      earnedDate: impactData.mealsRescued > 0 ? new Date().toISOString() : undefined,
-    },
-    {
-      id: "2",
-      name: "Éco-warrior",
-      description: "10 repas sauvés",
-      icon: Leaf,
-      earned: impactData.mealsRescued >= 10,
-      earnedDate: impactData.mealsRescued >= 10 ? new Date().toISOString() : undefined,
-    },
-    {
-      id: "3",
-      name: "Super saver",
-      description: "50 000 FCFA économisés",
-      icon: TrendingUp,
-      earned: impactData.moneySaved >= 50000,
-      earnedDate: impactData.moneySaved >= 50000 ? new Date().toISOString() : undefined,
-    },
-    {
-      id: "4",
-      name: "Champion vert",
-      description: "50 kg de CO₂ évités",
-      icon: TreePine,
-      earned: impactData.co2Saved >= 50,
-      progress: Math.min(100, Math.round((impactData.co2Saved / 50) * 100)),
-    },
-    {
-      id: "5",
-      name: "Fidèle",
-      description: "30 jours consécutifs d'activité",
-      icon: Calendar,
-      earned: false,
-      progress: 0,
-    },
-    {
-      id: "6",
-      name: "Ambassadeur",
-      description: "Parrainez 5 amis",
-      icon: Award,
-      earned: false,
-      progress: 0,
-    },
-  ];
 
   // Dynamic monthly objective and badge thresholds
   const monthsToShow = monthlyData.length || 4;
@@ -212,7 +158,7 @@ const UserImpactPage = () => {
         <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
           <CardContent className="p-4 text-center">
             <ShoppingBag className="h-8 w-8 text-green-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-green-500">{userImpact.orders_count}</p>
+            <p className="text-2xl font-bold text-green-500">{impactData.mealsRescued}</p>
             <p className="text-xs text-muted-foreground">Commandes</p>
           </CardContent>
         </Card>
@@ -220,7 +166,7 @@ const UserImpactPage = () => {
         <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20">
           <CardContent className="p-4 text-center">
             <Leaf className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-emerald-500">{userImpact.co2_avoided_kg.toFixed(1)} kg</p>
+            <p className="text-2xl font-bold text-emerald-500">{impactData.co2Saved.toFixed(1)} kg</p>
             <p className="text-xs text-muted-foreground">CO₂ évités</p>
           </CardContent>
         </Card>
@@ -228,7 +174,7 @@ const UserImpactPage = () => {
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
           <CardContent className="p-4 text-center">
             <Droplets className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-blue-500">{userImpact.food_saved_kg.toFixed(1)} kg</p>
+            <p className="text-2xl font-bold text-blue-500">{impactData.foodSavedKg.toFixed(1)} kg</p>
             <p className="text-xs text-muted-foreground">Nourriture sauvée</p>
           </CardContent>
         </Card>
@@ -236,7 +182,9 @@ const UserImpactPage = () => {
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
           <CardContent className="p-4 text-center">
             <TrendingUp className="h-8 w-8 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold text-primary">{(userImpact.money_saved_xaf / 1000).toFixed(0)}k</p>
+            <p className="text-2xl font-bold text-primary">
+              {impactData.moneySaved > 0 ? `${(impactData.moneySaved / 1000).toFixed(0)}k` : '0'}
+            </p>
             <p className="text-xs text-muted-foreground">FCFA économisés</p>
           </CardContent>
         </Card>

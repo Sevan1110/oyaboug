@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -34,8 +35,6 @@ import {
   Search,
 } from "lucide-react";
 import { logout } from "@/services";
-import { useToast } from "@/hooks/use-toast";
-import { useNotifications } from "@/hooks/useNotifications";
 
 const mainMenuItems = [
   {
@@ -100,9 +99,32 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
   const { toast } = useToast();
   const { state } = useSidebar();
   const { unreadCount } = useNotifications();
-  const isCollapsed = state === "collapsed";
-  const { toast } = useToast();
   const { signOut, user } = useAuth();
+  const isCollapsed = state === "collapsed";
+
+  // Helper functions for user display
+  const getDisplayName = () => {
+    if (user?.user_metadata?.full_name) {
+      return user.user_metadata.full_name;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return userName;
+  };
+
+  const getUserInitials = () => {
+    const name = getDisplayName();
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const getProfileImageUrl = () => {
+    return user?.user_metadata?.avatar_url || user?.user_metadata?.picture || undefined;
+  };
 
   const isActive = (path: string) => {
     if (path === "/user") {
@@ -237,7 +259,6 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
           onClick={handleLogout}
           tooltip="Déconnexion"
           className="text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={handleLogout}
         >
           <LogOut className="w-4 h-4" />
           <span>Déconnexion</span>
