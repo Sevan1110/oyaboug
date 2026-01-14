@@ -12,6 +12,7 @@ import {
   getNearbyMerchants,
   getMerchantImpactApi,
   searchMerchants,
+  getMerchantBySlug,
 } from '@/api';
 import type {
   ApiResponse,
@@ -65,7 +66,6 @@ export const getMyMerchantProfile = async (userId: string): Promise<ApiResponse<
  * Get merchant by slug
  */
 export const getMerchantBySlugName = async (slug: string): Promise<ApiResponse<Merchant>> => {
-  const { getMerchantBySlug } = await import('@/api');
   return getMerchantBySlug(slug);
 };
 

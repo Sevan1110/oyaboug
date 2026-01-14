@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { changePassword } from "@/services";
+import { changePassword, getAuthSession } from "@/services";
 
 const ResetPassword = () => {
   const { toast } = useToast();
@@ -25,7 +25,7 @@ const ResetPassword = () => {
   useEffect(() => {
     // Check if we have a session (Supabase handles the fragment automatically)
     const checkSession = async () => {
-      const { data } = await import("@/services/auth.service").then(s => s.getAuthSession());
+      const { data } = await getAuthSession();
       if (!data?.session) {
         toast({
           title: "Session expirée",

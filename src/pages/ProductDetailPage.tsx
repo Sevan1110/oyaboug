@@ -27,6 +27,7 @@ import * as inventoryService from "@/services/inventory.service";
 import { useAuth } from "@/hooks/useAuth";
 import type { FoodItem } from "@/types";
 import { toast } from "sonner";
+import { createReservation } from "@/services";
 
 const ProductDetailPage = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -71,7 +72,6 @@ const ProductDetailPage = () => {
 
         setIsReserving(true);
         try {
-            const { createReservation } = await import("@/services");
             const resp = await createReservation(user?.id || "", product.id, 1);
 
             if (resp.success) {
