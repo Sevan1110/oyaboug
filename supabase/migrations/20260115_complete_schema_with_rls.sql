@@ -247,7 +247,7 @@ create policy "Admins can insert admin activities"
 create or replace function public.get_user_role(user_uuid uuid)
 returns text as $$
   select role from public.profiles where user_id = user_uuid;
-$$ language sql security definer;
+$$ language sql security definer set search_path = '';
 
 -- Function to check if user is admin
 create or replace function public.is_admin(user_uuid uuid)
@@ -256,13 +256,15 @@ returns boolean as $$
     select 1 from public.profiles
     where user_id = user_uuid and role = 'admin'
   );
-$$ language sql security definer;
+$$ language sql security definer set search_path = '';
 
 -- Function to generate pickup code
 create or replace function public.generate_pickup_code()
 returns text as $$
-  select upper(substring(md5(random()::text) from 1 for 6));
-$$ language sql;
+begin
+  return upper(substring(md5(random()::text) from 1 for 6));
+end;
+$$ language plpgsql security definer set search_path = '';
 
 -- Function to calculate order savings
 create or replace function public.calculate_order_savings(
@@ -270,8 +272,10 @@ create or replace function public.calculate_order_savings(
   p_total_price integer
 )
 returns integer as $$
-  select p_original_total - p_total_price;
-$$ language sql;
+begin
+  return p_original_total - p_total_price;
+end;
+$$ language plpgsql security definer set search_path = '';
 
 ------------------------------------------------
 -- TRIGGERS: Auto-update impact logs on order completion
@@ -312,7 +316,7 @@ begin
   end if;
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = '';
 
 drop trigger if exists trigger_log_order_impact on public.orders;
 create trigger trigger_log_order_impact
@@ -362,7 +366,7 @@ begin
   end if;
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = '';
 
 drop trigger if exists trigger_notify_order_status_change on public.orders;
 create trigger trigger_notify_order_status_change

@@ -17,7 +17,7 @@ returns text as $$
 begin
   return lower(regexp_replace(regexp_replace(t, '[^a-zA-Z0-9\s]', '', 'g'), '\s+', '-', 'g'));
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer set search_path = '';
 
 -- 5. Populate existing data
 update public.merchants 
@@ -48,8 +48,9 @@ begin
   end if;
   return new;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer set search_path = '';
 
+drop trigger if exists tr_merchants_slug_trigger on public.merchants;
 create trigger tr_merchants_slug_trigger
 before insert on public.merchants
 for each row execute procedure public.tr_merchants_slug();
@@ -62,8 +63,9 @@ begin
   end if;
   return new;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer set search_path = '';
 
+drop trigger if exists tr_food_items_slug_trigger on public.food_items;
 create trigger tr_food_items_slug_trigger
 before insert on public.food_items
 for each row execute procedure public.tr_food_items_slug();
@@ -77,8 +79,9 @@ begin
   end if;
   return new;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer set search_path = '';
 
+drop trigger if exists tr_orders_tracking_trigger on public.orders;
 create trigger tr_orders_tracking_trigger
 before insert on public.orders
 for each row execute procedure public.tr_orders_tracking();

@@ -10,14 +10,20 @@ begin
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data->>'role', 'user'),
+    case 
+      when new.email = 'sevankedesh11@gmail.com' then 'admin'
+      else coalesce(new.raw_user_meta_data->>'role', 'user')
+    end,
     new.raw_user_meta_data->>'full_name',
     new.phone
   )
-  on conflict (user_id) do nothing;
+  on conflict (user_id) do update set
+    role = excluded.role,
+    full_name = coalesce(public.profiles.full_name, excluded.full_name),
+    phone = coalesce(public.profiles.phone, excluded.phone);
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = '';
 
 -- Trigger to run after a new user is created in auth.users
 drop trigger if exists on_auth_user_created on auth.users;

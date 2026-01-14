@@ -21,7 +21,7 @@ create extension if not exists "uuid-ossp";
 -- TABLE: profiles
 ------------------------------------------------
 create table if not exists public.profiles (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
   email text not null,
   phone text,
@@ -43,7 +43,7 @@ create unique index if not exists profiles_email_key on public.profiles(email);
 -- TABLE: merchants
 ------------------------------------------------
 create table if not exists public.merchants (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
   business_name text not null,
   business_type text not null
@@ -76,7 +76,7 @@ create index if not exists merchants_business_type_idx on public.merchants(busin
 -- TABLE: food_items
 ------------------------------------------------
 create table if not exists public.food_items (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   merchant_id uuid not null references public.merchants(id) on delete cascade,
   name text not null,
   description text,
@@ -116,7 +116,7 @@ create index if not exists food_items_is_available_idx on public.food_items(is_a
 -- TABLE: orders
 ------------------------------------------------
 create table if not exists public.orders (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   merchant_id uuid not null references public.merchants(id) on delete cascade,
   food_item_id uuid not null references public.food_items(id) on delete restrict,
@@ -147,7 +147,7 @@ create index if not exists orders_status_idx on public.orders(status);
 -- TABLE: notifications
 ------------------------------------------------
 create table if not exists public.notifications (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   type text not null
     check (type in (
@@ -183,7 +183,7 @@ create table if not exists public.favorites (
 -- TABLE: reviews (optionnelle, pour futures features)
 ------------------------------------------------
 create table if not exists public.reviews (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   merchant_id uuid not null references public.merchants(id) on delete cascade,
   order_id uuid references public.orders(id) on delete set null,
@@ -198,7 +198,7 @@ create index if not exists reviews_merchant_id_idx on public.reviews(merchant_id
 -- TABLE: impact_logs
 ------------------------------------------------
 create table if not exists public.impact_logs (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
   merchant_id uuid references public.merchants(id) on delete set null,
   food_item_id uuid references public.food_items(id) on delete set null,
@@ -217,7 +217,7 @@ create index if not exists impact_logs_merchant_id_idx on public.impact_logs(mer
 -- TABLE: pricing_history
 ------------------------------------------------
 create table if not exists public.pricing_history (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   food_item_id uuid not null references public.food_items(id) on delete cascade,
   original_price integer not null,
   discounted_price integer not null,
@@ -241,7 +241,7 @@ create table if not exists public.user_roles (
 -- TABLE: admin_activities (journal d’actions admin)
 ------------------------------------------------
 create table if not exists public.admin_activities (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   admin_user_id uuid references auth.users(id) on delete set null,
   action text not null,
   target_table text,
@@ -259,7 +259,7 @@ begin
   new.updated_at = now();
   return new;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer set search_path = '';
 
 drop trigger if exists set_profiles_updated_at on public.profiles;
 create trigger set_profiles_updated_at
@@ -289,7 +289,7 @@ execute procedure public.set_updated_at();
 -- TABLE: impact_reports (cached/generated reports)
 ------------------------------------------------
 create table if not exists public.impact_reports (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
   merchant_id uuid references public.merchants(id) on delete set null,
   start_date date not null,
@@ -306,7 +306,7 @@ create index if not exists impact_reports_merchant_id_idx on public.impact_repor
 -- TABLE: monthly_aggregates (optional caching of computed monthly stats)
 ------------------------------------------------
 create table if not exists public.monthly_aggregates (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
   year integer not null,
   month integer not null,

@@ -1,9 +1,9 @@
--- ==========================================
--- Merchant Registration Flow Migration
--- ==========================================
+-- 1. Update Merchants Table
+ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS is_refused BOOLEAN DEFAULT false;
 
--- 1. Enable Anonymous Insert for Merchants (Application)
+-- 2. Enable Anonymous Insert for Merchants (Application)
 -- Allow anyone to insert a new merchant record (registration application)
+drop policy if exists "Enable insert for registration" on public.merchants;
 create policy "Enable insert for registration"
   on public.merchants
   for insert
@@ -22,6 +22,7 @@ values ('merchant-documents', 'merchant-documents', false)
 on conflict (id) do nothing;
 
 -- Allow anon to upload documents
+drop policy if exists "Allow anon uploads" on storage.objects;
 create policy "Allow anon uploads"
   on storage.objects
   for insert
@@ -30,6 +31,7 @@ create policy "Allow anon uploads"
   );
 
 -- Allow admins to view documents
+drop policy if exists "Admins can view all documents" on storage.objects;
 create policy "Admins can view all documents"
   on storage.objects
   for select
@@ -60,7 +62,7 @@ begin
   end if;
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = '';
 
 -- Trigger on auth.users is tricky since we can't easily add triggers there in all Supabase envs.
 -- EASIER ALTERNATIVE: Use the profile creation trigger.
@@ -77,7 +79,7 @@ begin
   
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = '';
 
 drop trigger if exists trigger_link_merchant_profile on public.profiles;
 create trigger trigger_link_merchant_profile

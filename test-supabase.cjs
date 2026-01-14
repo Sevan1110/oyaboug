@@ -7,12 +7,12 @@ const data = JSON.stringify({
 });
 
 const options = {
-  hostname: 'lqqnadahkkzofrxanbha.supabase.co',
+  hostname: 'geqvbpghvmcglzfkqmvj.supabase.co',
   port: 443,
   path: '/auth/v1/token?grant_type=password',
   method: 'POST',
   headers: {
-    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxcW5hZGFoa2t6b2ZyeGFuYmhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1NDU0MDUsImV4cCI6MjA4MzEyMTQwNX0.PDfeyjS-mOIeEHxnTWhVzBoKE22dDZcPFjiq7ccxsDQ',
+    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdlcXZicGdodm1jZ2x6ZmtxbXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1NzQ4NTksImV4cCI6MjA4MzE1MDg1OX0.tbuBJZEB7T_0WJFFM5gPlwdlJ8dXThXNl4wbE70VYsE',
     'Content-Type': 'application/json',
     'Content-Length': data.length
   }
@@ -24,12 +24,12 @@ console.log('URL:', `https://${options.hostname}${options.path}`);
 const req = https.request(options, (res) => {
   console.log(`statusCode: ${res.statusCode}`);
   console.log(`headers:`, res.headers);
-  
+
   let responseData = '';
   res.on('data', (d) => {
     responseData += d.toString();
   });
-  
+
   res.on('end', () => {
     console.log('Response:', responseData);
   });
