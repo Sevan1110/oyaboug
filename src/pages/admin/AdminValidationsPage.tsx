@@ -71,8 +71,8 @@ const AdminValidationsPage = () => {
       });
 
       toast.success(
-        modalMode === 'validate' 
-          ? 'Commerce validé avec succès' 
+        modalMode === 'validate'
+          ? `Commerce validé avec succès. Email d'invitation envoyé à ${selectedMerchant.email}`
           : 'Commerce refusé'
       );
 

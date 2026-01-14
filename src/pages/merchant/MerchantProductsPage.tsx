@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,24 +32,64 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
-import { getMerchantItems, formatPrice, isExpiringSoon, getCategoryName } from "@/services";
+import { useAuth } from "@/contexts/AuthContext";
+import { getMerchantItems, formatPrice, isExpiringSoon, getCategoryName, getMyMerchantProfile } from "@/services";
 import type { FoodItem } from "@/types";
 import { toast } from "sonner";
 
 const MerchantProductsPage = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [products, setProducts] = useState<FoodItem[]>([]);
+  const [merchantId, setMerchantId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("active");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const merchantId = "mock-merchant-id";
+  useEffect(() => {
+    if (location.state?.openAddModal) {
+      setIsAddModalOpen(true);
+    }
+  }, [location.state]);
 
   useEffect(() => {
-    loadProducts();
-  }, []);
+    if (user) {
+      loadMerchantProfile();
+    } else {
+      // If no user, we can't load profile. 
+      // In a real app, this should probably redirect or the route should be protected.
+      setIsProfileLoading(false);
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (merchantId) {
+      loadProducts();
+    }
+  }, [merchantId]);
+
+  const loadMerchantProfile = async () => {
+    if (!user) return;
+    try {
+      const result = await getMyMerchantProfile(user.id);
+      if (result.success && result.data) {
+        setMerchantId(result.data.id);
+      } else {
+        toast.error("Impossible de charger le profil commerçant");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors du chargement du profil");
+    } finally {
+      setIsProfileLoading(false);
+    }
+  };
 
   const loadProducts = async () => {
+    if (!merchantId) return;
     setIsLoading(true);
     const result = await getMerchantItems(merchantId, true);
     if (result.success && result.data) {
@@ -87,7 +127,7 @@ const MerchantProductsPage = () => {
     const discount = Math.round(
       ((product.original_price - product.discounted_price) /
         product.original_price) *
-        100
+      100
     );
 
     return (
@@ -198,84 +238,105 @@ const MerchantProductsPage = () => {
 
   return (
     <MerchantLayout title="Mes produits" subtitle="Gérez vos invendus">
-      {/* Actions Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher un produit..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Button className="gap-2" onClick={() => setIsAddModalOpen(true)}>
-          <Plus className="w-4 h-4" />
-          Nouveau produit
-        </Button>
-      </div>
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList>
-          <TabsTrigger value="all">
-            Tous ({products.length})
-          </TabsTrigger>
-          <TabsTrigger value="active">
-            Actifs ({products.filter((p) => p.is_available).length})
-          </TabsTrigger>
-          <TabsTrigger value="inactive">
-            Masqués ({products.filter((p) => !p.is_available).length})
-          </TabsTrigger>
-          <TabsTrigger value="expiring" className="text-warning">
-            Expirent bientôt (
-            {
-              products.filter(
-                (p) => p.expiry_date && isExpiringSoon(p.expiry_date)
-              ).length
-            }
-            )
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      {/* Products Grid */}
-      {isLoading ? (
+      {isProfileLoading ? (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : filteredProducts.length > 0 ? (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+      ) : !merchantId ? (
+        <div className="flex flex-col items-center justify-center h-64">
+          <AlertTriangle className="w-12 h-12 text-warning mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Profil commerçant non trouvé</h3>
+          <p className="text-muted-foreground mb-4">
+            Impossible de charger vos informations. Veuillez vérifier votre connexion ou votre compte.
+          </p>
+          <Button onClick={() => window.location.reload()}>Réessayer</Button>
         </div>
       ) : (
-        <Card className="p-12">
-          <div className="text-center text-muted-foreground">
-            <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <h3 className="font-medium text-foreground mb-2">
-              Aucun produit trouvé
-            </h3>
-            <p className="text-sm mb-4">
-              {searchQuery
-                ? "Essayez une autre recherche"
-                : "Commencez par ajouter votre premier produit"}
-            </p>
+        <>
+          {/* Actions Bar */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher un produit..."
+                className="pl-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
             <Button className="gap-2" onClick={() => setIsAddModalOpen(true)}>
               <Plus className="w-4 h-4" />
-              Ajouter un produit
+              Nouveau produit
             </Button>
           </div>
-        </Card>
-      )}
 
-      {/* Add Product Modal */}
-      <AddProductModal
-        open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-        onProductCreated={loadProducts}
-      />
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+            <TabsList>
+              <TabsTrigger value="all">
+                Tous ({products.length})
+              </TabsTrigger>
+              <TabsTrigger value="active">
+                Actifs ({products.filter((p) => p.is_available).length})
+              </TabsTrigger>
+              <TabsTrigger value="inactive">
+                Masqués ({products.filter((p) => !p.is_available).length})
+              </TabsTrigger>
+              <TabsTrigger value="expiring" className="text-warning">
+                Expirent bientôt (
+                {
+                  products.filter(
+                    (p) => p.expiry_date && isExpiringSoon(p.expiry_date)
+                  ).length
+                }
+                )
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* Products Grid */}
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : filteredProducts.length > 0 ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <Card className="p-12">
+              <div className="text-center text-muted-foreground">
+                <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h3 className="font-medium text-foreground mb-2">
+                  Aucun produit trouvé
+                </h3>
+                <p className="text-sm mb-4">
+                  {searchQuery
+                    ? "Essayez une autre recherche"
+                    : "Commencez par ajouter votre premier produit"}
+                </p>
+                <Button className="gap-2" onClick={() => setIsAddModalOpen(true)}>
+                  <Plus className="w-4 h-4" />
+                  Ajouter un produit
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {/* Add Product Modal */}
+          {/* AddProductModal */}
+          {merchantId && (
+            <AddProductModal
+              open={isAddModalOpen}
+              onOpenChange={setIsAddModalOpen}
+              onProductCreated={loadProducts}
+              merchantId={merchantId}
+            />
+          )}
+        </>
+      )}
     </MerchantLayout>
   );
 };

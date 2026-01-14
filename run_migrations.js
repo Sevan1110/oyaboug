@@ -9,7 +9,8 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const SUPABASE_URL = 'https://lqqnadahkkzofrxanbha.supabase.co';
+const SUPABASE_URL = 'https://geqvbpghvmcglzfkqmvj.supabase.co';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; // Should be in env for security
 const MIGRATION_FILE = path.join(__dirname, 'supabase', 'complete_migration.sql');
 
 function executeSQL(sql, serviceRoleKey) {
@@ -19,7 +20,7 @@ function executeSQL(sql, serviceRoleKey) {
     });
 
     const options = {
-      hostname: 'lqqnadahkkzofrxanbha.supabase.co',
+      hostname: 'geqvbpghvmcglzfkqmvj.supabase.co',
       port: 443,
       path: '/rest/v1/rpc/exec_sql',
       method: 'POST',

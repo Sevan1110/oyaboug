@@ -113,3 +113,21 @@ export interface AdminClient {
   totalSpent: number;
   status: AdminClientStatus;
 }
+
+// ============================================
+// Admin Product
+// ============================================
+
+export interface AdminProduct {
+  id: string;
+  name: string;
+  merchantId: string;
+  merchantName: string;
+  category: string;
+  originalPrice: number;
+  discountPrice: number;
+  quantity: number;
+  isAvailable: boolean;
+  description?: string;
+  createdAt: Date;
+}

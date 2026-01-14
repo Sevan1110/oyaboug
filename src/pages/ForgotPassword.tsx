@@ -18,6 +18,7 @@ const ForgotPassword = () => {
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSent, setIsSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +37,7 @@ const ForgotPassword = () => {
     setIsLoading(false);
 
     if (result.success) {
+      setIsSent(true);
       toast({
         title: "Email envoyé",
         description: "Si un compte existe avec cet email, un lien de réinitialisation vous a été envoyé.",
@@ -80,33 +82,54 @@ const ForgotPassword = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="votre@email.com"
-                    className="pl-10"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading}
-                  />
+            {isSent ? (
+              <div className="text-center py-6 space-y-4">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
+                  <Mail className="w-8 h-8" />
                 </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-lg">Vérifiez vos emails</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Nous avons envoyé un lien de réinitialisation à <span className="font-medium text-foreground">{email}</span>.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setIsSent(false)}
+                >
+                  Renvoyer le lien
+                </Button>
               </div>
-              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Envoi en cours...
-                  </>
-                ) : (
-                  "Envoyer le lien de réinitialisation"
-                )}
-              </Button>
-            </form>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="votre@email.com"
+                      className="pl-10"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Envoi en cours...
+                    </>
+                  ) : (
+                    "Envoyer le lien de réinitialisation"
+                  )}
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
       </motion.div>

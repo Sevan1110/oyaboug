@@ -13,16 +13,18 @@ import {
   searchFoodItems,
   getFoodCategories,
   updateFoodItemQuantity,
+  getFoodItemBySlug,
 } from '@/api';
-import type { 
-  ApiResponse, 
-  FoodItem, 
+import type {
+  ApiResponse,
+  FoodItem,
   FoodCategory,
   CreateFoodItemInput,
   PaginatedResponse,
   SearchFilters,
   GabonCity,
-  MerchantType 
+  MerchantType,
+  BasketItem
 } from '@/types';
 
 /**
@@ -59,6 +61,13 @@ export const getItem = async (itemId: string): Promise<ApiResponse<FoodItem>> =>
 };
 
 /**
+ * Get food item by slug
+ */
+export const getItemBySlug = async (slug: string): Promise<ApiResponse<FoodItem>> => {
+  return getFoodItemBySlug(slug);
+};
+
+/**
  * Get all items for a merchant
  */
 export const getMerchantItems = async (
@@ -84,6 +93,7 @@ export const createListing = async (
     pickupEnd: string;
     expiryDate?: string;
     imageUrl?: string;
+    contents?: BasketItem[]; // Add missing import if needed, or rely on type inference if BasketItem is global or imported
   }
 ): Promise<ApiResponse<FoodItem>> => {
   const input: CreateFoodItemInput = {
@@ -97,6 +107,7 @@ export const createListing = async (
     pickup_end: data.pickupEnd,
     expiry_date: data.expiryDate,
     image_url: data.imageUrl,
+    contents: data.contents,
   };
 
   return createFoodItem(merchantId, input);
@@ -119,6 +130,7 @@ export const updateListing = async (
     expiryDate?: string;
     imageUrl?: string;
     isAvailable?: boolean;
+    contents?: BasketItem[];
   }
 ): Promise<ApiResponse<FoodItem>> => {
   const updates: Partial<FoodItem> = {
@@ -133,6 +145,7 @@ export const updateListing = async (
     expiry_date: data.expiryDate,
     image_url: data.imageUrl,
     is_available: data.isAvailable,
+    contents: data.contents,
   };
 
   // Remove undefined values

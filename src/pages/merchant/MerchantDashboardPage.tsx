@@ -148,7 +148,7 @@ const MerchantDashboardPage = () => {
         animate={{ opacity: 1, y: 0 }}
         className="mb-6"
       >
-        <Link to="/merchant/products/new">
+        <Link to="/merchant/products" state={{ openAddModal: true }}>
           <Button className="gap-2">
             <Plus className="w-4 h-4" />
             Ajouter un produit
@@ -167,15 +167,13 @@ const MerchantDashboardPage = () => {
           {alerts.map((alert, index) => (
             <Card
               key={index}
-              className={`p-4 border-l-4 ${
-                alert.type === "warning" ? "border-l-warning" : "border-l-primary"
-              }`}
+              className={`p-4 border-l-4 ${alert.type === "warning" ? "border-l-warning" : "border-l-primary"
+                }`}
             >
               <div className="flex items-center gap-3">
                 <AlertTriangle
-                  className={`w-5 h-5 ${
-                    alert.type === "warning" ? "text-warning" : "text-primary"
-                  }`}
+                  className={`w-5 h-5 ${alert.type === "warning" ? "text-warning" : "text-primary"
+                    }`}
                 />
                 <p className="text-sm text-foreground">{alert.message}</p>
               </div>
@@ -262,7 +260,7 @@ const MerchantDashboardPage = () => {
                   <p>Aucun produit actif</p>
                 </div>
               )}
-              <Link to="/merchant/products/new">
+              <Link to="/merchant/products" state={{ openAddModal: true }}>
                 <Button variant="outline" className="w-full gap-2">
                   <Plus className="w-4 h-4" />
                   Ajouter un produit
@@ -297,11 +295,10 @@ const MerchantDashboardPage = () => {
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          order.status === "completed"
-                            ? "bg-green-100"
-                            : "bg-primary/10"
-                        }`}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center ${order.status === "completed"
+                          ? "bg-green-100"
+                          : "bg-primary/10"
+                          }`}
                       >
                         {order.status === "completed" ? (
                           <CheckCircle className="w-5 h-5 text-green-600" />

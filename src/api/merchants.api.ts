@@ -6,13 +6,13 @@
 import { supabaseClient, requireSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 import { DB_TABLES, API_ROUTES } from './routes';
 
-import type { 
-  ApiResponse, 
-  Merchant, 
-  MerchantType, 
+import type {
+  ApiResponse,
+  Merchant,
+  MerchantType,
   MerchantImpact,
   PaginatedResponse,
-  GabonCity 
+  GabonCity
 } from '@/types';
 
 /**
@@ -48,7 +48,7 @@ export const getMerchants = async (filters?: {
 
   const limit = filters?.limit || 20;
   const offset = filters?.offset || 0;
-  
+
   query = query.range(offset, offset + limit - 1);
 
   const { data, error, count } = await query;
@@ -87,6 +87,34 @@ export const getMerchantById = async (
     .from(DB_TABLES.MERCHANTS)
     .select('*')
     .eq('id', merchantId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.code, message: error.message },
+      success: false,
+    };
+  }
+
+  return {
+    data: data as Merchant,
+    error: null,
+    success: true,
+  };
+};
+
+/**
+ * Get merchant by slug
+ */
+export const getMerchantBySlug = async (
+  slug: string
+): Promise<ApiResponse<Merchant>> => {
+  const client = requireSupabaseClient();
+  const { data, error } = await client
+    .from(DB_TABLES.MERCHANTS)
+    .select('*')
+    .eq('slug', slug)
     .maybeSingle();
 
   if (error) {
@@ -144,7 +172,7 @@ export const getMerchantByUserId = async (
  * Create a new merchant
  */
 export const createMerchant = async (
-  merchantData: Omit<Merchant, 'id' | 'created_at' | 'updated_at' | 'rating' | 'total_reviews'>
+  merchantData: Omit<Merchant, 'id' | 'created_at' | 'updated_at' | 'rating' | 'total_reviews' | 'slug'>
 ): Promise<ApiResponse<Merchant>> => {
   if (!isSupabaseConfigured()) {
     return {
@@ -240,7 +268,7 @@ export const getNearbyMerchants = async (
   }
 
   const client = requireSupabaseClient();
-  
+
   // Use PostGIS or simple bounding box calculation
   // This is a simplified version - in production, use PostGIS functions
   const latDelta = radiusKm / 111; // ~111km per degree latitude
@@ -285,7 +313,7 @@ export const getMerchantImpact = async (
   }
 
   const client = requireSupabaseClient();
-  
+
   // Get merchant stats from impact logs
   const { data, error } = await client
     .from(DB_TABLES.IMPACT_LOGS)

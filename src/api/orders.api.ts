@@ -5,12 +5,12 @@
 
 import { supabaseClient, requireSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 import { DB_TABLES } from './routes';
-import type { 
-  ApiResponse, 
-  Order, 
+import type {
+  ApiResponse,
+  Order,
   OrderStatus,
   CreateOrderInput,
-  PaginatedResponse 
+  PaginatedResponse
 } from '@/types';
 
 /**
@@ -41,7 +41,7 @@ export const createOrder = async (
   }
 
   const client = requireSupabaseClient();
-  
+
   // Get food item details to calculate prices
   const { data: foodItem, error: itemError } = await client
     .from(DB_TABLES.FOOD_ITEMS)
@@ -135,6 +135,40 @@ export const getOrderById = async (
     .from(DB_TABLES.ORDERS)
     .select('*, food_items(*), merchants(*)')
     .eq('id', orderId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.code, message: error.message },
+      success: false,
+    };
+  }
+
+  const order: Order = data ? {
+    ...data,
+    food_item: data.food_items,
+    merchant: data.merchants,
+  } : null;
+
+  return {
+    data: order as Order,
+    error: null,
+    success: true,
+  };
+};
+
+/**
+ * Get order by tracking code (for public/guest access with verification)
+ */
+export const getOrderByTrackingCode = async (
+  trackingCode: string
+): Promise<ApiResponse<Order>> => {
+  const client = requireSupabaseClient();
+  const { data, error } = await client
+    .from(DB_TABLES.ORDERS)
+    .select('*, food_items(*), merchants(*)')
+    .eq('tracking_code', trackingCode)
     .maybeSingle();
 
   if (error) {
@@ -295,7 +329,7 @@ export const updateOrderStatus = async (
   }
 
   const client = requireSupabaseClient();
-  
+
   const updateData: Record<string, unknown> = {
     status,
     updated_at: new Date().toISOString(),
@@ -401,7 +435,7 @@ export const completeOrder = async (
   }
 
   const client = requireSupabaseClient();
-  
+
   // Verify pickup code
   const { data: order, error: fetchError } = await client
     .from(DB_TABLES.ORDERS)
@@ -482,7 +516,7 @@ export const addOrderReview = async (
 
     if (merchant) {
       const newTotalReviews = (merchant.total_reviews || 0) + 1;
-      const newRating = 
+      const newRating =
         ((merchant.rating || 0) * (merchant.total_reviews || 0) + rating) / newTotalReviews;
 
       await client

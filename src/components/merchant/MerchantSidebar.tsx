@@ -151,7 +151,7 @@ const MerchantSidebar = ({
         {/* Quick Action */}
         {!isCollapsed && (
           <div className="px-4 mb-4">
-            <Link to="/merchant/products/new">
+            <Link to="/merchant/products" state={{ openAddModal: true }}>
               <Button className="w-full gap-2" size="sm">
                 <Plus className="w-4 h-4" />
                 Nouveau produit

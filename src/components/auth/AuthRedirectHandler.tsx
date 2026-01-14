@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 export const AuthRedirectHandler = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { userRole, isAuthenticated, loading } = useAuth();
+  const { userRole, isAuthenticated, loading, isVerifiedMerchant } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
@@ -32,7 +32,12 @@ export const AuthRedirectHandler = () => {
           navigate('/admin', { replace: true });
           break;
         case 'merchant':
-          navigate('/merchant', { replace: true });
+          if (isVerifiedMerchant) {
+            navigate('/merchant', { replace: true });
+          } else {
+            // Not verified, send to success/pending page
+            navigate('/merchant/register/success', { replace: true });
+          }
           break;
         case 'user':
         default:
@@ -40,7 +45,7 @@ export const AuthRedirectHandler = () => {
           break;
       }
     }
-  }, [isAuthenticated, userRole, loading, navigate, searchParams, location]);
+  }, [isAuthenticated, userRole, loading, navigate, searchParams, location, isVerifiedMerchant]);
 
   return null;
 };
