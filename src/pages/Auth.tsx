@@ -15,15 +15,17 @@ import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Leaf, User, Store, Mail, Lock, Phone, ArrowLeft, Loader2, Calendar, UserCircle, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { login, register, loginWithOtp, verifyOtpCode } from "@/services";
 import type { UserRole } from "@/types";
+import { requireSupabaseClient } from "@/api/supabaseClient";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAuthenticated, loading, user } = useAuth();
-  const { signIn, signUp, signInWithOTP, isLoading } = useAuthActions();
+  const [isLoading, setIsLoading] = useState(false);
 
   // Diagnostic de l'état de connexion au chargement
   useEffect(() => {
@@ -47,13 +49,7 @@ const Auth = () => {
     }
   }, [isAuthenticated, loading, user]);
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (!loading && isAuthenticated) {
-      navigate('/', { replace: true });
-    }
-  }, [isAuthenticated, loading, navigate]);
-
+  // Role is handled by AuthRedirectHandler or initial state
   const initialRole = searchParams.get("role") === "merchant" ? "merchant" : "user";
   const [role, setRole] = useState<UserRole>(initialRole);
 
@@ -70,7 +66,7 @@ const Auth = () => {
   const [birthDate, setBirthDate] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  
+
   // OTP state
   const [otpMode, setOtpMode] = useState<'email' | 'phone' | null>(null);
   const [otpIdentifier, setOtpIdentifier] = useState("");
@@ -108,7 +104,7 @@ const Auth = () => {
       } else {
         // Gestion des erreurs spécifiques
         let errorMessage = result.error?.message || "Email ou mot de passe incorrect";
-        
+
         if (result.error?.code === 'NOT_CONFIGURED') {
           errorMessage = "La configuration du serveur n'est pas disponible. Veuillez contacter le support.";
         } else if (result.error?.code === 'NETWORK_ERROR' || errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_NAME_NOT_RESOLVED')) {
@@ -118,7 +114,7 @@ const Auth = () => {
         } else if (errorMessage.includes('Email not confirmed')) {
           errorMessage = "Veuillez confirmer votre email avant de vous connecter";
         }
-        
+
         toast({
           title: "Erreur de connexion",
           description: errorMessage,
@@ -186,7 +182,7 @@ const Auth = () => {
       } else {
         // Gestion des erreurs spécifiques
         let errorMessage = result.error?.message || "Une erreur est survenue";
-        
+
         // Messages d'erreur plus conviviaux
         if (result.error?.code === 'NOT_CONFIGURED') {
           errorMessage = "La configuration du serveur n'est pas disponible. Veuillez contacter le support.";
@@ -197,7 +193,7 @@ const Auth = () => {
         } else if (errorMessage.includes('Password')) {
           errorMessage = "Le mot de passe doit contenir au moins 6 caractères.";
         }
-        
+
         toast({
           title: "Erreur d'inscription",
           description: errorMessage,
@@ -229,7 +225,7 @@ const Auth = () => {
     const type = identifier.includes("@") ? "email" : "phone";
     setOtpMode(type);
     setOtpIdentifier(identifier);
-    
+
     const result = await loginWithOtp(identifier, type);
     setIsLoading(false);
 
@@ -237,7 +233,7 @@ const Auth = () => {
       setOtpSent(true);
       toast({
         title: "Code envoyé",
-        description: type === "email" 
+        description: type === "email"
           ? "Vérifiez votre email pour le code de connexion"
           : "Vérifiez votre téléphone pour le code de connexion",
       });
@@ -252,7 +248,7 @@ const Auth = () => {
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!otpCode || otpCode.length < 6) {
       toast({
         title: "Erreur",
@@ -277,7 +273,7 @@ const Auth = () => {
       setOtpMode(null);
       setOtpIdentifier("");
       // Redirect based on role
-      navigate(role === "merchant" ? "/merchant/dashboard" : "/user/dashboard");
+      navigate(role === "merchant" ? "/merchant" : "/user");
     } else {
       toast({
         title: "Code incorrect",
@@ -333,11 +329,10 @@ const Auth = () => {
               <button
                 type="button"
                 onClick={() => setRole("user")}
-                className={`flex-1 p-4 rounded-xl border-2 transition-all ${
-                  role === "user"
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/50"
-                }`}
+                className={`flex-1 p-4 rounded-xl border-2 transition-all ${role === "user"
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50"
+                  }`}
               >
                 <User className={`w-6 h-6 mx-auto mb-2 ${role === "user" ? "text-primary" : "text-muted-foreground"}`} />
                 <p className={`text-sm font-medium ${role === "user" ? "text-primary" : "text-muted-foreground"}`}>
@@ -347,11 +342,10 @@ const Auth = () => {
               <button
                 type="button"
                 onClick={() => setRole("merchant")}
-                className={`flex-1 p-4 rounded-xl border-2 transition-all ${
-                  role === "merchant"
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/50"
-                }`}
+                className={`flex-1 p-4 rounded-xl border-2 transition-all ${role === "merchant"
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50"
+                  }`}
               >
                 <Store className={`w-6 h-6 mx-auto mb-2 ${role === "merchant" ? "text-primary" : "text-muted-foreground"}`} />
                 <p className={`text-sm font-medium ${role === "merchant" ? "text-primary" : "text-muted-foreground"}`}>
@@ -373,10 +367,10 @@ const Auth = () => {
                     <Label htmlFor="login-email">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        id="login-email" 
-                        type="email" 
-                        placeholder="votre@email.com" 
+                      <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="votre@email.com"
                         className="pl-10"
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
@@ -388,10 +382,10 @@ const Auth = () => {
                     <Label htmlFor="login-password">Mot de passe</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        id="login-password" 
-                        type="password" 
-                        placeholder="••••••••" 
+                      <Input
+                        id="login-password"
+                        type="password"
+                        placeholder="••••••••"
                         className="pl-10"
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
@@ -431,9 +425,9 @@ const Auth = () => {
                       <Label htmlFor="business-name">Nom du commerce</Label>
                       <div className="relative">
                         <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input 
-                          id="business-name" 
-                          placeholder="Ma Boulangerie" 
+                        <Input
+                          id="business-name"
+                          placeholder="Ma Boulangerie"
                           className="pl-10"
                           value={businessName}
                           onChange={(e) => setBusinessName(e.target.value)}
@@ -447,9 +441,9 @@ const Auth = () => {
                       <Label htmlFor="first-name">Prénom *</Label>
                       <div className="relative">
                         <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input 
-                          id="first-name" 
-                          placeholder="Jean" 
+                        <Input
+                          id="first-name"
+                          placeholder="Jean"
                           className="pl-10"
                           value={firstName}
                           onChange={(e) => setFirstName(e.target.value)}
@@ -462,9 +456,9 @@ const Auth = () => {
                       <Label htmlFor="last-name">Nom *</Label>
                       <div className="relative">
                         <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input 
-                          id="last-name" 
-                          placeholder="Dupont" 
+                        <Input
+                          id="last-name"
+                          placeholder="Dupont"
                           className="pl-10"
                           value={lastName}
                           onChange={(e) => setLastName(e.target.value)}
@@ -478,8 +472,8 @@ const Auth = () => {
                     <Label htmlFor="birth-date">Date de naissance</Label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        id="birth-date" 
+                      <Input
+                        id="birth-date"
                         type="date"
                         className="pl-10"
                         value={birthDate}
@@ -493,10 +487,10 @@ const Auth = () => {
                     <Label htmlFor="signup-email">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        id="signup-email" 
-                        type="email" 
-                        placeholder="votre@email.com" 
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="votre@email.com"
                         className="pl-10"
                         value={signupEmail}
                         onChange={(e) => setSignupEmail(e.target.value)}
@@ -508,10 +502,10 @@ const Auth = () => {
                     <Label htmlFor="signup-phone">Téléphone</Label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        id="signup-phone" 
-                        type="tel" 
-                        placeholder="+241 XX XX XX XX" 
+                      <Input
+                        id="signup-phone"
+                        type="tel"
+                        placeholder="+241 XX XX XX XX"
                         className="pl-10"
                         value={signupPhone}
                         onChange={(e) => setSignupPhone(e.target.value)}
@@ -523,10 +517,10 @@ const Auth = () => {
                     <Label htmlFor="signup-password">Mot de passe</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        id="signup-password" 
-                        type="password" 
-                        placeholder="••••••••" 
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="••••••••"
                         className="pl-10"
                         value={signupPassword}
                         onChange={(e) => setSignupPassword(e.target.value)}
@@ -535,8 +529,8 @@ const Auth = () => {
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
-                    <Checkbox 
-                      id="cgu" 
+                    <Checkbox
+                      id="cgu"
                       className="mt-1"
                       checked={acceptedTerms}
                       onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
@@ -600,9 +594,9 @@ const Auth = () => {
                       />
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    className="w-full gap-2" 
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
                     size="lg"
                     onClick={handleOtpLogin}
                     disabled={isLoading || !otpIdentifier}
@@ -621,7 +615,7 @@ const Auth = () => {
                         Code envoyé
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {otpMode === "email" 
+                        {otpMode === "email"
                           ? `Un code a été envoyé à ${otpIdentifier}`
                           : `Un code SMS a été envoyé à ${otpIdentifier}`
                         }
@@ -637,7 +631,7 @@ const Auth = () => {
                     </Button>
                   </div>
                 </div>
-                
+
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="otp-code">Code de vérification</Label>
@@ -656,9 +650,9 @@ const Auth = () => {
                       Entrez le code à 6 chiffres reçu
                     </p>
                   </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
+                  <Button
+                    type="submit"
+                    className="w-full"
                     size="lg"
                     disabled={isLoading || otpCode.length !== 6}
                   >

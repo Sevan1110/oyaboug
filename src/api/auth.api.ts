@@ -15,7 +15,7 @@ export const signInWithEmail = async (
 ): Promise<ApiResponse<{ user: User; session: unknown }>> => {
   console.log('=== AUTH.API SIGNINWITHEMAIL ===');
   console.log('Credentials:', { email: credentials.email, password: '***' });
-  
+
   if (!isSupabaseConfigured()) {
     console.error('Supabase non configuré');
     return {
@@ -28,17 +28,17 @@ export const signInWithEmail = async (
   try {
     const client = requireSupabaseClient();
     console.log('Client Supabase obtenu, tentative de connexion...');
-    
+
     // Réduire le timeout à 5 secondes pour le navigateur
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('Timeout de connexion - Vérifiez votre réseau ou les paramètres CORS')), 5000);
     });
-    
+
     const signInPromise = client.auth.signInWithPassword({
       email: credentials.email,
       password: credentials.password,
     });
-    
+
     console.log('Appel de signInWithPassword() en cours...');
     const { data, error } = await Promise.race([signInPromise, timeoutPromise]) as any;
     console.log('Réponse Supabase reçue:', { data: !!data, error: error?.message });
@@ -306,8 +306,13 @@ export const verifyOtp = async (
   }
 
   const client = requireSupabaseClient();
+
+  // For email OTP codes, the type in Supabase is usually 'magiclink' or 'signup'
+  // For phone, it's 'sms'
+  const verifyType = type === 'email' ? 'magiclink' : 'sms';
+
   const options = type === 'email'
-    ? { email: identifier, token, type: 'email' as const }
+    ? { email: identifier, token, type: verifyType as any }
     : { phone: identifier, token, type: 'sms' as const };
 
   const { data, error } = await client.auth.verifyOtp(options);
