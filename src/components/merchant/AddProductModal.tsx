@@ -39,23 +39,18 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { FoodCategory, CreateFoodItemInput } from "@/types";
+import type { FoodCategory, CreateFoodItemInput, BasketItem } from "@/types";
 import { formatPrice, getCategoryName } from "@/services";
+import { createListing } from "@/services/inventory.service";
 import { compressImage, validateImageFile, formatFileSize, getBase64Size } from "@/utils/imageCompression";
 
-interface BasketItem {
-  id: string;
-  name: string;
-  category: FoodCategory;
-  originalPrice: number;
-  quantity: number;
-  imagePreview?: string;
-}
+
 
 interface AddProductModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onProductCreated?: () => void;
+  merchantId: string;
 }
 
 const categories: { value: FoodCategory; label: string }[] = [
@@ -74,11 +69,12 @@ const AddProductModal = ({
   open,
   onOpenChange,
   onProductCreated,
+  merchantId,
 }: AddProductModalProps) => {
   const [mode, setMode] = useState<"single" | "basket">("single");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const basketFileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Single product form
   const [productForm, setProductForm] = useState<CreateFoodItemInput>({
     name: "",
@@ -105,6 +101,7 @@ const AddProductModal = ({
   const [basketDiscount, setBasketDiscount] = useState(30);
   const [basketPickupStart, setBasketPickupStart] = useState("12:00");
   const [basketPickupEnd, setBasketPickupEnd] = useState("14:00");
+  const [basketExpiryDate, setBasketExpiryDate] = useState("");
 
   // Temp item for basket
   const [tempItem, setTempItem] = useState<Partial<BasketItem>>({
@@ -188,6 +185,7 @@ const AddProductModal = ({
     setBasketDescription("");
     setBasketQuantity(1);
     setBasketDiscount(30);
+    setBasketExpiryDate("");
     setTempItem({ name: "", category: "other", originalPrice: 0, quantity: 1 });
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (basketFileInputRef.current) basketFileInputRef.current.value = "";
@@ -230,20 +228,41 @@ const AddProductModal = ({
     basketTotalOriginal * (1 - basketDiscount / 100)
   );
 
-  const handleSubmitSingle = () => {
+  const handleSubmitSingle = async () => {
     if (!productForm.name || !productForm.original_price) {
       toast.error("Veuillez remplir les champs obligatoires");
       return;
     }
 
-    // Mock API call
-    console.log("Creating single product:", productForm);
-    toast.success(`Produit "${productForm.name}" créé avec succès`);
-    onProductCreated?.();
-    handleClose();
+    try {
+      const response = await createListing(merchantId, {
+        name: productForm.name,
+        description: productForm.description,
+        category: productForm.category,
+        originalPrice: productForm.original_price,
+        discountedPrice: productForm.discounted_price,
+        quantity: productForm.quantity_available,
+        pickupStart: productForm.pickup_start,
+        pickupEnd: productForm.pickup_end,
+        expiryDate: productForm.expiry_date,
+        imageUrl: productForm.image_url,
+      });
+
+      if (response.success) {
+        toast.success(`Produit "${productForm.name}" créé avec succès`);
+        onProductCreated?.();
+        handleClose();
+      } else {
+        toast.error("Erreur lors de la création du produit");
+        console.error(response.error);
+      }
+    } catch (error) {
+      console.error("Error creating product:", error);
+      toast.error("Une erreur est survenue");
+    }
   };
 
-  const handleSubmitBasket = () => {
+  const handleSubmitBasket = async () => {
     if (!basketName) {
       toast.error("Veuillez donner un nom au panier");
       return;
@@ -253,33 +272,42 @@ const AddProductModal = ({
       return;
     }
 
-    const basketData = {
-      name: basketName,
-      description: basketDescription,
-      category: "mixed_basket" as FoodCategory,
-      original_price: basketTotalOriginal,
-      discounted_price: basketTotalDiscounted,
-      quantity_available: basketQuantity,
-      pickup_start: basketPickupStart,
-      pickup_end: basketPickupEnd,
-      items: basketItems,
-      image_url: basketImagePreview,
-    };
+    try {
+      const response = await createListing(merchantId, {
+        name: basketName,
+        description: basketDescription,
+        category: "mixed_basket",
+        originalPrice: basketTotalOriginal,
+        discountedPrice: basketTotalDiscounted,
+        quantity: basketQuantity,
+        pickupStart: basketPickupStart,
+        pickupEnd: basketPickupEnd,
+        expiryDate: basketExpiryDate,
+        imageUrl: basketImagePreview || undefined,
+        contents: basketItems,
+      });
 
-    // Mock API call
-    console.log("Creating basket:", basketData);
-    toast.success(`Panier "${basketName}" créé avec succès`);
-    onProductCreated?.();
-    handleClose();
+      if (response.success) {
+        toast.success(`Panier "${basketName}" créé avec succès`);
+        onProductCreated?.();
+        handleClose();
+      } else {
+        toast.error("Erreur lors de la création du panier");
+        console.error(response.error);
+      }
+    } catch (error) {
+      console.error("Error creating basket:", error);
+      toast.error("Une erreur est survenue");
+    }
   };
 
   const discountPercentage =
     productForm.original_price > 0
       ? Math.round(
-          ((productForm.original_price - productForm.discounted_price) /
-            productForm.original_price) *
-            100
-        )
+        ((productForm.original_price - productForm.discounted_price) /
+          productForm.original_price) *
+        100
+      )
       : 0;
 
   return (
@@ -417,25 +445,39 @@ const AddProductModal = ({
                   }
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="pickup_start">Début récupération *</Label>
-                <Input
-                  id="pickup_start"
-                  type="time"
-                  value={productForm.pickup_start}
-                  onChange={(e) =>
-                    setProductForm({ ...productForm, pickup_start: e.target.value })
-                  }
-                />
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pickup_start">Début récupération *</Label>
+                  <Input
+                    id="pickup_start"
+                    type="time"
+                    value={productForm.pickup_start}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, pickup_start: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pickup_end">Fin récupération *</Label>
+                  <Input
+                    id="pickup_end"
+                    type="time"
+                    value={productForm.pickup_end}
+                    onChange={(e) =>
+                      setProductForm({ ...productForm, pickup_end: e.target.value })
+                    }
+                  />
+                </div>
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="pickup_end">Fin récupération *</Label>
+                <Label htmlFor="expiry_date">Date de péremption (Optionnel)</Label>
                 <Input
-                  id="pickup_end"
-                  type="time"
-                  value={productForm.pickup_end}
+                  id="expiry_date"
+                  type="datetime-local"
+                  value={productForm.expiry_date || ""}
                   onChange={(e) =>
-                    setProductForm({ ...productForm, pickup_end: e.target.value })
+                    setProductForm({ ...productForm, expiry_date: e.target.value })
                   }
                 />
               </div>
@@ -713,7 +755,8 @@ const AddProductModal = ({
             </AnimatePresence>
 
             {/* Pricing & Pickup */}
-            <div className="grid sm:grid-cols-3 gap-4">
+            {/* Pricing & Pickup */}
+            <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="basket_discount">Réduction (%)</Label>
                 <Input
@@ -725,6 +768,15 @@ const AddProductModal = ({
                   onChange={(e) =>
                     setBasketDiscount(parseInt(e.target.value) || 30)
                   }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="basket_expiry">Date de péremption</Label>
+                <Input
+                  id="basket_expiry"
+                  type="datetime-local"
+                  value={basketExpiryDate}
+                  onChange={(e) => setBasketExpiryDate(e.target.value)}
                 />
               </div>
               <div className="space-y-2">

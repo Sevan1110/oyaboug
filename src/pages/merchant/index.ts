@@ -10,3 +10,5 @@ export { default as MerchantAnalyticsPage } from "./MerchantAnalyticsPage";
 export { default as MerchantImpactPage } from "./MerchantImpactPage";
 export { default as MerchantProfilePage } from "./MerchantProfilePage";
 export { default as MerchantSettingsPage } from "./MerchantSettingsPage";
+export { default as MerchantHelpPage } from "./MerchantHelpPage";
+export { default as MerchantNotificationsPage } from "./MerchantNotificationsPage";

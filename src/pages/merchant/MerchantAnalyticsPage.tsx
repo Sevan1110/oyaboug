@@ -3,7 +3,7 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,75 +36,185 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { useAuth } from "@/contexts/AuthContext";
+import { getMyMerchantProfile, getMerchantStats } from "@/services/merchant.service";
+import { getMerchantOrders } from "@/services/order.service";
+import { getCategoryName } from "@/services/inventory.service";
+import type { MerchantImpact, Order, FoodCategory } from "@/types";
+import { toast } from "sonner";
 
-// Mock data
-const salesData = [
-  { name: "Lun", ventes: 12, revenus: 45000 },
-  { name: "Mar", ventes: 19, revenus: 72000 },
-  { name: "Mer", ventes: 15, revenus: 58000 },
-  { name: "Jeu", ventes: 22, revenus: 85000 },
-  { name: "Ven", ventes: 28, revenus: 105000 },
-  { name: "Sam", ventes: 35, revenus: 132000 },
-  { name: "Dim", ventes: 18, revenus: 68000 },
-];
+// Helper to get day name
+const getDayName = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("fr-FR", { weekday: "short" });
+};
 
-const categoryData = [
-  { name: "Pains & Viennoiseries", value: 40, color: "hsl(145, 65%, 42%)" },
-  { name: "Plats préparés", value: 30, color: "hsl(28, 85%, 55%)" },
-  { name: "Fruits & Légumes", value: 20, color: "hsl(217, 91%, 60%)" },
-  { name: "Autres", value: 10, color: "hsl(145, 20%, 60%)" },
-];
-
-const hourlyData = [
-  { hour: "10h", orders: 2 },
-  { hour: "11h", orders: 5 },
-  { hour: "12h", orders: 12 },
-  { hour: "13h", orders: 18 },
-  { hour: "14h", orders: 15 },
-  { hour: "15h", orders: 8 },
-  { hour: "16h", orders: 10 },
-  { hour: "17h", orders: 14 },
-  { hour: "18h", orders: 20 },
-  { hour: "19h", orders: 16 },
-  { hour: "20h", orders: 6 },
-];
+// Helper colors for categories
+const CATEGORY_COLORS: Record<string, string> = {
+  bread_pastry: "hsl(35, 90%, 60%)", // Gold/Orange
+  prepared_meals: "hsl(28, 85%, 55%)", // Orange
+  fruits_vegetables: "hsl(145, 65%, 42%)", // Green
+  dairy: "hsl(210, 90%, 60%)", // Blue
+  meat_fish: "hsl(350, 80%, 60%)", // Red
+  beverages: "hsl(190, 80%, 50%)", // Cyan
+  snacks: "hsl(280, 70%, 60%)", // Purple
+  mixed_basket: "hsl(160, 60%, 40%)", // Teal
+  other: "hsl(0, 0%, 60%)", // Gray
+};
 
 const MerchantAnalyticsPage = () => {
   const [period, setPeriod] = useState("week");
+  const { user } = useAuth();
+  const [merchantId, setMerchantId] = useState<string | null>(null);
+  const [impact, setImpact] = useState<MerchantImpact | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Dynamic Chart State
+  const [salesData, setSalesData] = useState<any[]>([]);
+  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [hourlyData, setHourlyData] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user]);
+
+  const loadData = async () => {
+    if (!user) return;
+    try {
+      // 1. Get Merchant ID
+      const profileRes = await getMyMerchantProfile(user.id);
+      if (profileRes.success && profileRes.data) {
+        const mId = profileRes.data.id;
+        setMerchantId(mId);
+
+        // 2. Get Stats using mId
+        const statsRes = await getMerchantStats(mId);
+        if (statsRes.success && statsRes.data) {
+          setImpact(statsRes.data);
+        }
+
+        // 3. Get Orders for Charts (fetch last 100 to approximate recent analytics)
+        const ordersRes = await getMerchantOrders(mId, { perPage: 100 });
+        if (ordersRes.success && ordersRes.data) {
+          processChartData(ordersRes.data.data);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors du chargement des statistiques");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const processChartData = (orders: Order[]) => {
+    // Process Sales Over Time (Last 7 Days Logic Simplified to Weekday aggregation)
+    const salesMap = new Map<string, { count: number; revenue: number }>();
+    const weekDays = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+
+    // Initialize map
+    weekDays.forEach(day => salesMap.set(day, { count: 0, revenue: 0 }));
+
+    orders.forEach(order => {
+      const dayName = getDayName(order.created_at).toLowerCase();
+      // Try to match short name, default to mon if fails (simple logic)
+      if (salesMap.has(dayName)) {
+        const current = salesMap.get(dayName)!;
+        salesMap.set(dayName, {
+          count: current.count + 1,
+          revenue: current.revenue + order.total_price
+        });
+      }
+    });
+
+    const processedSales = Array.from(salesMap.entries()).map(([name, data]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      ventes: data.count,
+      revenus: data.revenue
+    }));
+    setSalesData(processedSales);
+
+
+    // Process Category Distribution
+    const catMap = new Map<string, number>();
+    orders.forEach(order => {
+      if (order.food_item?.category) {
+        const cat = order.food_item.category;
+        catMap.set(cat, (catMap.get(cat) || 0) + 1);
+      }
+    });
+
+    const totalOrders = orders.length || 1;
+    const processedCats = Array.from(catMap.entries()).map(([cat, count]) => ({
+      name: getCategoryName(cat as FoodCategory),
+      value: Math.round((count / totalOrders) * 100),
+      color: CATEGORY_COLORS[cat] || CATEGORY_COLORS.other
+    })).sort((a, b) => b.value - a.value); // Sort descending
+
+    // Fallback if empty
+    if (processedCats.length === 0) {
+      processedCats.push({ name: "Aucune donnée", value: 100, color: CATEGORY_COLORS.other });
+    }
+    setCategoryData(processedCats);
+
+
+    // Process Hourly Traffic
+    const hourMap = new Map<string, number>();
+    // Initialize common trading hours (10h to 21h)
+    for (let i = 8; i <= 21; i++) {
+      hourMap.set(`${i}h`, 0);
+    }
+
+    orders.forEach(order => {
+      const date = new Date(order.created_at);
+      const hourKey = `${date.getHours()}h`;
+      if (hourMap.has(hourKey)) {
+        hourMap.set(hourKey, (hourMap.get(hourKey) || 0) + 1);
+      }
+    });
+
+    const processedHourly = Array.from(hourMap.entries()).map(([hour, count]) => ({
+      hour,
+      orders: count
+    }));
+    setHourlyData(processedHourly);
+  };
 
   const stats = [
     {
-      title: "Ventes totales",
-      value: "149",
-      change: "+12%",
-      trend: "up",
+      title: "Commandes livrées",
+      value: impact ? impact.orders_fulfilled.toString() : "0",
+      change: "+0%", // Needs historical data for real change
+      trend: "neutral",
       icon: ShoppingBag,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
     {
-      title: "Revenus",
-      value: "565 000 XAF",
-      change: "+18%",
+      title: "Revenus (Anti-gaspi)",
+      value: impact ? `${impact.revenue_from_waste_xaf.toLocaleString()} XAF` : "0 XAF",
+      change: "+0%",
       trend: "up",
       icon: Wallet,
       color: "text-secondary",
       bgColor: "bg-secondary/10",
     },
     {
-      title: "Nouveaux clients",
-      value: "47",
-      change: "+8%",
-      trend: "up",
+      title: "Note moyenne",
+      value: impact ? impact.average_rating.toFixed(1) : "0.0",
+      change: "N/A",
+      trend: "neutral",
       icon: Users,
       color: "text-blue-600",
       bgColor: "bg-blue-100",
     },
     {
-      title: "Produits publiés",
-      value: "23",
-      change: "-2",
-      trend: "down",
+      title: "Nourriture sauvée",
+      value: impact ? `${impact.food_saved_kg.toFixed(1)} kg` : "0 kg",
+      change: `-${impact ? impact.co2_avoided_kg.toFixed(1) : 0}kg CO2`,
+      trend: "up",
       icon: Package,
       color: "text-purple-600",
       bgColor: "bg-purple-100",
@@ -139,9 +249,8 @@ const MerchantAnalyticsPage = () => {
                     <stat.icon className={`w-5 h-5 ${stat.color}`} />
                   </div>
                   <div
-                    className={`flex items-center text-xs font-medium ${
-                      stat.trend === "up" ? "text-green-600" : "text-destructive"
-                    }`}
+                    className={`flex items-center text-xs font-medium ${stat.trend === "up" ? "text-green-600" : "text-destructive"
+                      }`}
                   >
                     {stat.trend === "up" ? (
                       <ArrowUpRight className="w-3 h-3" />
