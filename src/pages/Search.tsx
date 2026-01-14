@@ -98,7 +98,7 @@ const SearchPage = () => {
 
   const loadItems = async () => {
     setIsLoading(true);
-    
+
     const result = await searchInventory({
       city: selectedCity === "all" ? undefined : selectedCity,
       category: selectedCategory === "all" ? undefined : selectedCategory,
@@ -111,7 +111,7 @@ const SearchPage = () => {
     if (result.success && result.data) {
       setItems(result.data);
     }
-    
+
     setIsLoading(false);
   };
 
@@ -120,17 +120,17 @@ const SearchPage = () => {
       loadItems();
       return;
     }
-    
+
     setIsLoading(true);
     const result = await searchInventory({
       city: selectedCity === "all" ? undefined : selectedCity,
       category: selectedCategory === "all" ? undefined : selectedCategory,
       sortBy,
     });
-    
+
     if (result.success && result.data) {
       // Client-side filter by search query
-      const filtered = result.data.filter(item => 
+      const filtered = result.data.filter(item =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.merchant?.business_name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
@@ -171,7 +171,9 @@ const SearchPage = () => {
       name: item.merchant?.business_name || "Commerce",
       type: item.merchant?.business_type || "other",
       distance: item.merchant?.quartier || "",
+      slug: item.merchant?.slug || "",
     },
+    slug: item.slug || "",
     pickupTime: `${item.pickup_start} - ${item.pickup_end}`,
     quantity: item.quantity_available,
     badges: (item.badges || []) as ("bio" | "free" | "lastItems")[],
@@ -256,9 +258,9 @@ const SearchPage = () => {
 
             <div className="flex gap-2 flex-wrap">
               {MERCHANT_TYPES.slice(0, 3).map(type => (
-                <Badge 
+                <Badge
                   key={type.value}
-                  variant={selectedMerchantType === type.value ? "default" : "outline"} 
+                  variant={selectedMerchantType === type.value ? "default" : "outline"}
                   className="cursor-pointer hover:bg-accent px-3 py-1.5"
                   onClick={() => setSelectedMerchantType(
                     selectedMerchantType === type.value ? "all" : type.value
@@ -394,8 +396,8 @@ const SearchPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <FoodCard 
-                    item={toFoodCardItem(item)} 
+                  <FoodCard
+                    item={toFoodCardItem(item)}
                     onReserve={item.quantity_available > 0 ? () => handleReserve(item) : undefined}
                     reservedCount={reservedCountMap[`${item.id}:${item.merchant_id}`] || 0}
                   />

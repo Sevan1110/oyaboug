@@ -46,6 +46,8 @@ import {
   AdminSettingsPage,
 } from "./pages/admin";
 import { TermsOfService, PrivacyPolicy, HelpCenter } from "./pages/legal";
+import MerchantPublicPage from "./pages/MerchantPublicPage";
+import ProductDetailPage from "./pages/ProductDetailPage";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute, AdminRoute, MerchantRoute, UserRoute } from "@/components/auth/ProtectedRoute";
 import { AuthRedirectHandler } from "@/components/auth/AuthRedirectHandler";
@@ -68,6 +70,8 @@ const App = () => (
             <Route path="/auth/reset" element={<ResetPassword />} />
             <Route path="/search" element={<Search />} />
             <Route path="/concept" element={<Concept />} />
+            <Route path="/m/:slug" element={<MerchantPublicPage />} />
+            <Route path="/p/:slug" element={<ProductDetailPage />} />
 
             {/* Merchant Registration */}
             <Route path="/merchant/register" element={<MerchantRegisterPage />} />

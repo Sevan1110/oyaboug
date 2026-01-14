@@ -3,7 +3,7 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Lock, ArrowLeft, Loader2, Leaf } from "lucide-react";
@@ -20,6 +20,25 @@ const ResetPassword = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
+
+  useEffect(() => {
+    // Check if we have a session (Supabase handles the fragment automatically)
+    const checkSession = async () => {
+      const { data } = await import("@/services/auth.service").then(s => s.getAuthSession());
+      if (!data?.session) {
+        toast({
+          title: "Session expirée",
+          description: "Le lien de réinitialisation est invalide ou a expiré.",
+          variant: "destructive",
+        });
+        navigate("/auth");
+      }
+      setIsVerifying(false);
+    };
+
+    checkSession();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,48 +111,55 @@ const ResetPassword = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">Nouveau mot de passe</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="pl-10"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
-                  />
-                </div>
+            {isVerifying ? (
+              <div className="flex flex-col items-center py-10 space-y-4">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Vérification du lien...</p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirmer le mot de passe</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="pl-10"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={isLoading}
-                  />
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password">Nouveau mot de passe</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      className="pl-10"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
                 </div>
-              </div>
-              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Mise à jour...
-                  </>
-                ) : (
-                  "Mettre à jour le mot de passe"
-                )}
-              </Button>
-            </form>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirmer le mot de passe</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="••••••••"
+                      className="pl-10"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Mise à jour...
+                    </>
+                  ) : (
+                    "Mettre à jour le mot de passe"
+                  )}
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
       </motion.div>
