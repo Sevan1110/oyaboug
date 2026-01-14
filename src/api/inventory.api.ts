@@ -5,13 +5,13 @@
 
 import { supabaseClient, requireSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 import { DB_TABLES } from './routes';
-import type { 
-  ApiResponse, 
-  FoodItem, 
+import type {
+  ApiResponse,
+  FoodItem,
   FoodCategory,
   CreateFoodItemInput,
   PaginatedResponse,
-  SearchFilters 
+  SearchFilters
 } from '@/types';
 
 /**
@@ -56,7 +56,7 @@ export const getAvailableFoodItems = async (filters?: {
 
   const limit = filters?.limit || 20;
   const offset = filters?.offset || 0;
-  
+
   query = query
     .range(offset, offset + limit - 1)
     .order('created_at', { ascending: false });
@@ -189,7 +189,7 @@ export const createFoodItem = async (
   }
 
   const client = requireSupabaseClient();
-  
+
   // Calculate discount percentage
   const discountPercentage = Math.round(
     ((itemData.original_price - itemData.discounted_price) / itemData.original_price) * 100
@@ -203,6 +203,7 @@ export const createFoodItem = async (
       discount_percentage: discountPercentage,
       quantity_initial: itemData.quantity_available,
       is_available: true,
+      contents: itemData.contents,
     })
     .select()
     .single();
@@ -238,7 +239,7 @@ export const updateFoodItem = async (
   }
 
   const client = requireSupabaseClient();
-  
+
   // Recalculate discount if prices changed
   let updateData: Record<string, unknown> = {
     ...updates,
@@ -442,7 +443,7 @@ export const updateFoodItemQuantity = async (
   }
 
   const client = requireSupabaseClient();
-  
+
   // Get current quantity
   const { data: current, error: fetchError } = await client
     .from(DB_TABLES.FOOD_ITEMS)

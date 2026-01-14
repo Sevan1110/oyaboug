@@ -61,7 +61,7 @@ export interface Merchant {
   updated_at: string;
 }
 
-export type MerchantType = 
+export type MerchantType =
   | 'restaurant'
   | 'bakery'
   | 'grocery'
@@ -107,9 +107,19 @@ export interface FoodItem {
   pickup_end: string;
   expiry_date?: string;
   is_available: boolean;
+  contents?: BasketItem[];
   badges?: string[];
   created_at: string;
   updated_at: string;
+}
+
+export interface BasketItem {
+  id: string;
+  name: string;
+  category: FoodCategory;
+  originalPrice: number;
+  quantity: number;
+  imagePreview?: string;
 }
 
 export type FoodCategory =
@@ -134,6 +144,7 @@ export interface CreateFoodItemInput {
   pickup_end: string;
   expiry_date?: string;
   image_url?: string;
+  contents?: BasketItem[];
 }
 
 // ============================================

@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       try {
         console.log('=== INITIALISATION AUTH CONTEXT ===');
-        
+
         // Vérifier si le client Supabase est disponible
         if (!supabaseClient) {
           console.error('Client Supabase non disponible');
@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         console.log('Client Supabase disponible, tentative de récupération de session...');
-        
+
         // Get initial session
         const { data: { session: initialSession }, error } = await supabaseClient.auth.getSession();
 
@@ -70,8 +70,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           // Get user role from user metadata or database
           const role = initialSession.user.user_metadata?.role ||
-                      initialSession.user.app_metadata?.role ||
-                      'user';
+            initialSession.user.app_metadata?.role ||
+            'user';
           setUserRole(role as UserRole);
           console.log('Rôle utilisateur:', role);
         } else {
@@ -104,15 +104,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log('=== AUTH STATE CHANGE ===');
           console.log('Event:', event);
           console.log('Session:', !!session);
-          
+
           setSession(session);
           setUser(session?.user ?? null);
 
           if (session?.user) {
             // Update user role
             const role = session.user.user_metadata?.role ||
-                        session.user.app_metadata?.role ||
-                        'user';
+              session.user.app_metadata?.role ||
+              'user';
             setUserRole(role as UserRole);
             console.log('Nouveau rôle:', role);
           } else {
@@ -154,8 +154,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (refreshedUser) {
         setUser(refreshedUser);
         const role = refreshedUser.user_metadata?.role ||
-                    refreshedUser.app_metadata?.role ||
-                    'user';
+          refreshedUser.app_metadata?.role ||
+          'user';
         setUserRole(role as UserRole);
       }
     } catch (error) {
@@ -181,4 +181,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

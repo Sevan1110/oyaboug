@@ -18,103 +18,62 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Package, ShoppingBasket, Eye, Store } from "lucide-react";
-
-// Mock data
-const mockProducts = [
-  {
-    id: '1',
-    name: 'Pain au chocolat',
-    merchant: 'Boulangerie Le Pain Doré',
-    originalPrice: 500,
-    discountPrice: 250,
-    quantity: 10,
-    category: 'Viennoiserie',
-    status: 'active',
-  },
-  {
-    id: '2',
-    name: 'Croissant beurre',
-    merchant: 'Boulangerie Le Pain Doré',
-    originalPrice: 400,
-    discountPrice: 200,
-    quantity: 15,
-    category: 'Viennoiserie',
-    status: 'active',
-  },
-  {
-    id: '3',
-    name: 'Sandwich poulet',
-    merchant: 'Restaurant Chez Mama',
-    originalPrice: 2500,
-    discountPrice: 1500,
-    quantity: 5,
-    category: 'Sandwich',
-    status: 'active',
-  },
-  {
-    id: '4',
-    name: 'Salade César',
-    merchant: 'Restaurant Chez Mama',
-    originalPrice: 3000,
-    discountPrice: 1800,
-    quantity: 0,
-    category: 'Salade',
-    status: 'sold_out',
-  },
-];
-
-const mockBaskets = [
-  {
-    id: '1',
-    name: 'Panier Surprise Boulangerie',
-    merchant: 'Boulangerie Le Pain Doré',
-    originalPrice: 3000,
-    discountPrice: 1500,
-    quantity: 5,
-    contents: 'Assortiment de viennoiseries et pains',
-    status: 'active',
-  },
-  {
-    id: '2',
-    name: 'Panier Déjeuner',
-    merchant: 'Restaurant Chez Mama',
-    originalPrice: 5000,
-    discountPrice: 2500,
-    quantity: 3,
-    contents: 'Plat du jour + dessert + boisson',
-    status: 'active',
-  },
-];
+import { Search, Package, ShoppingBasket, Eye, Store, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { adminService } from "@/services/admin.service";
+import { toast } from "sonner";
+import { AdminProduct } from "@/types/admin.types";
 
 const AdminProductsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("products");
 
+  const { data: allItems, isLoading, error } = useQuery({
+    queryKey: ['admin-products'],
+    queryFn: adminService.getProducts,
+  });
+
+  if (error) {
+    toast.error("Erreur lors du chargement des produits");
+  }
+
+  const products = allItems?.filter(item => item.category !== 'mixed_basket') || [];
+  const baskets = allItems?.filter(item => item.category === 'mixed_basket') || [];
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR').format(amount) + ' FCFA';
   };
 
-  const filteredProducts = mockProducts.filter(product => {
+  const filteredProducts = products.filter(product => {
     const query = searchQuery.toLowerCase();
     return (
       product.name.toLowerCase().includes(query) ||
-      product.merchant.toLowerCase().includes(query)
+      (product.merchantName?.toLowerCase() || '').includes(query)
     );
   });
 
-  const filteredBaskets = mockBaskets.filter(basket => {
+  const filteredBaskets = baskets.filter(basket => {
     const query = searchQuery.toLowerCase();
     return (
       basket.name.toLowerCase().includes(query) ||
-      basket.merchant.toLowerCase().includes(query)
+      (basket.merchantName?.toLowerCase() || '').includes(query)
     );
   });
+
+  if (isLoading) {
+    return (
+      <AdminLayout title="Produits & Paniers" subtitle="Chargement...">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout
       title="Produits & Paniers"
-      subtitle="Gérez les produits et paniers de la plateforme"
+      subtitle="Vue d'ensemble du catalogue (Lecture seule)"
     >
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -124,7 +83,7 @@ const AdminProductsPage = () => {
               <Package className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{mockProducts.length}</p>
+              <p className="text-2xl font-bold">{products.length}</p>
               <p className="text-sm text-muted-foreground">Produits</p>
             </div>
           </CardContent>
@@ -135,7 +94,7 @@ const AdminProductsPage = () => {
               <ShoppingBasket className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{mockBaskets.length}</p>
+              <p className="text-2xl font-bold">{baskets.length}</p>
               <p className="text-sm text-muted-foreground">Paniers</p>
             </div>
           </CardContent>
@@ -147,8 +106,8 @@ const AdminProductsPage = () => {
             </div>
             <div>
               <p className="text-2xl font-bold">
-                {mockProducts.filter(p => p.status === 'active').length + 
-                 mockBaskets.filter(b => b.status === 'active').length}
+                {products.filter(p => p.isAvailable).length +
+                  baskets.filter(b => b.isAvailable).length}
               </p>
               <p className="text-sm text-muted-foreground">Actifs</p>
             </div>
@@ -161,7 +120,7 @@ const AdminProductsPage = () => {
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher..."
+            placeholder="Rechercher par nom ou commerce..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -174,18 +133,18 @@ const AdminProductsPage = () => {
         <TabsList className="mb-6">
           <TabsTrigger value="products" className="gap-2">
             <Package className="w-4 h-4" />
-            Produits ({mockProducts.length})
+            Produits ({products.length})
           </TabsTrigger>
           <TabsTrigger value="baskets" className="gap-2">
             <ShoppingBasket className="w-4 h-4" />
-            Paniers ({mockBaskets.length})
+            Paniers ({baskets.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="products">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Liste des produits</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Catalogue des produits</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -198,14 +157,14 @@ const AdminProductsPage = () => {
                     <TableHead className="text-right">Prix réduit</TableHead>
                     <TableHead className="text-center">Stock</TableHead>
                     <TableHead>Statut</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right">Détails</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredProducts.map((product) => (
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{product.merchant}</TableCell>
+                      <TableCell className="text-muted-foreground">{product.merchantName || 'Inconnu'}</TableCell>
                       <TableCell>{product.category}</TableCell>
                       <TableCell className="text-right line-through text-muted-foreground">
                         {formatCurrency(product.originalPrice)}
@@ -215,17 +174,24 @@ const AdminProductsPage = () => {
                       </TableCell>
                       <TableCell className="text-center">{product.quantity}</TableCell>
                       <TableCell>
-                        <Badge variant={product.status === 'active' ? 'default' : 'secondary'}>
-                          {product.status === 'active' ? 'Actif' : 'Épuisé'}
+                        <Badge variant={product.isAvailable ? 'default' : 'secondary'}>
+                          {product.isAvailable ? 'Actif' : 'Épuisé'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" title="Détails (à venir)">
                           <Eye className="w-4 h-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
                   ))}
+                  {filteredProducts.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        Aucun produit trouvé
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -234,8 +200,8 @@ const AdminProductsPage = () => {
 
         <TabsContent value="baskets">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Liste des paniers</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Catalogue des paniers</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -248,16 +214,16 @@ const AdminProductsPage = () => {
                     <TableHead className="text-right">Prix réduit</TableHead>
                     <TableHead className="text-center">Stock</TableHead>
                     <TableHead>Statut</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right">Détails</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredBaskets.map((basket) => (
                     <TableRow key={basket.id}>
                       <TableCell className="font-medium">{basket.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{basket.merchant}</TableCell>
+                      <TableCell className="text-muted-foreground">{basket.merchantName || 'Inconnu'}</TableCell>
                       <TableCell className="max-w-[200px] truncate text-muted-foreground">
-                        {basket.contents}
+                        {basket.description || 'Aucun contenu spécifié'}
                       </TableCell>
                       <TableCell className="text-right line-through text-muted-foreground">
                         {formatCurrency(basket.originalPrice)}
@@ -267,17 +233,24 @@ const AdminProductsPage = () => {
                       </TableCell>
                       <TableCell className="text-center">{basket.quantity}</TableCell>
                       <TableCell>
-                        <Badge variant={basket.status === 'active' ? 'default' : 'secondary'}>
-                          {basket.status === 'active' ? 'Actif' : 'Épuisé'}
+                        <Badge variant={basket.isAvailable ? 'default' : 'secondary'}>
+                          {basket.isAvailable ? 'Actif' : 'Épuisé'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" title="Détails (à venir)">
                           <Eye className="w-4 h-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
                   ))}
+                  {filteredBaskets.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        Aucun panier trouvé
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

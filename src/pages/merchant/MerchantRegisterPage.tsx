@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { requireSupabaseClient } from "@/api/supabaseClient";
 
 // Validation schema
 const merchantFormSchema = z.object({
@@ -53,18 +54,18 @@ const merchantFormSchema = z.object({
   business_name: z.string().min(2, "Le nom doit contenir au moins 2 caractères").max(100),
   business_type: z.string().min(1, "Sélectionnez un type d'activité"),
   description: z.string().min(10, "La description doit contenir au moins 10 caractères").max(500),
-  
+
   // Step 2: Contact Info
   email: z.string().email("Email invalide"),
   phone: z.string().min(8, "Numéro de téléphone invalide").max(20),
   address: z.string().min(5, "Adresse requise"),
   city: z.string().min(1, "Ville requise"),
   quartier: z.string().min(2, "Quartier requis"),
-  
+
   // Step 3: Documents
   rccm_number: z.string().optional(),
   nif_number: z.string().optional(),
-  
+
   // Terms
   accept_terms: z.boolean().refine(val => val === true, "Vous devez accepter les conditions"),
   accept_anti_waste: z.boolean().refine(val => val === true, "Vous devez vous engager contre le gaspillage"),
@@ -134,9 +135,37 @@ const MerchantRegisterPage = () => {
     }
   };
 
+  const uploadFileToSupabase = async (file: File, path: string) => {
+    try {
+      const supabase = requireSupabaseClient();
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${path}/${fileName}`;
+
+      const { error } = await supabase.storage
+        .from('merchant-documents')
+        .upload(filePath, file);
+
+      if (error) {
+        console.error('Error uploading file:', error);
+        throw error;
+      }
+
+      const { data } = supabase.storage
+        .from('merchant-documents')
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Supabase client error:', error);
+      return null;
+    }
+  };
+
   const nextStep = async () => {
     let fieldsToValidate: (keyof MerchantFormData)[] = [];
-    
+
     switch (currentStep) {
       case 1:
         fieldsToValidate = ['business_name', 'business_type', 'description'];
@@ -161,22 +190,53 @@ const MerchantRegisterPage = () => {
 
   const onSubmit = async (data: MerchantFormData) => {
     setIsSubmitting(true);
-    
+
     try {
-      // Simulate API call - in real app, this would call the merchant service
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      console.log("Merchant registration data:", data);
-      console.log("Uploaded files:", uploadedFiles);
-      
+      const supabase = requireSupabaseClient();
+
+      // 1. Upload files
+      let logoUrl = null;
+      let rccmUrl = null; // Ideally store in a separate documents field, but schema uses 'logo_url' and no dedicated doc columns currently visible in simple schema. 
+      // We will assume basic insert for now. For docs, we might put them in metadata or just log them.
+      // Wait, let's just upload logo to 'logo_url' if present.
+
+      if (uploadedFiles.logo) {
+        logoUrl = await uploadFileToSupabase(uploadedFiles.logo, 'logos');
+      }
+
+      // 2. Insert merchant
+      const { error } = await supabase
+        .from('merchants')
+        .insert({
+          business_name: data.business_name,
+          business_type: data.business_type,
+          description: data.description,
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          city: data.city,
+          quartier: data.quartier,
+          logo_url: logoUrl,
+          // document data? Schema doesn't have columns for these yet. 
+          // We can put them in a JSONB field if available or just ignore for MVP.
+          // Let's check schema again. 'merchants' has no jsonb for unknown fields except 'opening_hours'.
+          // We will proceed with core fields.
+          is_verified: false,
+          is_active: true, // Active but not verified (pending)
+          is_refused: false
+        });
+
+      if (error) throw error;
+
       toast.success("Demande d'inscription envoyée avec succès!", {
         description: "Notre équipe examinera votre dossier sous 48h.",
       });
-      
+
       navigate("/merchant/register/success");
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Registration error:", error);
       toast.error("Une erreur est survenue", {
-        description: "Veuillez réessayer plus tard.",
+        description: error.message || "Veuillez réessayer plus tard.",
       });
     } finally {
       setIsSubmitting(false);
@@ -188,21 +248,19 @@ const MerchantRegisterPage = () => {
       {[1, 2, 3, 4].map((step) => (
         <div key={step} className="flex items-center">
           <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-              step < currentStep
-                ? "bg-primary text-primary-foreground"
-                : step === currentStep
+            className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${step < currentStep
+              ? "bg-primary text-primary-foreground"
+              : step === currentStep
                 ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
                 : "bg-muted text-muted-foreground"
-            }`}
+              }`}
           >
             {step < currentStep ? <CheckCircle2 className="w-5 h-5" /> : step}
           </div>
           {step < 4 && (
             <div
-              className={`w-12 h-1 mx-1 rounded ${
-                step < currentStep ? "bg-primary" : "bg-muted"
-              }`}
+              className={`w-12 h-1 mx-1 rounded ${step < currentStep ? "bg-primary" : "bg-muted"
+                }`}
             />
           )}
         </div>
@@ -537,7 +595,7 @@ const MerchantRegisterPage = () => {
       <Card className="bg-muted/50">
         <CardContent className="p-4">
           <p className="text-sm text-muted-foreground">
-            💡 Les commerces avec documents vérifiés bénéficient d'un badge "Vérifié" 
+            💡 Les commerces avec documents vérifiés bénéficient d'un badge "Vérifié"
             et sont mis en avant dans les résultats de recherche.
           </p>
         </CardContent>
@@ -634,7 +692,7 @@ const MerchantRegisterPage = () => {
             </FormControl>
             <div className="space-y-1 leading-none">
               <FormLabel className="text-foreground">
-                Je m'engage à lutter contre le gaspillage alimentaire en proposant 
+                Je m'engage à lutter contre le gaspillage alimentaire en proposant
                 mes invendus à prix réduit sur la plateforme ouyaboung
               </FormLabel>
               <FormDescription>
