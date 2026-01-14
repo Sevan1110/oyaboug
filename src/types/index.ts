@@ -57,6 +57,7 @@ export interface Merchant {
   total_reviews: number;
   is_verified: boolean;
   is_active: boolean;
+  slug: string;
   created_at: string;
   updated_at: string;
 }
@@ -109,6 +110,7 @@ export interface FoodItem {
   is_available: boolean;
   contents?: BasketItem[];
   badges?: string[];
+  slug: string;
   created_at: string;
   updated_at: string;
 }
@@ -164,6 +166,7 @@ export interface Order {
   savings: number; // in XAF
   status: OrderStatus;
   pickup_code: string;
+  tracking_code: string;
   pickup_time?: string;
   confirmed_at?: string;
   picked_up_at?: string;

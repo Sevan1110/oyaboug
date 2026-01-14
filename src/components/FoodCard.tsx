@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, Store } from "lucide-react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 export interface FoodItem {
   id: string;
@@ -15,7 +16,9 @@ export interface FoodItem {
     name: string;
     type: string;
     distance: string;
+    slug: string;
   };
+  slug: string;
   pickupTime: string;
   quantity: number;
   badges: ("bio" | "lastItems" | "free")[];
@@ -57,21 +60,27 @@ const FoodCard = ({ item, onReserve, reservedCount = 0 }: FoodCardProps) => {
 
         <CardContent className="p-4">
           {/* Merchant info */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+          <Link
+            to={`/m/${item.merchant.slug}`}
+            className="flex items-center gap-2 text-xs text-muted-foreground mb-2 hover:text-primary transition-colors cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Store className="w-3 h-3" />
             <span>{item.merchant.name}</span>
             <span>•</span>
             <span>{item.merchant.type}</span>
-          </div>
+          </Link>
 
           {/* Name & description */}
-          <h3 className="font-semibold text-foreground mb-1 line-clamp-1">{item.name}</h3>
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{item.description}</p>
+          <Link to={`/p/${item.slug}`} className="block group/link">
+            <h3 className="font-semibold text-foreground mb-1 line-clamp-1 group-hover/link:text-primary transition-colors">{item.name}</h3>
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{item.description}</p>
+          </Link>
 
           {/* Price */}
           <div className="flex items-baseline gap-2 mb-3">
-            <span className="text-lg font-bold text-primary">{item.discountedPrice.toFixed(2)} €</span>
-            <span className="text-sm text-muted-foreground line-through">{item.originalPrice.toFixed(2)} €</span>
+            <span className="text-lg font-bold text-primary">{item.discountedPrice.toLocaleString()} XAF</span>
+            <span className="text-sm text-muted-foreground line-through">{item.originalPrice.toLocaleString()} XAF</span>
           </div>
 
           {/* Meta info */}

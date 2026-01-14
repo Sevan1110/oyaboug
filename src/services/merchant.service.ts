@@ -13,14 +13,14 @@ import {
   getMerchantImpactApi,
   searchMerchants,
 } from '@/api';
-import type { 
-  ApiResponse, 
-  Merchant, 
-  MerchantType, 
+import type {
+  ApiResponse,
+  Merchant,
+  MerchantType,
   MerchantImpact,
   PaginatedResponse,
   GabonCity,
-  OpeningHours 
+  OpeningHours
 } from '@/types';
 
 /**
@@ -59,6 +59,14 @@ export const getMerchant = async (merchantId: string): Promise<ApiResponse<Merch
  */
 export const getMyMerchantProfile = async (userId: string): Promise<ApiResponse<Merchant>> => {
   return getMerchantByUserId(userId);
+};
+
+/**
+ * Get merchant by slug
+ */
+export const getMerchantBySlugName = async (slug: string): Promise<ApiResponse<Merchant>> => {
+  const { getMerchantBySlug } = await import('@/api');
+  return getMerchantBySlug(slug);
 };
 
 /**
@@ -190,7 +198,7 @@ export const isMerchantOpenNow = (merchant: Merchant): boolean => {
   const now = new Date();
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const today = dayNames[now.getDay()] as keyof OpeningHours;
-  
+
   const todayHours = merchant.opening_hours[today];
   if (!todayHours || todayHours.is_closed) return false;
 

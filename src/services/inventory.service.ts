@@ -60,6 +60,14 @@ export const getItem = async (itemId: string): Promise<ApiResponse<FoodItem>> =>
 };
 
 /**
+ * Get food item by slug
+ */
+export const getItemBySlug = async (slug: string): Promise<ApiResponse<FoodItem>> => {
+  const { getFoodItemBySlug } = await import('@/api');
+  return getFoodItemBySlug(slug);
+};
+
+/**
  * Get all items for a merchant
  */
 export const getMerchantItems = async (

@@ -132,6 +132,39 @@ export const getFoodItemById = async (
 };
 
 /**
+ * Get food item by slug
+ */
+export const getFoodItemBySlug = async (
+  slug: string
+): Promise<ApiResponse<FoodItem>> => {
+  const client = requireSupabaseClient();
+  const { data, error } = await client
+    .from(DB_TABLES.FOOD_ITEMS)
+    .select('*, merchants(*)')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.code, message: error.message },
+      success: false,
+    };
+  }
+
+  const item = data ? {
+    ...data,
+    merchant: data.merchants,
+  } : null;
+
+  return {
+    data: item as FoodItem,
+    error: null,
+    success: true,
+  };
+};
+
+/**
  * Get food items by merchant
  */
 export const getFoodItemsByMerchant = async (
