@@ -14,7 +14,8 @@ import type {
   SalesStats,
   TopMerchant,
   MerchantStatus,
-  AdminClient
+  AdminClient,
+  AdminProduct
 } from '@/types/admin.types';
 
 // Transform DB merchant to MerchantRegistration
@@ -30,10 +31,10 @@ const transformMerchant = (dbMerchant: any): MerchantRegistration => ({
   businessType: dbMerchant.business_type,
   siret: dbMerchant.siret || '',
   description: dbMerchant.description || '',
-  status: dbMerchant.is_verified 
-    ? 'validated' 
-    : dbMerchant.is_refused 
-      ? 'refused' 
+  status: dbMerchant.is_verified
+    ? 'validated'
+    : dbMerchant.is_refused
+      ? 'refused'
       : 'pending',
   createdAt: new Date(dbMerchant.created_at),
   updatedAt: new Date(dbMerchant.updated_at),
@@ -185,20 +186,20 @@ export const adminService = {
     }
 
     const client = requireSupabaseClient();
-    const updates = action.action === 'validate' 
+    const updates = action.action === 'validate'
       ? {
-          is_verified: true,
-          is_refused: false,
-          validated_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }
+        is_verified: true,
+        is_refused: false,
+        validated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
       : {
-          is_verified: false,
-          is_refused: true,
-          refused_at: new Date().toISOString(),
-          refusal_reason: action.reason,
-          updated_at: new Date().toISOString(),
-        };
+        is_verified: false,
+        is_refused: true,
+        refused_at: new Date().toISOString(),
+        refusal_reason: action.reason,
+        updated_at: new Date().toISOString(),
+      };
 
     const { data, error } = await client
       .from(DB_TABLES.MERCHANTS)
@@ -337,9 +338,9 @@ export const adminService = {
 
       return (merchants || []).map(m => ({
         id: m.id,
-        type: m.is_verified 
+        type: m.is_verified
           ? 'merchant_validated' as const
-          : m.is_refused 
+          : m.is_refused
             ? 'merchant_refused' as const
             : 'merchant_registration' as const,
         description: `${m.is_verified ? 'Commerce validé' : m.is_refused ? 'Commerce refusé' : 'Nouvelle inscription'}: ${m.business_name}`,
@@ -379,7 +380,7 @@ export const adminService = {
     // Group by day
     const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
     const stats: Record<string, SalesStats> = {};
-    
+
     days.forEach(day => {
       stats[day] = { period: day, sales: 0, revenue: 0, orders: 0 };
     });
@@ -468,6 +469,38 @@ export const adminService = {
   // Format percentage
   formatPercentage: (value: number): string => {
     return value.toFixed(1) + '%';
+  },
+
+  // Get all products/baskets for admin view
+  getProducts: async (): Promise<AdminProduct[]> => {
+    if (!isSupabaseConfigured()) {
+      return [];
+    }
+
+    const client = requireSupabaseClient();
+    const { data, error } = await client
+      .from(DB_TABLES.FOOD_ITEMS)
+      .select('*, merchant:merchants(id, business_name)')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching admin products:', error);
+      throw error;
+    }
+
+    return (data || []).map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      merchantId: item.merchant_id,
+      merchantName: item.merchant?.business_name || 'Inconnu',
+      category: item.category,
+      originalPrice: item.original_price,
+      discountPrice: item.discounted_price,
+      quantity: item.quantity_available,
+      isAvailable: item.is_available,
+      description: item.description,
+      createdAt: new Date(item.created_at),
+    }));
   },
 };
 
