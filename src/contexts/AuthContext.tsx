@@ -46,6 +46,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       try {
         console.log('=== INITIALISATION AUTH CONTEXT ===');
+        console.time('Auth Init Total');
 
         if (!supabaseClient) {
           console.error('Client Supabase non disponible');
@@ -53,7 +54,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
 
+        console.log('Fetching session...');
         const { data: { session: initialSession }, error } = await supabaseClient.auth.getSession();
+        console.log('Session fetched:', !!initialSession);
 
         if (error) {
           console.error('Error getting session:', error);
@@ -64,11 +67,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(initialSession.user);
 
           // Fetch user profile from database
+          console.log('Fetching profile for user:', initialSession.user.id);
           const { data: profile, error: profileError } = await supabaseClient
             .from('profiles')
             .select('role')
             .eq('user_id', initialSession.user.id)
             .single();
+          console.log('Profile fetched:', profile?.role || 'ERROR');
 
           if (profileError) {
             console.error('Error fetching user profile:', profileError);
@@ -94,6 +99,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error('Error initializing auth:', error);
       } finally {
         if (mounted) {
+          console.timeEnd('Auth Init Total');
+          console.log('✅ Auth initialization complete, setting loading=false');
           setLoading(false);
         }
       }
@@ -103,9 +110,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const safetyTimeout = setTimeout(() => {
       if (mounted) {
+        console.warn('⚠️ SAFETY TIMEOUT REACHED - Force setting loading=false');
         setLoading(false);
       }
-    }, 5000);
+    }, 2000); // Reduced from 5000 to 2000ms
 
     if (supabaseClient) {
       const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
@@ -165,14 +173,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
-      await supabaseClient?.auth.signOut();
+      console.log('[AuthContext] Starting sign out process...');
+
+      // Clear local state immediately for better UX
       setUser(null);
       setSession(null);
       setUserRole(null);
       setIsVerifiedMerchant(false);
+      localStorage.removeItem('supabase.auth.token'); // Force clear token
+
+      if (!supabaseClient) return;
+
+      // Use a race to avoid hanging on remote sign out
+      const signOutPromise = supabaseClient.auth.signOut();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Sign out timed out')), 3000)
+      );
+
+      try {
+        await Promise.race([signOutPromise, timeoutPromise]);
+        console.log('[AuthContext] Remote sign out successful');
+      } catch (timeoutError) {
+        console.warn('[AuthContext] Remote sign out timed out or failed, but local state cleared:', timeoutError);
+      }
     } catch (error) {
-      console.error('Error signing out:', error);
-      throw error;
+      console.error('[AuthContext] Error in signOut function:', error);
+      // Even if everything fails, make sure we stop loading and clear user
+      setUser(null);
+      setSession(null);
     }
   };
 

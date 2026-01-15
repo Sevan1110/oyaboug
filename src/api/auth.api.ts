@@ -29,10 +29,17 @@ export const signInWithEmail = async (
     const client = requireSupabaseClient();
     console.log('Client Supabase obtenu, tentative de connexion...');
 
-    const { data, error } = await client.auth.signInWithPassword({
+    // Wrapper pour ajouter un timeout
+    const signInPromise = client.auth.signInWithPassword({
       email: credentials.email,
       password: credentials.password,
     });
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout: Supabase ne répond pas après 10s')), 10000)
+    );
+
+    const { data, error } = await Promise.race([signInPromise, timeoutPromise]) as any;
     console.log('Réponse Supabase reçue:', { data: !!data, error: error?.message });
 
     if (error) {

@@ -30,18 +30,34 @@ export const UserMenu: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
+      console.log('Initiating sign out in UserMenu...');
+
+      // Set a safety timeout to force refresh the page if React Router navigation hangs
+      const safetyRedirect = setTimeout(() => {
+        console.warn('Navigation hanging, forcing hard redirect...');
+        window.location.href = '/';
+      }, 2000);
+
       await signOut();
+
+      clearTimeout(safetyRedirect);
+
       toast({
         title: "Déconnexion réussie",
         description: "À bientôt sur Oyaboung !",
       });
-      navigate('/');
+
+      // Force navigation to home page
+      navigate('/', { replace: true });
     } catch (error) {
+      console.error('Logout error in UserMenu:', error);
+      // Fallback: Clear local storage and force redirect to /auth
+      localStorage.clear();
       toast({
-        title: "Erreur de déconnexion",
-        description: "Une erreur est survenue lors de la déconnexion",
-        variant: "destructive",
+        title: "Session expirée",
+        description: "Vous avez été déconnecté",
       });
+      window.location.href = '/auth';
     }
   };
 

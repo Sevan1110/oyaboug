@@ -21,9 +21,9 @@ import {
   Loader2,
   TrendingUp,
 } from "lucide-react";
-import { 
-  getActiveOrders, 
-  getUserStats, 
+import {
+  getActiveOrders,
+  getUserStats,
   formatOrderForDisplay,
   formatPrice,
   getAvailableItems,
@@ -42,7 +42,7 @@ const UserDashboardPage = () => {
   const [userImpact, setUserImpact] = useState<UserImpact | null>(null);
   const [favoritesCount, setFavoritesCount] = useState<number>(0);
   const [reservedCountMap, setReservedCountMap] = useState<Record<string, number>>({});
-  
+
   const userId = user?.id || null;
 
   useEffect(() => {
@@ -53,26 +53,26 @@ const UserDashboardPage = () => {
 
   const loadDashboardData = async () => {
     if (!userId) return;
-    
-    setIsLoading(true);
-    
-    try {
-    // Load in parallel
-    const [ordersResult, impactResult, itemsResult, favoritesResult] = await Promise.all([
-      getActiveOrders({ userId }),
-      getUserStats(userId),
-      getAvailableItems({ perPage: 4 }),
-      getFavorites(userId),
-    ]);
 
-    if (ordersResult.success && ordersResult.data) {
-      setActiveOrders(ordersResult.data);
-      const counts: Record<string, number> = {};
-      ordersResult.data.forEach((o) => {
-        const key = `${o.food_item_id}:${o.merchant_id}`;
-        counts[key] = (counts[key] || 0) + (o.quantity || 1);
-      });
-      setReservedCountMap(counts);
+    setIsLoading(true);
+
+    try {
+      // Load in parallel
+      const [ordersResult, impactResult, itemsResult, favoritesResult] = await Promise.all([
+        getActiveOrders({ userId }),
+        getUserStats(userId),
+        getAvailableItems({ perPage: 4 }),
+        getFavorites(userId),
+      ]);
+
+      if (ordersResult.success && ordersResult.data) {
+        setActiveOrders(ordersResult.data);
+        const counts: Record<string, number> = {};
+        ordersResult.data.forEach((o) => {
+          const key = `${o.food_item_id}:${o.merchant_id}`;
+          counts[key] = (counts[key] || 0) + (o.quantity || 1);
+        });
+        setReservedCountMap(counts);
       }
 
       if (impactResult.success && impactResult.data) {
@@ -116,31 +116,31 @@ const UserDashboardPage = () => {
   };
 
   const stats = [
-    { 
-      icon: ShoppingBag, 
-      value: userImpact?.orders_count?.toString() || "0", 
-      label: "Commandes", 
+    {
+      icon: ShoppingBag,
+      value: userImpact?.orders_count?.toString() || "0",
+      label: "Commandes",
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
-    { 
-      icon: Wallet, 
-      value: userImpact ? formatPrice(userImpact.money_saved_xaf) : "0 XAF", 
-      label: "Économisés", 
+    {
+      icon: Wallet,
+      value: userImpact ? formatPrice(userImpact.money_saved_xaf) : "0 XAF",
+      label: "Économisés",
       color: "text-secondary",
       bgColor: "bg-secondary/10",
     },
-    { 
-      icon: Leaf, 
-      value: userImpact ? `${userImpact.co2_avoided_kg.toFixed(1)}kg` : "0kg", 
-      label: "CO₂ évité", 
+    {
+      icon: Leaf,
+      value: userImpact ? `${(userImpact.co2_avoided_kg || 0).toFixed(1)}kg` : "0kg",
+      label: "CO₂ évité",
       color: "text-green-600",
       bgColor: "bg-green-100",
-    }, 
-    { 
-      icon: Heart, 
-      value: favoritesCount.toString(), 
-      label: "Favoris", 
+    },
+    {
+      icon: Heart,
+      value: (favoritesCount || 0).toString(),
+      label: "Favoris",
       color: "text-destructive",
       bgColor: "bg-destructive/10",
     },
@@ -158,7 +158,9 @@ const UserDashboardPage = () => {
       name: item.merchant?.business_name || "Commerce",
       type: item.merchant?.business_type || "other",
       distance: item.merchant?.quartier || "",
+      slug: item.merchant?.slug || "",
     },
+    slug: item.slug || "",
     pickupTime: `${item.pickup_start} - ${item.pickup_end}`,
     quantity: item.quantity_available,
     badges: (item.badges || []) as ("bio" | "free" | "lastItems")[],
@@ -175,8 +177,8 @@ const UserDashboardPage = () => {
   }
 
   return (
-    <UserLayout 
-      title="Tableau de bord" 
+    <UserLayout
+      title="Tableau de bord"
       subtitle="Bienvenue sur votre espace anti-gaspillage"
     >
       <div className="space-y-6">
@@ -251,7 +253,7 @@ const UserDashboardPage = () => {
               <CardContent>
                 {activeOrders.length > 0 ? (
                   <div className="space-y-3">
-                  {Object.values(
+                    {Object.values(
                       activeOrders.reduce((acc, o) => {
                         const key = `${o.food_item_id}:${o.merchant_id}`;
                         if (!acc[key]) acc[key] = { order: o, total: 0 };
@@ -261,35 +263,35 @@ const UserDashboardPage = () => {
                     )
                       .slice(0, 3)
                       .map(({ order, total }) => {
-                      const formatted = formatOrderForDisplay(order);
-                      return (
-                        <div 
-                          key={order.id} 
-                          className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                              <ShoppingBag className="w-5 h-5 text-primary" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-foreground text-sm">{formatted.merchantName}</p>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Clock className="w-3 h-3" />
-                                {formatted.itemName} • x{total}
+                        const formatted = formatOrderForDisplay(order);
+                        return (
+                          <div
+                            key={order.id}
+                            className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                                <ShoppingBag className="w-5 h-5 text-primary" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground text-sm">{formatted.merchantName}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Clock className="w-3 h-3" />
+                                  {formatted.itemName} • x{total}
+                                </div>
                               </div>
                             </div>
+                            <div className="text-right">
+                              <Badge className={`${formatted.statusColor} text-xs`}>
+                                {formatted.status}
+                              </Badge>
+                              <p className="text-sm font-bold text-foreground mt-1">
+                                {formatted.totalPrice}
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <Badge className={`${formatted.statusColor} text-xs`}>
-                              {formatted.status}
-                            </Badge>
-                            <p className="text-sm font-bold text-foreground mt-1">
-                              {formatted.totalPrice}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
                 ) : (
                   <div className="text-center py-8">
@@ -328,13 +330,13 @@ const UserDashboardPage = () => {
                       <Leaf className="w-8 h-8 text-green-600" />
                       <div>
                         <p className="text-2xl font-bold text-green-600">
-                          {userImpact ? userImpact.co2_avoided_kg.toFixed(1) : "0"} kg
+                          {userImpact ? (userImpact.co2_avoided_kg || 0).toFixed(1) : "0"} kg
                         </p>
                         <p className="text-xs text-muted-foreground">CO₂ évité</p>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 rounded-lg bg-muted/50 text-center">
                       <p className="text-lg font-bold text-foreground">
@@ -376,9 +378,9 @@ const UserDashboardPage = () => {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {favoriteItems.map((item) => (
-              <FoodCard 
-                key={item.id} 
-                item={toFoodCardItem(item)} 
+              <FoodCard
+                key={item.id}
+                item={toFoodCardItem(item)}
                 onReserve={item.quantity_available > 0 ? () => handleReserve(item) : undefined}
                 reservedCount={reservedCountMap[`${item.id}:${item.merchant?.id || item.merchant_id}`] || 0}
               />

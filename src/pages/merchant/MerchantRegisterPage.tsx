@@ -204,7 +204,7 @@ const MerchantRegisterPage = () => {
         logoUrl = await uploadFileToSupabase(uploadedFiles.logo, 'logos');
       }
 
-      // 2. Insert merchant
+      // 2. Insert merchant application (NOT active until admin validates)
       const { error } = await supabase
         .from('merchants')
         .insert({
@@ -217,19 +217,17 @@ const MerchantRegisterPage = () => {
           city: data.city,
           quartier: data.quartier,
           logo_url: logoUrl,
-          // document data? Schema doesn't have columns for these yet. 
-          // We can put them in a JSONB field if available or just ignore for MVP.
-          // Let's check schema again. 'merchants' has no jsonb for unknown fields except 'opening_hours'.
-          // We will proceed with core fields.
-          is_verified: false,
-          is_active: true, // Active but not verified (pending)
+          user_id: null,  // No user_id until admin validates and merchant creates account
+          is_verified: false,  // Pending admin validation
+          is_active: false,  // NOT active until validated
           is_refused: false
         });
 
       if (error) throw error;
 
       toast.success("Demande d'inscription envoyée avec succès!", {
-        description: "Notre équipe examinera votre dossier sous 48h.",
+        description: "Notre équipe admin examinera votre dossier sous 48h. Vous recevrez un email de confirmation à " + data.email,
+        duration: 8000,
       });
 
       navigate("/merchant/register/success");

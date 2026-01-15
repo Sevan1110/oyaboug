@@ -12,11 +12,11 @@ import MerchantValidationModal from "@/components/admin/MerchantValidationModal"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Store, 
-  Users, 
-  Package, 
-  ShoppingBag, 
+import {
+  Store,
+  Users,
+  Package,
+  ShoppingBag,
   TrendingUp,
   ArrowRight,
   DollarSign,
@@ -91,17 +91,49 @@ const AdminDashboardPage = () => {
 
     setIsProcessing(true);
     try {
+      const action = modalMode === 'validate' ? 'validate' : 'refuse';
+
       await adminService.updateMerchantStatus({
         merchantId: selectedMerchant.id,
-        action: modalMode === 'validate' ? 'validate' : 'refuse',
+        action,
         reason,
         adminId: 'admin-1', // Will be replaced with actual admin ID
       });
 
+      // Import email service dynamically
+      const { sendMerchantApprovalEmail, sendMerchantRejectionEmail, logEmailToConsole } =
+        await import('@/services/email.service');
+
+      // Send email to merchant
+      if (action === 'validate') {
+        const emailResult = await sendMerchantApprovalEmail(
+          selectedMerchant.email,
+          selectedMerchant.businessName
+        );
+
+        if (!emailResult.success) {
+          // Fallback: log to console if email fails
+          logEmailToConsole('approval', selectedMerchant.email, selectedMerchant.businessName);
+          console.warn('Email not sent, but validation succeeded:', emailResult.error);
+        }
+      } else {
+        const emailResult = await sendMerchantRejectionEmail(
+          selectedMerchant.email,
+          selectedMerchant.businessName,
+          reason
+        );
+
+        if (!emailResult.success) {
+          // Fallback: log to console if email fails
+          logEmailToConsole('rejection', selectedMerchant.email, selectedMerchant.businessName, reason);
+          console.warn('Email not sent, but refusal succeeded:', emailResult.error);
+        }
+      }
+
       toast.success(
-        modalMode === 'validate' 
-          ? 'Commerce validé avec succès' 
-          : 'Commerce refusé'
+        modalMode === 'validate'
+          ? 'Commerce validé avec succès. Un email a été envoyé au marchand.'
+          : 'Commerce refusé. Un email a été envoyé au marchand.'
       );
 
       // Refresh data
@@ -193,21 +225,21 @@ const AdminDashboardPage = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={salesStats}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="period" 
+                  <XAxis
+                    dataKey="period"
                     className="text-xs fill-muted-foreground"
                   />
                   <YAxis className="text-xs fill-muted-foreground" />
-                  <Tooltip 
-                    contentStyle={{ 
+                  <Tooltip
+                    contentStyle={{
                       backgroundColor: 'hsl(var(--background))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
                     }}
                   />
-                  <Bar 
-                    dataKey="sales" 
-                    fill="hsl(var(--primary))" 
+                  <Bar
+                    dataKey="sales"
+                    fill="hsl(var(--primary))"
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>

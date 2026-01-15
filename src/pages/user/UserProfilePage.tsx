@@ -326,17 +326,15 @@ const UserProfilePage = () => {
                 />
               </div>
 
-              {/* Informations de la photo */}
-              {(profileImage || userData.avatar) && (
-                <div className="mb-4">
-                  <p className="text-xs text-muted-foreground">
-                    Photo de profil
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Taille maximale: 2Mo
-                  </p>
-                </div>
-              )}
+              {/* Photo Info */}
+              <div className="mb-4">
+                <p className="text-xs text-muted-foreground">
+                  Photo de profil
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Taille maximale: 2Mo
+                </p>
+              </div>
 
               <h2 className="text-xl font-bold text-foreground">
                 {formData.firstName} {formData.lastName}
