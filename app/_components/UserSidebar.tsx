@@ -15,6 +15,7 @@ import {
     SidebarFooter,
     useSidebar,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -31,8 +32,9 @@ import {
     HelpCircle,
     User,
     Search,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react";
-import { logout } from "@/services";
 
 const mainMenuItems = [
     {
@@ -95,7 +97,7 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
     const pathname = usePathname();
     const router = useRouter();
     const { toast } = useToast();
-    const { state } = useSidebar();
+    const { state, toggleSidebar } = useSidebar();
     const { unreadCount } = useNotifications();
     const { signOut, user } = useAuth();
     const isCollapsed = state === "collapsed";
@@ -132,17 +134,17 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
     };
 
     const handleLogout = async () => {
-        const result = await logout();
-        if (result.success) {
+        try {
+            await signOut();
             toast({
                 title: "Déconnexion réussie",
                 description: "À bientôt sur ouyaboung !",
             });
             router.push("/auth");
-        } else {
+        } catch (error: any) {
             toast({
                 title: "Erreur de déconnexion",
-                description: result.error?.message || "Une erreur est survenue",
+                description: error.message || "Une erreur est survenue",
                 variant: "destructive",
             });
         }
@@ -150,14 +152,14 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
 
     return (
         <Sidebar collapsible="icon" className="border-r border-border">
-            <SidebarHeader className="p-4">
+            <SidebarHeader className="p-4 flex flex-row items-center justify-between">
                 <SidebarMenuButton
                     asChild
-                    className="w-full justify-start p-2 h-auto hover:bg-accent/50"
+                    className="flex-1 justify-start p-2 h-auto hover:bg-accent/50 max-w-[calc(100%-32px)]"
                 >
                     <Link href="/user/profile">
-                        <div className="flex items-center gap-3">
-                            <Avatar className="w-10 h-10">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <Avatar className="w-10 h-10 shrink-0">
                                 <AvatarImage
                                     src={getProfileImageUrl()}
                                     alt={getDisplayName()}
@@ -179,6 +181,17 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
                         </div>
                     </Link>
                 </SidebarMenuButton>
+
+                {/* Custom Toggle Button */}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 ml-1 shrink-0 hidden md:flex"
+                    onClick={toggleSidebar}
+                    aria-label={isCollapsed ? "Déplier la barre latérale" : "Replier la barre latérale"}
+                >
+                    {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                </Button>
             </SidebarHeader>
 
             <SidebarContent>

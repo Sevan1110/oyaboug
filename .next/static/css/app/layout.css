@@ -1536,6 +1536,9 @@ body{
 .max-w-xl{
   max-width: 36rem;
 }
+.max-w-\[calc\(100\%-32px\)\]{
+  max-width: calc(100% - 32px);
+}
 .flex-1{
   flex: 1 1 0%;
 }

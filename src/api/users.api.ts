@@ -50,6 +50,8 @@ export const updateUserProfile = async (
   const { data: authUser } = await client.auth.getUser();
   const email = authUser?.user?.email || updates.email || '';
   const role = (updates.role as UserProfile['role']) || 'user';
+
+  // Prepare payload without id first
   const payload = {
     user_id: userId,
     email,
@@ -58,16 +60,44 @@ export const updateUserProfile = async (
     updated_at: new Date().toISOString(),
   } as Partial<UserProfile> & { user_id: string; email: string; role: UserProfile['role'] };
 
-  const { data, error: upsertErr } = await client
+  // First, check if profile exists for this user_id
+  const { data: existingProfile } = await client
     .from(DB_TABLES.PROFILES)
-    .upsert(payload, { onConflict: 'user_id' })
-    .select('*')
+    .select('id')
+    .eq('user_id', userId)
     .maybeSingle();
 
-  if (upsertErr) {
+  let data, error;
+
+  if (existingProfile?.id) {
+    // Update existing profile
+    const result = await client
+      .from(DB_TABLES.PROFILES)
+      .update(payload)
+      .eq('id', existingProfile.id)
+      .select('*')
+      .maybeSingle();
+    data = result.data;
+    error = result.error;
+  } else {
+    // Insert new profile
+    // Note: If user_id is the PK, we might need to set id: userId. 
+    // Assuming id is auto-generated UUID or matches user_id. 
+    // Let's rely on default behavior.
+    const result = await client
+      .from(DB_TABLES.PROFILES)
+      .insert(payload)
+      .select('*')
+      .maybeSingle();
+    data = result.data;
+    error = result.error;
+  }
+
+  if (error) {
+    console.error("Error in updateUserProfile:", error);
     return {
       data: null,
-      error: { code: upsertErr.code, message: upsertErr.message },
+      error: { code: error.code, message: error.message },
       success: false,
     };
   }
@@ -131,7 +161,7 @@ export const updateUserPreferences = async (
   }
 
   const client = requireSupabaseClient();
-  
+
   // First get current preferences
   const { data: current } = await client
     .from(DB_TABLES.PROFILES)

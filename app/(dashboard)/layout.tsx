@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import UserSidebar from "../_components/UserSidebar";
-import NotificationBell from "@/components/notifications/NotificationBell";
+import NotificationBell from "../_components/NotificationBell";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "../_components/UserMenu";

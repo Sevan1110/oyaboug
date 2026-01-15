@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{\"app/(public)/search/page.tsx -> @/components/GabonMap\":{\"id\":\"app/(public)/search/page.tsx -> @/components/GabonMap\",\"files\":[\"static/css/_app-pages-browser_src_components_GabonMap_tsx.css\",\"static/chunks/_app-pages-browser_src_components_GabonMap_tsx.js\"]}}"
+self.__REACT_LOADABLE_MANIFEST="{}"
