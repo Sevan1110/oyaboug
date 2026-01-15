@@ -1,14 +1,17 @@
+"use client";
+
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Leaf, Menu, X, User, Store, Shield } from "lucide-react";
+import { Leaf, Menu, X, Store } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { UserMenu } from "@/components/auth/UserMenu";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const pathname = location.pathname;
   const { isAuthenticated } = useAuth();
 
   const navLinks = [
@@ -17,7 +20,7 @@ const Navbar = () => {
     { href: "/concept", label: "Comment ça marche" },
   ];
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => pathname === path;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
@@ -36,9 +39,8 @@ const Navbar = () => {
             <Link
               key={link.href}
               to={link.href}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                isActive(link.href) ? "text-primary" : "text-muted-foreground"
-              }`}
+              className={`text-sm font-medium transition-colors hover:text-primary ${isActive(link.href) ? "text-primary" : "text-muted-foreground"
+                }`}
             >
               {link.label}
             </Link>
@@ -88,9 +90,8 @@ const Navbar = () => {
                   key={link.href}
                   to={link.href}
                   onClick={() => setIsOpen(false)}
-                  className={`text-base font-medium py-2 transition-colors ${
-                    isActive(link.href) ? "text-primary" : "text-muted-foreground"
-                  }`}
+                  className={`text-base font-medium py-2 transition-colors ${isActive(link.href) ? "text-primary" : "text-muted-foreground"
+                    }`}
                 >
                   {link.label}
                 </Link>
@@ -122,3 +123,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+

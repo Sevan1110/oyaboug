@@ -1,0 +1,8 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/(dashboard)/user/page": "app/(dashboard)/user/page.js",
+  "/(public)/search/page": "app/(public)/search/page.js",
+  "/(dashboard)/user/profile/page": "app/(dashboard)/user/profile/page.js",
+  "/(dashboard)/user/help/page": "app/(dashboard)/user/help/page.js",
+  "/(dashboard)/user/settings/page": "app/(dashboard)/user/settings/page.js"
+}

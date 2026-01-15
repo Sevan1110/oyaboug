@@ -3,7 +3,7 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -98,6 +98,7 @@ const MerchantSidebar = ({
   merchantType = "Restaurant",
 }: MerchantSidebarProps) => {
   const location = useLocation();
+  const pathname = location.pathname;
   const navigate = useNavigate();
   const { toast } = useToast();
   const { state } = useSidebar();
@@ -105,9 +106,9 @@ const MerchantSidebar = ({
 
   const isActive = (path: string) => {
     if (path === "/merchant") {
-      return location.pathname === "/merchant";
+      return pathname === "/merchant";
     }
-    return location.pathname.startsWith(path);
+    return pathname.startsWith(path);
   };
 
   const handleLogout = async () => {
@@ -151,7 +152,10 @@ const MerchantSidebar = ({
         {/* Quick Action */}
         {!isCollapsed && (
           <div className="px-4 mb-4">
-            <Link to="/merchant/products" state={{ openAddModal: true }}>
+            {/* Note: passing state via Link in Next.js is not done via a 'state' prop like in react-router-dom. 
+                We usually use query params or a global state. For now, we'll just link to products. 
+            */}
+            <Link to="/merchant/products?action=add">
               <Button className="w-full gap-2" size="sm">
                 <Plus className="w-4 h-4" />
                 Nouveau produit

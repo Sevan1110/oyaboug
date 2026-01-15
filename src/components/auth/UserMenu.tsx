@@ -1,7 +1,4 @@
-// ============================================
-// User Menu - User Profile Dropdown
-// ouyaboung Platform - Anti-gaspillage alimentaire
-// ============================================
+"use client";
 
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -32,7 +29,7 @@ export const UserMenu: React.FC = () => {
     try {
       console.log('Initiating sign out in UserMenu...');
 
-      // Set a safety timeout to force refresh the page if React Router navigation hangs
+      // Set a safety timeout
       const safetyRedirect = setTimeout(() => {
         console.warn('Navigation hanging, forcing hard redirect...');
         window.location.href = '/';
@@ -49,15 +46,14 @@ export const UserMenu: React.FC = () => {
 
       // Force navigation to home page
       navigate('/', { replace: true });
+      // router.refresh(); // Not needed in React Router
     } catch (error) {
       console.error('Logout error in UserMenu:', error);
       // Fallback: Clear local storage and force redirect to /auth
-      localStorage.clear();
-      toast({
-        title: "Session expirée",
-        description: "Vous avez été déconnecté",
-      });
-      window.location.href = '/auth';
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        window.location.href = '/auth';
+      }
     }
   };
 
@@ -150,23 +146,37 @@ export const UserMenu: React.FC = () => {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link to={getDashboardPath()} className="cursor-pointer">
-            <User className="mr-2 h-4 w-4" />
-            <span>Tableau de bord</span>
-          </Link>
+          {userRole === 'user' ? (
+            <a href={getDashboardPath()} className="cursor-pointer flex w-full items-center">
+              <User className="mr-2 h-4 w-4" />
+              <span>Tableau de bord</span>
+            </a>
+          ) : (
+            <Link to={getDashboardPath()} className="cursor-pointer flex w-full items-center">
+              <User className="mr-2 h-4 w-4" />
+              <span>Tableau de bord</span>
+            </Link>
+          )}
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to={getProfilePath()} className="cursor-pointer">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Profil</span>
-          </Link>
+          {userRole === 'user' ? (
+            <a href={getProfilePath()} className="cursor-pointer flex w-full items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Profil</span>
+            </a>
+          ) : (
+            <Link to={getProfilePath()} className="cursor-pointer flex w-full items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Profil</span>
+            </Link>
+          )}
         </DropdownMenuItem>
         {userRole === 'user' && (
           <DropdownMenuItem asChild>
-            <Link to="/user/favorites" className="cursor-pointer">
+            <a href="/user/favorites" className="cursor-pointer flex w-full items-center">
               <Heart className="mr-2 h-4 w-4" />
               <span>Favoris</span>
-            </Link>
+            </a>
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />

@@ -78,8 +78,7 @@ const MerchantLayout = ({ children, title, subtitle }: MerchantLayoutProps) => {
 
               <div className="ml-auto flex items-center gap-2">
                 {/* Notifications */}
-                {/* Notifications */}
-                <Link to="/merchant/notifications">
+                <a href="/user/notifications">
                   <Button variant="ghost" size="icon" className="relative">
                     <Bell className="w-5 h-5" />
                     {unreadCount > 0 && (
@@ -91,7 +90,7 @@ const MerchantLayout = ({ children, title, subtitle }: MerchantLayoutProps) => {
                       </Badge>
                     )}
                   </Button>
-                </Link>
+                </a>
 
                 {/* User Avatar */}
                 <Button variant="ghost" size="icon" className="rounded-full">

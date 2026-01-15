@@ -3,26 +3,18 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Search from "./pages/Search";
-import Concept from "./pages/Concept";
-import NotFound from "./pages/NotFound";
-import {
-  UserDashboardPage,
-  UserReservationsPage,
-  UserFavoritesPage,
-  UserImpactPage,
-  UserNotificationsPage,
-  UserProfilePage,
-  UserSettingsPage,
-  UserHelpPage,
-} from "./pages/user";
+import Link from "next/link"; // Ensure this isn't used here, actually App.tsx is Vite.
+// Vite App.tsx
+import Index from "./screens/Index";
+import Auth from "./screens/Auth";
+import ForgotPassword from "./screens/ForgotPassword";
+import ResetPassword from "./screens/ResetPassword";
+import Search from "./screens/Search";
+import Concept from "./screens/Concept";
+import NotFound from "./screens/NotFound";
+// User pages migrated to App Router
 import {
   MerchantDashboardPage,
-
   MerchantOrdersPage,
   MerchantAnalyticsPage,
   MerchantImpactPage,
@@ -30,10 +22,10 @@ import {
   MerchantSettingsPage,
   MerchantHelpPage,
   MerchantNotificationsPage,
-} from "./pages/merchant";
-import MerchantProductsPage from "./pages/merchant/MerchantProductsPage";
-import MerchantRegisterPage from "./pages/merchant/MerchantRegisterPage";
-import MerchantRegisterSuccessPage from "./pages/merchant/MerchantRegisterSuccessPage";
+} from "./screens/merchant";
+import MerchantProductsPage from "./screens/merchant/MerchantProductsPage";
+import MerchantRegisterPage from "./screens/merchant/MerchantRegisterPage";
+import MerchantRegisterSuccessPage from "./screens/merchant/MerchantRegisterSuccessPage";
 import {
   AdminDashboardPage,
   AdminMerchantsPage,
@@ -44,10 +36,10 @@ import {
   AdminAnalyticsPage,
   AdminGeoPage,
   AdminSettingsPage,
-} from "./pages/admin";
-import { TermsOfService, PrivacyPolicy, HelpCenter } from "./pages/legal";
-import MerchantPublicPage from "./pages/MerchantPublicPage";
-import ProductDetailPage from "./pages/ProductDetailPage";
+} from "./screens/admin";
+import { TermsOfService, PrivacyPolicy, HelpCenter } from "./screens/legal";
+import MerchantPublicPage from "./screens/MerchantPublicPage";
+import ProductDetailPage from "./screens/ProductDetailPage";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute, AdminRoute, MerchantRoute, UserRoute } from "@/components/auth/ProtectedRoute";
 import { AuthRedirectHandler } from "@/components/auth/AuthRedirectHandler";
@@ -78,14 +70,8 @@ const App = () => (
             <Route path="/merchant/register/success" element={<MerchantRegisterSuccessPage />} />
 
             {/* User Routes */}
-            <Route path="/user" element={<UserRoute><UserDashboardPage /></UserRoute>} />
-            <Route path="/user/reservations" element={<UserRoute><UserReservationsPage /></UserRoute>} />
-            <Route path="/user/favorites" element={<UserRoute><UserFavoritesPage /></UserRoute>} />
-            <Route path="/user/impact" element={<UserRoute><UserImpactPage /></UserRoute>} />
-            <Route path="/user/profile" element={<UserRoute><UserProfilePage /></UserRoute>} />
-            <Route path="/user/notifications" element={<UserRoute><UserNotificationsPage /></UserRoute>} />
-            <Route path="/user/settings" element={<UserRoute><UserSettingsPage /></UserRoute>} />
-            <Route path="/user/help" element={<UserRoute><UserHelpPage /></UserRoute>} />
+            {/* User Routes - Migrated to Next.js App Router */}
+            {/* Routes are now handled by app/(dashboard)/user/... */}
 
             {/* Merchant Routes */}
             <Route path="/merchant" element={<MerchantRoute><MerchantDashboardPage /></MerchantRoute>} />
