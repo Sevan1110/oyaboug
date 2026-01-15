@@ -93,6 +93,18 @@ export const UserMenu: React.FC = () => {
     }
   };
 
+  const getProfilePath = () => {
+    switch (userRole) {
+      case 'admin':
+        return '/admin/settings';
+      case 'merchant':
+        return '/merchant/profile';
+      case 'user':
+      default:
+        return '/user/profile';
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -128,7 +140,7 @@ export const UserMenu: React.FC = () => {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/profile" className="cursor-pointer">
+          <Link to={getProfilePath()} className="cursor-pointer">
             <Settings className="mr-2 h-4 w-4" />
             <span>Profil</span>
           </Link>

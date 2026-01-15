@@ -11,6 +11,8 @@ export interface User {
   email: string;
   phone?: string;
   full_name?: string;
+  first_name?: string;
+  last_name?: string;
   avatar_url?: string;
   role: UserRole;
   created_at: string;
@@ -23,6 +25,7 @@ export interface UserProfile extends User {
   address?: string;
   city?: string;
   quartier?: string;
+  birth_date?: string;
   preferences?: UserPreferences;
 }
 
