@@ -21,7 +21,7 @@ class StructuredLogger {
     private isDevelopment: boolean;
 
     constructor() {
-        this.environment = import.meta.env.MODE || 'development';
+        this.environment = process.env.NODE_ENV || 'development';
         this.isDevelopment = this.environment === 'development';
     }
 

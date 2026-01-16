@@ -5,7 +5,8 @@ import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { AuthProvider } from "@/components/providers/AuthProvider";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthRedirect } from "@/components/auth/AuthRedirect";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,10 +21,10 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="fr">
+        <html lang="fr" suppressHydrationWarning>
             <body className={inter.className}>
-                {/* AuthProvider will be adapted next */}
                 <AuthProvider>
+                    <AuthRedirect />
                     <TooltipProvider>
                         {children}
                         <Toaster />

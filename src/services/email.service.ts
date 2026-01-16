@@ -3,34 +3,34 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY;
-const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:5173';
+const RESEND_API_KEY = process.env.NEXT_PUBLIC_RESEND_API_KEY;
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 const FROM_EMAIL = 'ouyaboung <noreply@oyaboug.com>'; // Change to your verified domain
 
 /**
  * Send merchant approval email
  */
 export const sendMerchantApprovalEmail = async (
-    email: string,
-    businessName: string
+  email: string,
+  businessName: string
 ): Promise<{ success: boolean; error?: string }> => {
-    if (!RESEND_API_KEY) {
-        console.warn('RESEND_API_KEY not configured. Email not sent.');
-        return { success: false, error: 'Email service not configured' };
-    }
+  if (!RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not configured. Email not sent.');
+    return { success: false, error: 'Email service not configured' };
+  }
 
-    try {
-        const response = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${RESEND_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                from: FROM_EMAIL,
-                to: email,
-                subject: `${businessName} - Votre commerce a été approuvé! 🎉`,
-                html: `
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: email,
+        subject: `${businessName} - Votre commerce a été approuvé! 🎉`,
+        html: `
           <!DOCTYPE html>
           <html>
           <head>
@@ -115,50 +115,50 @@ export const sendMerchantApprovalEmail = async (
           </body>
           </html>
         `
-            })
-        });
+      })
+    });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Resend API error:', errorData);
-            return { success: false, error: errorData.message || 'Email send failed' };
-        }
-
-        const data = await response.json();
-        console.log('Merchant approval email sent:', data);
-        return { success: true };
-
-    } catch (error: any) {
-        console.error('Error sending merchant approval email:', error);
-        return { success: false, error: error.message };
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Resend API error:', errorData);
+      return { success: false, error: errorData.message || 'Email send failed' };
     }
+
+    const data = await response.json();
+    console.log('Merchant approval email sent:', data);
+    return { success: true };
+
+  } catch (error: any) {
+    console.error('Error sending merchant approval email:', error);
+    return { success: false, error: error.message };
+  }
 };
 
 /**
  * Send merchant rejection email
  */
 export const sendMerchantRejectionEmail = async (
-    email: string,
-    businessName: string,
-    reason?: string
+  email: string,
+  businessName: string,
+  reason?: string
 ): Promise<{ success: boolean; error?: string }> => {
-    if (!RESEND_API_KEY) {
-        console.warn('RESEND_API_KEY not configured. Email not sent.');
-        return { success: false, error: 'Email service not configured' };
-    }
+  if (!RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not configured. Email not sent.');
+    return { success: false, error: 'Email service not configured' };
+  }
 
-    try {
-        const response = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${RESEND_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                from: FROM_EMAIL,
-                to: email,
-                subject: `${businessName} - Mise à jour de votre demande`,
-                html: `
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: email,
+        subject: `${businessName} - Mise à jour de votre demande`,
+        html: `
           <!DOCTYPE html>
           <html>
           <head>
@@ -225,39 +225,39 @@ export const sendMerchantRejectionEmail = async (
           </body>
           </html>
         `
-            })
-        });
+      })
+    });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Resend API error:', errorData);
-            return { success: false, error: errorData.message || 'Email send failed' };
-        }
-
-        const data = await response.json();
-        console.log('Merchant rejection email sent:', data);
-        return { success: true };
-
-    } catch (error: any) {
-        console.error('Error sending merchant rejection email:', error);
-        return { success: false, error: error.message };
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Resend API error:', errorData);
+      return { success: false, error: errorData.message || 'Email send failed' };
     }
+
+    const data = await response.json();
+    console.log('Merchant rejection email sent:', data);
+    return { success: true };
+
+  } catch (error: any) {
+    console.error('Error sending merchant rejection email:', error);
+    return { success: false, error: error.message };
+  }
 };
 
 /**
  * Fallback: Log email to console if Resend is not configured
  */
 export const logEmailToConsole = (
-    type: 'approval' | 'rejection',
-    email: string,
-    businessName: string,
-    reason?: string
+  type: 'approval' | 'rejection',
+  email: string,
+  businessName: string,
+  reason?: string
 ) => {
-    console.log('\n========== EMAIL SIMULATION ==========');
-    console.log(`Type: ${type === 'approval' ? 'APPROVAL' : 'REJECTION'}`);
-    console.log(`To: ${email}`);
-    console.log(`Business: ${businessName}`);
-    if (reason) console.log(`Reason: ${reason}`);
-    console.log(`Action URL: ${APP_URL}/auth?role=merchant&email=${encodeURIComponent(email)}`);
-    console.log('======================================\n');
+  console.log('\n========== EMAIL SIMULATION ==========');
+  console.log(`Type: ${type === 'approval' ? 'APPROVAL' : 'REJECTION'}`);
+  console.log(`To: ${email}`);
+  console.log(`Business: ${businessName}`);
+  if (reason) console.log(`Reason: ${reason}`);
+  console.log(`Action URL: ${APP_URL}/auth?role=merchant&email=${encodeURIComponent(email)}`);
+  console.log('======================================\n');
 };

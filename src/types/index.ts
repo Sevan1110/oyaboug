@@ -317,6 +317,7 @@ export interface SignUpData extends AuthCredentials {
   phone?: string;
   role: UserRole;
   business_name?: string; // for merchants
+  metadata?: Record<string, any>; // For additional profile data
 }
 
 export interface AuthSession {

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Leaf, User, Store, Mail, Lock, Phone, ArrowLeft, Loader2, Calendar, UserCircle, X } from "lucide-react";
+import { Leaf, User, Store, Mail, Lock, Phone, ArrowLeft, Loader2, Calendar, UserCircle, X, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { login, register, loginWithOtp, verifyOtpCode } from "@/services";
@@ -62,7 +62,12 @@ const AuthContent = () => {
     const [lastName, setLastName] = useState("");
     const [birthDate, setBirthDate] = useState("");
     const [businessName, setBusinessName] = useState("");
+
     const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+    // Password visibility state
+    const [showLoginPassword, setShowLoginPassword] = useState(false);
+    const [showSignupPassword, setShowSignupPassword] = useState(false);
 
     // OTP state
     const [otpMode, setOtpMode] = useState<'email' | 'phone' | null>(null);
@@ -96,9 +101,8 @@ const AuthContent = () => {
                     title: "Connexion réussie",
                     description: "Bienvenue sur ouyaboung !",
                 });
-                // Redirect based on role
-                router.push(role === "merchant" ? "/merchant" : "/user");
-                router.refresh(); // Ensure auth state updates
+                // AuthRedirect component will handle the redirect based on user role
+                // No need to manually redirect here
             } else {
                 // Gestion des erreurs spécifiques
                 let errorMessage = result.error?.message || "Email ou mot de passe incorrect";
@@ -175,8 +179,8 @@ const AuthContent = () => {
                 setBirthDate("");
                 setBusinessName("");
                 setAcceptedTerms(false);
-                // Rediriger vers la page d'authentification (onglet Connexion) logic handled by user, here we can just refresh or set tab
-                router.push("/auth");
+                // Rediriger vers la page de connexion
+                router.push('/auth');
             } else {
                 // Gestion des erreurs spécifiques
                 let errorMessage = result.error?.message || "Une erreur est survenue";
@@ -382,13 +386,26 @@ const AuthContent = () => {
                                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                             <Input
                                                 id="login-password"
-                                                type="password"
+                                                type={showLoginPassword ? "text" : "password"}
                                                 placeholder="••••••••"
-                                                className="pl-10"
+                                                className="pl-10 pr-10"
                                                 value={loginPassword}
                                                 onChange={(e) => setLoginPassword(e.target.value)}
                                                 disabled={isLoading}
                                             />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent z-10"
+                                                onClick={() => setShowLoginPassword(!showLoginPassword)}
+                                            >
+                                                {showLoginPassword ? (
+                                                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                                ) : (
+                                                    <Eye className="h-4 w-4 text-muted-foreground" />
+                                                )}
+                                            </Button>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between">
@@ -517,13 +534,26 @@ const AuthContent = () => {
                                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                             <Input
                                                 id="signup-password"
-                                                type="password"
+                                                type={showSignupPassword ? "text" : "password"}
                                                 placeholder="••••••••"
-                                                className="pl-10"
+                                                className="pl-10 pr-10"
                                                 value={signupPassword}
                                                 onChange={(e) => setSignupPassword(e.target.value)}
                                                 disabled={isLoading}
                                             />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent z-10"
+                                                onClick={() => setShowSignupPassword(!showSignupPassword)}
+                                            >
+                                                {showSignupPassword ? (
+                                                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                                ) : (
+                                                    <Eye className="h-4 w-4 text-muted-foreground" />
+                                                )}
+                                            </Button>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-2">

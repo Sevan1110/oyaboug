@@ -3,7 +3,8 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Sidebar,
   SidebarContent,
@@ -97,9 +98,8 @@ const MerchantSidebar = ({
   merchantName = "Mon Commerce",
   merchantType = "Restaurant",
 }: MerchantSidebarProps) => {
-  const location = useLocation();
-  const pathname = location.pathname;
-  const navigate = useNavigate();
+  const pathname = usePathname();
+  const router = useRouter();
   const { toast } = useToast();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -118,7 +118,7 @@ const MerchantSidebar = ({
         title: "Déconnexion réussie",
         description: "À bientôt sur ouyaboung !",
       });
-      navigate("/auth");
+      router.push("/auth");
     } else {
       toast({
         title: "Erreur de déconnexion",
@@ -155,7 +155,7 @@ const MerchantSidebar = ({
             {/* Note: passing state via Link in Next.js is not done via a 'state' prop like in react-router-dom. 
                 We usually use query params or a global state. For now, we'll just link to products. 
             */}
-            <Link to="/merchant/products?action=add">
+            <Link href="/merchant/products?action=add">
               <Button className="w-full gap-2" size="sm">
                 <Plus className="w-4 h-4" />
                 Nouveau produit
@@ -177,7 +177,7 @@ const MerchantSidebar = ({
                     tooltip={item.title}
                   >
                     <Link
-                      to={item.url}
+                      href={item.url}
                       className="flex items-center justify-between"
                     >
                       <div className="flex items-center gap-2">
@@ -212,7 +212,7 @@ const MerchantSidebar = ({
                     isActive={isActive(item.url)}
                     tooltip={item.title}
                   >
-                    <Link to={item.url}>
+                    <Link href={item.url}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
                     </Link>

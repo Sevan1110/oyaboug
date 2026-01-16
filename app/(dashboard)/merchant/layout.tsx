@@ -7,7 +7,7 @@ import NotificationBell from "@/components/notifications/NotificationBell";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getAuthUser, getMerchantProfile } from "@/services";
+import { getAuthUser, getMyMerchantProfile } from "@/services";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function MerchantDashboardLayout({ children }: { children: ReactNode }) {
@@ -22,7 +22,7 @@ export default function MerchantDashboardLayout({ children }: { children: ReactN
             try {
                 const { data: userData } = await getAuthUser();
                 if (userData?.user) {
-                    const { data: merchantData } = await getMerchantProfile(userData.user.id);
+                    const { data: merchantData } = await getMyMerchantProfile(userData.user.id);
                     if (merchantData) {
                         setProfile({
                             businessName: merchantData.business_name,

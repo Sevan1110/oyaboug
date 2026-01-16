@@ -129,9 +129,9 @@ const calculateDistance = (
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
@@ -194,8 +194,8 @@ const MapItemPopup = ({ item, onSelect, userLocation }: MapItemPopupProps) => {
           {distance !== null && (
             <p className="text-xs text-primary flex items-center gap-1 mt-0.5">
               <MapPin className="w-3 h-3" />
-              {distance < 1 
-                ? `${Math.round(distance * 1000)}m` 
+              {distance < 1
+                ? `${Math.round(distance * 1000)}m`
                 : `${distance.toFixed(1)}km`
               }
             </p>
@@ -328,6 +328,8 @@ interface GabonMapProps {
   selectedCity?: GabonCity | "";
   onItemSelect?: (item: FoodItem) => void;
   className?: string;
+  userLocation?: [number, number] | null;
+  onLocate?: (pos: [number, number]) => void;
 }
 
 const GabonMap = ({
@@ -335,15 +337,24 @@ const GabonMap = ({
   selectedCity,
   onItemSelect,
   className = "",
+  userLocation: propUserLocation,
+  onLocate: propOnLocate,
 }: GabonMapProps) => {
   const mapRef = useRef<L.Map>(null);
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [internalUserLocation, setInternalUserLocation] = useState<[number, number] | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+
+  const userLocation = propUserLocation !== undefined ? propUserLocation : internalUserLocation;
+
   const [nearbyRadius, setNearbyRadius] = useState(2); // km
 
   const handleLocate = (position: [number, number]) => {
     setIsLocating(true);
-    setUserLocation(position);
+    if (propOnLocate) {
+      propOnLocate(position);
+    } else {
+      setInternalUserLocation(position);
+    }
     setTimeout(() => setIsLocating(false), 500);
   };
 
@@ -399,11 +410,11 @@ const GabonMap = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <MapRecenter 
-          city={selectedCity as GabonCity} 
+        <MapRecenter
+          city={selectedCity as GabonCity}
           userLocation={userLocation}
         />
-        
+
         <LocateControl onLocate={handleLocate} isLocating={isLocating} />
 
         {/* User location marker */}
@@ -488,9 +499,9 @@ const GabonMap = ({
             icon={item.quantity_available <= 3 ? urgentIcon : merchantIcon}
           >
             <Popup>
-              <MapItemPopup 
-                item={item} 
-                onSelect={onItemSelect} 
+              <MapItemPopup
+                item={item}
+                onSelect={onItemSelect}
                 userLocation={userLocation}
               />
             </Popup>
@@ -551,11 +562,10 @@ const GabonMap = ({
               <button
                 key={r}
                 onClick={() => setNearbyRadius(r)}
-                className={`px-2 py-1 text-xs rounded transition-colors ${
-                  nearbyRadius === r
+                className={`px-2 py-1 text-xs rounded transition-colors ${nearbyRadius === r
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
+                  }`}
               >
                 {r}km
               </button>

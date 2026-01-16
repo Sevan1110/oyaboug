@@ -4,7 +4,7 @@
 // ============================================
 
 import { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import MerchantSidebar from "./MerchantSidebar";
 import { Bell, Search } from "lucide-react";
@@ -77,8 +77,7 @@ const MerchantLayout = ({ children, title, subtitle }: MerchantLayoutProps) => {
               </div>
 
               <div className="ml-auto flex items-center gap-2">
-                {/* Notifications */}
-                <a href="/user/notifications">
+                <Link href="/user/notifications">
                   <Button variant="ghost" size="icon" className="relative">
                     <Bell className="w-5 h-5" />
                     {unreadCount > 0 && (
@@ -90,7 +89,7 @@ const MerchantLayout = ({ children, title, subtitle }: MerchantLayoutProps) => {
                       </Badge>
                     )}
                   </Button>
-                </a>
+                </Link>
 
                 {/* User Avatar */}
                 <Button variant="ghost" size="icon" className="rounded-full">

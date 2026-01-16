@@ -1,7 +1,6 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/auth/page": "app/auth/page.js",
-  "/(dashboard)/user/page": "app/(dashboard)/user/page.js",
-  "/(dashboard)/user/notifications/page": "app/(dashboard)/user/notifications/page.js",
-  "/(dashboard)/user/help/page": "app/(dashboard)/user/help/page.js"
+  "/(dashboard)/merchant/page": "app/(dashboard)/merchant/page.js",
+  "/(dashboard)/merchant/settings/page": "app/(dashboard)/merchant/settings/page.js",
+  "/(dashboard)/merchant/profile/page": "app/(dashboard)/merchant/profile/page.js"
 }

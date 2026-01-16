@@ -1,3 +1,5 @@
+"use client";
+
 // ============================================
 // Auth Context - Global Authentication State Management
 // ouyaboung Platform - Anti-gaspillage alimentaire
@@ -67,21 +69,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(initialSession.user);
 
           // Fetch user profile from database
-          console.log('Fetching profile for user:', initialSession.user.id);
+          console.log('🔍 [AuthContext] Fetching profile for user:', initialSession.user.id);
           const { data: profile, error: profileError } = await supabaseClient
             .from('profiles')
             .select('role')
             .eq('user_id', initialSession.user.id)
             .single();
-          console.log('Profile fetched:', profile?.role || 'ERROR');
+
+          console.log('📊 [AuthContext] Profile fetch result:', {
+            profile,
+            profileError,
+            hasProfile: !!profile,
+            role: profile?.role
+          });
 
           if (profileError) {
-            console.error('Error fetching user profile:', profileError);
+            console.error('❌ [AuthContext] Error fetching user profile:', profileError);
+            // Fallback to metadata
             const role = initialSession.user.user_metadata?.role ||
               initialSession.user.app_metadata?.role ||
               'user';
+            console.log('🔄 [AuthContext] Using fallback role from metadata:', role);
             setUserRole(role as UserRole);
           } else if (profile) {
+            console.log('✅ [AuthContext] Setting role from profile:', profile.role);
             setUserRole(profile.role as UserRole);
 
             // If merchant, check verification status
@@ -93,6 +104,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 .maybeSingle();
               setIsVerifiedMerchant(!!merchant?.is_verified);
             }
+          } else {
+            // No profile found, use metadata as fallback
+            const role = initialSession.user.user_metadata?.role ||
+              initialSession.user.app_metadata?.role ||
+              'user';
+            console.log('⚠️ [AuthContext] No profile found, using metadata role:', role);
+            setUserRole(role as UserRole);
           }
         }
       } catch (error) {
@@ -122,18 +140,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(session?.user ?? null);
 
           if (session?.user) {
-            const { data: profile } = await supabaseClient
+            console.log('🔄 [AuthContext] Auth state change: fetching profile for', session.user.id);
+            const { data: profile, error: profileError } = await supabaseClient
               .from('profiles')
               .select('role')
               .eq('user_id', session.user.id)
               .single();
 
-            if (profile) {
+            if (profileError) {
+              console.warn('❌ [AuthContext] Error fetching profile on auth change:', profileError);
+              const role = session.user.user_metadata?.role ||
+                session.user.app_metadata?.role ||
+                'user';
+              console.log('🔄 [AuthContext] Using fallback role:', role);
+              setUserRole(role as UserRole);
+            } else if (profile) {
+              console.log('✅ [AuthContext] Role updated from profile:', profile.role);
               setUserRole(profile.role as UserRole);
             } else {
               const role = session.user.user_metadata?.role ||
                 session.user.app_metadata?.role ||
                 'user';
+              console.log('⚠️ [AuthContext] No profile found on auth change, using fallback:', role);
               setUserRole(role as UserRole);
             }
 
