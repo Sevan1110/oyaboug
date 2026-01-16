@@ -3,7 +3,8 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useLocation, Link, useNavigate } from "react-router-dom";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Sidebar,
   SidebarContent,
@@ -97,17 +98,17 @@ const MerchantSidebar = ({
   merchantName = "Mon Commerce",
   merchantType = "Restaurant",
 }: MerchantSidebarProps) => {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const pathname = usePathname();
+  const router = useRouter();
   const { toast } = useToast();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
   const isActive = (path: string) => {
     if (path === "/merchant") {
-      return location.pathname === "/merchant";
+      return pathname === "/merchant";
     }
-    return location.pathname.startsWith(path);
+    return pathname.startsWith(path);
   };
 
   const handleLogout = async () => {
@@ -117,7 +118,7 @@ const MerchantSidebar = ({
         title: "Déconnexion réussie",
         description: "À bientôt sur ouyaboung !",
       });
-      navigate("/auth");
+      router.push("/auth");
     } else {
       toast({
         title: "Erreur de déconnexion",
@@ -151,7 +152,10 @@ const MerchantSidebar = ({
         {/* Quick Action */}
         {!isCollapsed && (
           <div className="px-4 mb-4">
-            <Link to="/merchant/products" state={{ openAddModal: true }}>
+            {/* Note: passing state via Link in Next.js is not done via a 'state' prop like in react-router-dom. 
+                We usually use query params or a global state. For now, we'll just link to products. 
+            */}
+            <Link href="/merchant/products?action=add">
               <Button className="w-full gap-2" size="sm">
                 <Plus className="w-4 h-4" />
                 Nouveau produit
@@ -173,7 +177,7 @@ const MerchantSidebar = ({
                     tooltip={item.title}
                   >
                     <Link
-                      to={item.url}
+                      href={item.url}
                       className="flex items-center justify-between"
                     >
                       <div className="flex items-center gap-2">
@@ -208,7 +212,7 @@ const MerchantSidebar = ({
                     isActive={isActive(item.url)}
                     tooltip={item.title}
                   >
-                    <Link to={item.url}>
+                    <Link href={item.url}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
                     </Link>

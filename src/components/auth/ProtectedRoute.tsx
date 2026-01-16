@@ -50,8 +50,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (!userRole || !roles.includes(userRole)) {
       // User doesn't have required role
       const rolePath = userRole === 'admin' ? '/admin' :
-                      userRole === 'merchant' ? '/merchant' :
-                      '/user';
+        userRole === 'merchant' ? '/merchant' :
+          '/user';
 
       return <Navigate to={rolePath} replace />;
     }
@@ -74,7 +74,7 @@ export const MerchantRoute: React.FC<{ children: ReactNode }> = ({ children }) =
 );
 
 export const UserRoute: React.FC<{ children: ReactNode }> = ({ children }) => (
-  <ProtectedRoute requiredRole="user" fallbackPath="/auth">
+  <ProtectedRoute requiredRole={['user', 'admin', 'merchant']} fallbackPath="/auth">
     {children}
   </ProtectedRoute>
 );

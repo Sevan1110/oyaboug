@@ -1,3 +1,5 @@
+"use client";
+
 import { Link } from "react-router-dom";
 import { Leaf, Instagram, Twitter, Facebook, Mail, MapPin, Phone } from "lucide-react";
 

@@ -1,0 +1,6 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/(dashboard)/merchant/page": "app/(dashboard)/merchant/page.js",
+  "/(dashboard)/merchant/settings/page": "app/(dashboard)/merchant/settings/page.js",
+  "/(dashboard)/merchant/profile/page": "app/(dashboard)/merchant/profile/page.js"
+}

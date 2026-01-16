@@ -3,7 +3,7 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -104,7 +104,7 @@ const NotificationItem = ({
           </p>
           {notification.action_url && (
             <Link
-              to={notification.action_url}
+              href={notification.action_url}
               className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
             >
               {notification.action_label || "Voir plus"}
@@ -209,7 +209,7 @@ const NotificationList = () => {
 
       <Separator />
       <Link
-        to="/user/notifications"
+        href="/user/notifications"
         className="flex items-center justify-center gap-2 p-3 text-sm text-primary hover:bg-muted/50 transition-colors"
       >
         Voir toutes les notifications

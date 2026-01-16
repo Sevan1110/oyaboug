@@ -53,6 +53,7 @@ export const register = async (
     phone?: string;
     role?: UserRole;
     businessName?: string;
+    metadata?: Record<string, any>;
   } = {}
 ): Promise<ApiResponse<{ user: User; session: unknown }>> => {
   const signUpData: SignUpData = {
@@ -62,6 +63,7 @@ export const register = async (
     phone: options.phone,
     role: options.role || 'user',
     business_name: options.businessName,
+    metadata: options.metadata,
   };
   return signUpWithEmail(signUpData);
 };

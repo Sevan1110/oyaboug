@@ -29,10 +29,17 @@ export const signInWithEmail = async (
     const client = requireSupabaseClient();
     console.log('Client Supabase obtenu, tentative de connexion...');
 
-    const { data, error } = await client.auth.signInWithPassword({
+    // Wrapper pour ajouter un timeout
+    const signInPromise = client.auth.signInWithPassword({
       email: credentials.email,
       password: credentials.password,
     });
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout: Supabase ne répond pas après 10s')), 10000)
+    );
+
+    const { data, error } = await Promise.race([signInPromise, timeoutPromise]) as any;
     console.log('Réponse Supabase reçue:', { data: !!data, error: error?.message });
 
     if (error) {
@@ -57,7 +64,7 @@ export const signInWithEmail = async (
     console.error('Exception dans signInWithEmail:', error);
     return {
       data: null,
-      error: { code: 'EXCEPTION', message: error.message },
+      error: { code: 'EXCEPTION', message: (error as Error).message },
       success: false,
     };
   }
@@ -78,7 +85,7 @@ export const signUpWithEmail = async (
   }
 
   const client = requireSupabaseClient();
-  const redirectUrl = `${import.meta.env.DEV ? 'http://127.0.0.1:3000' : window.location.origin}/auth`;
+  const redirectUrl = `${process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:3000' : window.location.origin}/auth`;
 
   try {
     const { data, error } = await client.auth.signUp({
@@ -91,6 +98,7 @@ export const signUpWithEmail = async (
           phone: signUpData.phone,
           role: signUpData.role,
           business_name: signUpData.business_name,
+          ...signUpData.metadata,
         },
       },
     });
