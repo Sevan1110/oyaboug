@@ -6,7 +6,8 @@
 // ============================================
 
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
     ShoppingBag,
@@ -32,8 +33,9 @@ import { toast } from "sonner";
 import { createReservation } from "@/services";
 
 const ProductDetailPage = () => {
-    const { slug } = useParams<{ slug: string }>();
-    const navigate = useNavigate();
+    const params = useParams();
+    const router = useRouter();
+    const slug = params?.slug as string;
     const { isAuthenticated, user } = useAuth();
     const [product, setProduct] = useState<FoodItem | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -53,7 +55,7 @@ const ProductDetailPage = () => {
                 setProduct(result.data);
             } else {
                 toast.error("Produit non trouvé");
-                navigate("/search");
+                router.push("/search");
             }
         } catch (error) {
             console.error("Error loading product:", error);
@@ -66,7 +68,7 @@ const ProductDetailPage = () => {
     const handleReserve = async () => {
         if (!isAuthenticated) {
             toast.error("Veuillez vous connecter pour réserver");
-            navigate(`/auth?returnTo=/p/${slug}`);
+            router.push(`/auth?returnTo=/p/${slug}`);
             return;
         }
 
@@ -78,7 +80,7 @@ const ProductDetailPage = () => {
 
             if (resp.success) {
                 toast.success("Réservation réussie !");
-                navigate("/user/reservations");
+                router.push("/user/reservations");
             } else {
                 toast.error(resp.error?.message || "Erreur lors de la réservation");
             }
@@ -111,7 +113,7 @@ const ProductDetailPage = () => {
                     variant="ghost"
                     size="sm"
                     className="mb-6 gap-2"
-                    onClick={() => navigate(-1)}
+                    onClick={() => router.back()}
                 >
                     <ArrowLeft className="w-4 h-4" /> Retour
                 </Button>
@@ -152,7 +154,7 @@ const ProductDetailPage = () => {
                             <div>
                                 <div className="flex items-center gap-2 text-muted-foreground mb-4">
                                     <Store className="w-4 h-4" />
-                                    <Link to={`/m/${product.merchant?.slug}`} className="hover:text-primary transition-colors underline-offset-4 hover:underline">
+                                    <Link href={`/m/${product.merchant?.slug}`} className="hover:text-primary transition-colors underline-offset-4 hover:underline">
                                         {product.merchant?.business_name}
                                     </Link>
                                     <Separator orientation="vertical" className="h-4 mx-2" />

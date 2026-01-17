@@ -142,8 +142,8 @@ const formatPickupRange = (start: string, end: string) => {
   if (isTimeOnly(start) && isTimeOnly(end)) {
     return `${start} - ${end}`;
   }
-  let ds = parseISO(start);
-  let de = parseISO(end);
+  const ds = parseISO(start);
+  const de = parseISO(end);
   if (isNaN(ds.getTime()) || isNaN(de.getTime())) {
     return `${start} - ${end}`;
   }
@@ -563,8 +563,8 @@ const GabonMap = ({
                 key={r}
                 onClick={() => setNearbyRadius(r)}
                 className={`px-2 py-1 text-xs rounded transition-colors ${nearbyRadius === r
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
                   }`}
               >
                 {r}km

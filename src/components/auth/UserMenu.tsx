@@ -1,7 +1,8 @@
 "use client";
 
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export const UserMenu: React.FC = () => {
   const { user, userRole, signOut, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const { toast } = useToast();
 
   if (!isAuthenticated || !user) {
@@ -45,7 +46,7 @@ export const UserMenu: React.FC = () => {
       });
 
       // Force navigation to home page
-      navigate('/', { replace: true });
+      router.replace('/');
       // router.refresh(); // Not needed in React Router
     } catch (error) {
       console.error('Logout error in UserMenu:', error);
@@ -152,7 +153,7 @@ export const UserMenu: React.FC = () => {
               <span>Tableau de bord</span>
             </a>
           ) : (
-            <Link to={getDashboardPath()} className="cursor-pointer flex w-full items-center">
+            <Link href={getDashboardPath()} className="cursor-pointer flex w-full items-center">
               <User className="mr-2 h-4 w-4" />
               <span>Tableau de bord</span>
             </Link>
@@ -165,7 +166,7 @@ export const UserMenu: React.FC = () => {
               <span>Profil</span>
             </a>
           ) : (
-            <Link to={getProfilePath()} className="cursor-pointer flex w-full items-center">
+            <Link href={getProfilePath()} className="cursor-pointer flex w-full items-center">
               <Settings className="mr-2 h-4 w-4" />
               <span>Profil</span>
             </Link>

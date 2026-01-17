@@ -5,7 +5,7 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -40,7 +40,7 @@ import { getMerchantItems, formatPrice, isExpiringSoon, getCategoryName, getMyMe
 import type { FoodItem } from "@/types";
 import { toast } from "sonner";
 
-const MerchantProductsPage = () => {
+const MerchantProductsContent = () => {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const action = searchParams.get("action");
@@ -243,7 +243,7 @@ const MerchantProductsPage = () => {
   };
 
   return (
-    <MerchantLayout title="Mes produits" subtitle="Gérez vos invendus">
+    <>
       {isProfileLoading ? (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -336,7 +336,6 @@ const MerchantProductsPage = () => {
           )}
 
           {/* Add Product Modal */}
-          {/* AddProductModal */}
           {merchantId && (
             <AddProductModal
               open={isAddModalOpen}
@@ -347,6 +346,20 @@ const MerchantProductsPage = () => {
           )}
         </>
       )}
+    </>
+  );
+};
+
+const MerchantProductsPage = () => {
+  return (
+    <MerchantLayout title="Mes produits" subtitle="Gérez vos invendus">
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      }>
+        <MerchantProductsContent />
+      </Suspense>
     </MerchantLayout>
   );
 };

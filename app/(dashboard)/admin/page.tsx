@@ -26,7 +26,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { adminService } from "@/services/admin.service";
 import type { AdminKPIs, MerchantRegistration, AdminActivity } from "@/types/admin.types";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -261,7 +261,7 @@ const AdminDashboardPage = () => {
             <Clock className="w-4 h-4 text-amber-500" />
             Commerces en attente de validation
           </CardTitle>
-          <Link to="/admin/validations">
+          <Link href="/admin/validations">
             <Button variant="ghost" size="sm" className="gap-1">
               Voir tout
               <ArrowRight className="w-4 h-4" />

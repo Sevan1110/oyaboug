@@ -3,8 +3,8 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import React, { ReactNode, useEffect, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import React, { ReactNode, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 import type { UserRole } from '@/types';
@@ -23,7 +23,32 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   fallbackPath = '/auth'
 }) => {
   const { isAuthenticated, userRole, loading } = useAuth();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (loading) return;
+
+    // Check authentication requirement
+    if (requireAuth && !isAuthenticated) {
+      router.push(`${fallbackPath}?returnTo=${encodeURIComponent(pathname || '/')}`);
+      return;
+    }
+
+    // Check role requirements
+    if (requiredRole && isAuthenticated) {
+      const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+
+      if (!userRole || !roles.includes(userRole)) {
+        // User doesn't have required role
+        const rolePath = userRole === 'admin' ? '/admin' :
+          userRole === 'merchant' ? '/merchant' :
+            '/user';
+
+        router.push(rolePath);
+      }
+    }
+  }, [loading, isAuthenticated, userRole, requireAuth, requiredRole, fallbackPath, pathname, router]);
 
   // Show loading spinner while checking authentication
   if (loading) {
@@ -37,24 +62,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Check authentication requirement
-  if (requireAuth && !isAuthenticated) {
-    // Redirect to auth page with return url
-    return <Navigate to={`${fallbackPath}?returnTo=${encodeURIComponent(location.pathname)}`} replace />;
-  }
+  // If not authenticated and auth is required, don't render children (effect will redirect)
+  if (requireAuth && !isAuthenticated) return null;
 
-  // Check role requirements
+  // If authenticated but wrong role, don't render children (effect will redirect)
   if (requiredRole && isAuthenticated) {
     const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-
-    if (!userRole || !roles.includes(userRole)) {
-      // User doesn't have required role
-      const rolePath = userRole === 'admin' ? '/admin' :
-        userRole === 'merchant' ? '/merchant' :
-          '/user';
-
-      return <Navigate to={rolePath} replace />;
-    }
+    if (!userRole || !roles.includes(userRole)) return null;
   }
 
   return <>{children}</>;

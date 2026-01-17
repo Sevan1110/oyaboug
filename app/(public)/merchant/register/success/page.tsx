@@ -5,7 +5,7 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,7 +39,7 @@ const MerchantRegisterSuccessPage = () => {
             <Card className="mb-8">
               <CardContent className="p-6">
                 <h2 className="text-lg font-semibold mb-6">Prochaines étapes</h2>
-                
+
                 <div className="space-y-6">
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
@@ -81,13 +81,13 @@ const MerchantRegisterSuccessPage = () => {
             </Card>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/">
+              <Link href="/">
                 <Button variant="outline" className="gap-2 w-full sm:w-auto">
                   <Home className="w-4 h-4" />
                   Retour à l'accueil
                 </Button>
               </Link>
-              <Link to="/search">
+              <Link href="/search">
                 <Button className="gap-2 w-full sm:w-auto">
                   Explorer les offres
                   <ArrowRight className="w-4 h-4" />

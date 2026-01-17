@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, Store } from "lucide-react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 
 export interface FoodItem {
   id: string;
@@ -61,7 +61,7 @@ const FoodCard = ({ item, onReserve, reservedCount = 0 }: FoodCardProps) => {
         <CardContent className="p-4">
           {/* Merchant info */}
           <Link
-            to={`/m/${item.merchant.slug}`}
+            href={`/m/${item.merchant.slug}`}
             className="flex items-center gap-2 text-xs text-muted-foreground mb-2 hover:text-primary transition-colors cursor-pointer"
             onClick={(e) => e.stopPropagation()}
           >
@@ -72,7 +72,7 @@ const FoodCard = ({ item, onReserve, reservedCount = 0 }: FoodCardProps) => {
           </Link>
 
           {/* Name & description */}
-          <Link to={`/p/${item.slug}`} className="block group/link">
+          <Link href={`/p/${item.slug}`} className="block group/link">
             <h3 className="font-semibold text-foreground mb-1 line-clamp-1 group-hover/link:text-primary transition-colors">{item.name}</h3>
             <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{item.description}</p>
           </Link>

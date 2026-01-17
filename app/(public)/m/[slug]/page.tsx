@@ -6,7 +6,7 @@
 // ============================================
 
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MapPin, Phone, Mail, Clock, Star, Store, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,9 @@ import type { Merchant, FoodItem } from "@/types";
 import { toast } from "sonner";
 
 const MerchantPublicPage = () => {
-    const { slug } = useParams<{ slug: string }>();
-    const navigate = useNavigate();
+    const params = useParams();
+    const router = useRouter();
+    const slug = params?.slug as string;
     const [merchant, setMerchant] = useState<Merchant | null>(null);
     const [items, setItems] = useState<FoodItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -47,7 +48,7 @@ const MerchantPublicPage = () => {
                 }
             } else {
                 toast.error("Commerce non trouvé");
-                navigate("/search");
+                router.push("/search");
             }
         } catch (error) {
             console.error("Error loading merchant:", error);
@@ -84,7 +85,7 @@ const MerchantPublicPage = () => {
                         variant="secondary"
                         size="sm"
                         className="mb-4 gap-2 bg-white/90"
-                        onClick={() => navigate(-1)}
+                        onClick={() => router.back()}
                     >
                         <ArrowLeft className="w-4 h-4" /> Retour
                     </Button>
@@ -182,7 +183,7 @@ const MerchantPublicPage = () => {
                                     whileHover={{ scale: 1.02 }}
                                     transition={{ duration: 0.2 }}
                                     className="cursor-pointer"
-                                    onClick={() => navigate(`/p/${item.slug}`)}
+                                    onClick={() => router.push(`/p/${item.slug}`)}
                                 >
                                     <FoodCard
                                         item={{

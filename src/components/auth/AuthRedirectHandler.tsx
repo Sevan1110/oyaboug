@@ -3,49 +3,57 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useEffect } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
-export const AuthRedirectHandler = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+const AuthRedirectHandlerContent = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { userRole, isAuthenticated, loading, isVerifiedMerchant } = useAuth();
-  const location = useLocation();
 
   useEffect(() => {
     if (loading) return;
 
     // Ne rediriger que si on vient de l'authentification (returnTo param) ou si on est sur la page d'accueil
-    const returnTo = searchParams.get('returnTo');
-    const shouldRedirect = returnTo || location.pathname === '/' || location.pathname === '/auth';
+    const returnTo = searchParams?.get('returnTo');
+    const shouldRedirect = returnTo || pathname === '/' || pathname === '/auth';
 
     if (isAuthenticated && userRole && shouldRedirect) {
       if (returnTo) {
-        navigate(returnTo, { replace: true });
+        router.replace(returnTo);
         return;
       }
 
       // Default redirects based on role
       switch (userRole) {
         case 'admin':
-          navigate('/admin', { replace: true });
+          router.replace('/admin');
           break;
         case 'merchant':
           if (isVerifiedMerchant) {
-            navigate('/merchant', { replace: true });
+            router.replace('/merchant');
           } else {
             // Not verified, send to success/pending page
-            navigate('/merchant/register/success', { replace: true });
+            router.replace('/merchant/register/success');
           }
           break;
         case 'user':
         default:
-          navigate('/user', { replace: true });
+          router.replace('/user');
           break;
       }
     }
-  }, [isAuthenticated, userRole, loading, navigate, searchParams, location, isVerifiedMerchant]);
+  }, [isAuthenticated, userRole, loading, router, searchParams, pathname, isVerifiedMerchant]);
 
   return null;
+};
+
+export const AuthRedirectHandler = () => {
+  return (
+    <Suspense fallback={null}>
+      <AuthRedirectHandlerContent />
+    </Suspense>
+  );
 };
