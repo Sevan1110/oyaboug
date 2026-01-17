@@ -383,7 +383,7 @@ const AddProductModal = ({
               />
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="original_price">Prix original (XAF) *</Label>
                 <Input
@@ -416,20 +416,23 @@ const AddProductModal = ({
                   }
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Réduction</Label>
-                <div className="h-10 flex items-center">
+              <div className="space-y-2 md:col-span-2">
+                <Label>Aperçu de la réduction</Label>
+                <div className="h-10 flex items-center gap-2 p-2 bg-muted/30 rounded-md border border-border/50">
                   <Badge
                     variant={discountPercentage >= 30 ? "default" : "secondary"}
                     className="text-sm"
                   >
                     -{discountPercentage}%
                   </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    Le client économise {formatPrice(productForm.original_price - productForm.discounted_price)}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="quantity">Quantité disponible *</Label>
                 <Input
@@ -445,31 +448,6 @@ const AddProductModal = ({
                   }
                 />
               </div>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pickup_start">Début récupération *</Label>
-                  <Input
-                    id="pickup_start"
-                    type="time"
-                    value={productForm.pickup_start}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, pickup_start: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pickup_end">Fin récupération *</Label>
-                  <Input
-                    id="pickup_end"
-                    type="time"
-                    value={productForm.pickup_end}
-                    onChange={(e) =>
-                      setProductForm({ ...productForm, pickup_end: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="expiry_date">Date de péremption (Optionnel)</Label>
                 <Input
@@ -478,6 +456,28 @@ const AddProductModal = ({
                   value={productForm.expiry_date || ""}
                   onChange={(e) =>
                     setProductForm({ ...productForm, expiry_date: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pickup_start">Début récupération *</Label>
+                <Input
+                  id="pickup_start"
+                  type="time"
+                  value={productForm.pickup_start}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, pickup_start: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pickup_end">Fin récupération *</Label>
+                <Input
+                  id="pickup_end"
+                  type="time"
+                  value={productForm.pickup_end}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, pickup_end: e.target.value })
                   }
                 />
               </div>

@@ -33,25 +33,48 @@ import {
   Calendar,
   Hash,
 } from "lucide-react";
-import { getMerchantOrders, formatPrice, formatOrderForDisplay } from "@/services";
+import { getMerchantOrders, formatPrice, formatOrderForDisplay, getMyMerchantProfile } from "@/services";
 import type { Order, OrderStatus } from "@/types";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 const MerchantOrdersPage = () => {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<OrderStatus | "all">("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  const merchantId = "mock-merchant-id";
+  const [merchantId, setMerchantId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    if (user) {
+      loadMerchantInfo();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (merchantId) {
+      loadOrders();
+    }
+  }, [merchantId]);
+
+  const loadMerchantInfo = async () => {
+    if (!user) return;
+    try {
+      const profile = await getMyMerchantProfile(user.id);
+      if (profile.success && profile.data) {
+        setMerchantId(profile.data.id);
+      }
+    } catch (e) {
+      console.error("Failed to load merchant profile", e);
+      toast.error("Erreur lors du chargement du profil");
+    }
+  };
 
   const loadOrders = async () => {
+    if (!merchantId) return;
     setIsLoading(true);
     const result = await getMerchantOrders(merchantId, { perPage: 50 });
     if (result.success && result.data) {
@@ -119,13 +142,12 @@ const MerchantOrdersPage = () => {
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    order.status === "completed"
-                      ? "bg-green-100"
-                      : order.status === "cancelled"
+                  className={`w-10 h-10 rounded-full flex items-center justify-center ${order.status === "completed"
+                    ? "bg-green-100"
+                    : order.status === "cancelled"
                       ? "bg-destructive/10"
                       : "bg-primary/10"
-                  }`}
+                    }`}
                 >
                   {getStatusIcon(order.status)}
                 </div>

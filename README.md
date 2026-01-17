@@ -1,126 +1,177 @@
-<div align="center">
-  <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/leaf.svg" width="80" height="80" alt="ouyaboung Logo">
-  <h1>ouyaboung</h1>
-  <p><strong>Plateforme Intelligente de Lutte contre le Gaspillage Alimentaire au Gabon</strong></p>
-  <p>Propulsé par <strong>IFUMB</strong></p>
+# Supabase CLI
 
-  [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-  [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
-  [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-</div>
+[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
+](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
 
----
+[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
 
-## Présentation
+This repository contains all the functionality for Supabase CLI.
 
-**ouyaboung** est une plateforme innovante dédiée à la réduction du gaspillage alimentaire au Gabon. Elle connecte les commerçants (boulangeries, restaurants, épiceries, etc.) disposant d'invendus de qualité avec des citoyens souhaitant consommer de manière responsable tout en faisant des économies.
+- [x] Running Supabase locally
+- [x] Managing database migrations
+- [x] Creating and deploying Supabase Functions
+- [x] Generating types directly from your database schema
+- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
 
-### Mission
-Transformer le "surplus" en "ressource" en facilitant la redistribution rapide des produits alimentaires proches de leur date de péremption.
+## Getting started
 
----
+### Install the CLI
 
-## Fonctionnalités Clés
+Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
 
-### Pour les Citoyens (Utilisateurs)
-- **Recherche Géo-localisée** : Trouvez des offres anti-gaspis dans votre quartier.
-- **Profil Public Commerçant** : Explorez l'univers et les offres de vos commerces favoris.
-- **Réservation Instantanée** : Bloquez votre panier en un clic.
-- **Impact Tracking** : Visualisez votre contribution personnelle (CO2 évité, argent économisé).
-- **Historique & Favoris** : Gérez vos commandes et suivez vos commerçants préférés.
-
-### Pour les Commerçants
-- **Dashboard de Gestion** : Gérez vos stocks d'invendus en temps réel.
-- **Mise en ligne rapide** : Créez une offre en moins de 30 secondes.
-- **Analytique Merchant** : Suivez vos revenus générés par le "non-gaspillage".
-- **Flux de Validation** : Inscription fluide avec validation par l'administration.
-- **Profil Personnalisable** : Gérez vos horaires, logo et images de couverture.
-
-### Administration & Sécurité
-- **Interface Admin Dédiée** : Validation des nouveaux commerçants et supervision du réseau.
-- **Sécurité par Design** : Utilisation de **Slugs** pour l'obfuscation des IDs techniques.
-- **Row Level Security (RLS)** : Protection stricte des données au niveau de la base de données (Supabase).
-- **Authentification Robuste** : Système OTP (One-Time Password) et gestion des rôles synchronisée.
-
----
-
-## Installation Rapide
-
-### Prérequis
-- Node.js (v18+)
-- npm ou pnpm
-- Un projet [Supabase](https://supabase.com/) configuré
-
-### Étapes
-1. **Cloner le dépôt**
-   ```bash
-   git clone https://github.com/Sevan1110/oyaboug.git
-   cd oyaboug
-   ```
-
-2. **Installer les dépendances**
-   ```bash
-   npm install
-   ```
-
-3. **Variables d'environnement**
-   Créez un fichier `.env` à la racine :
-   ```env
-   VITE_SUPABASE_URL=votre_url_supabase
-   VITE_SUPABASE_ANON_KEY=votre_cle_anonyme_supabase
-   ```
-
-4. **Lancer le serveur de développement**
-   ```bash
-   npm run dev
-   ```
-
----
-
-## Pile Technique
-
-- **Frontend** : React 18, Vite, TypeScript.
-- **Styling** : Tailwind CSS, Shadcn/UI, Framer Motion (animations).
-- **Icons** : Lucide React.
-- **Backend & Auth** : Supabase (PostgreSQL, GoTrue).
-- **Gestion d'état** : React Query (TanStack Query).
-
----
-
-## Structure du Projet
-
-```text
-src/
-├── api/             # Couche de communication avec Supabase
-├── components/      # Composants UI réutilisables (shadcn/custom)
-├── contexts/        # AuthContext & Providers globaux
-├── hooks/           # Hooks React personnalisés (useAuth, etc.)
-├── pages/           # Vues principales classées par domaines (Admin, User, Merchant)
-├── services/        # Logique métier et transformation de données
-├── types/           # Interfaces et définitions TypeScript
-└── utils/           # Fonctions utilitaires (Slugs, formatage)
+```bash
+npm i supabase --save-dev
 ```
 
----
+When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
 
-## Contribution
+```
+NODE_OPTIONS=--no-experimental-fetch yarn add supabase
+```
 
-Les contributions sont les bienvenues ! 
-1. Forkez le projet.
-2. Créez votre branche de fonctionnalité (`git checkout -b feature/AmazingFeature`).
-3. Commitez vos changements (`git commit -m 'Add some AmazingFeature'`).
-4. Pushez vers la branche (`git push origin feature/AmazingFeature`).
-5. Ouvrez une Pull Request.
+> **Note**
+For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
 
----
+<details>
+  <summary><b>macOS</b></summary>
 
-## Licence
+  Available via [Homebrew](https://brew.sh). To install:
 
-Distribué sous la licence MIT. Voir `LICENSE` pour plus d'informations.
+  ```sh
+  brew install supabase/tap/supabase
+  ```
 
----
+  To install the beta release channel:
+  
+  ```sh
+  brew install supabase/tap/supabase-beta
+  brew link --overwrite supabase-beta
+  ```
+  
+  To upgrade:
 
-<div align="center">
-  <p>Une solution développée par <strong>IFUMB</strong> pour un Gabon plus vert.</p>
-</div>
+  ```sh
+  brew upgrade supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Windows</b></summary>
+
+  Available via [Scoop](https://scoop.sh). To install:
+
+  ```powershell
+  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+  scoop install supabase
+  ```
+
+  To upgrade:
+
+  ```powershell
+  scoop update supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Linux</b></summary>
+
+  Available via [Homebrew](https://brew.sh) and Linux packages.
+
+  #### via Homebrew
+
+  To install:
+
+  ```sh
+  brew install supabase/tap/supabase
+  ```
+
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+
+  #### via Linux packages
+
+  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
+
+  ```sh
+  sudo apk add --allow-untrusted <...>.apk
+  ```
+
+  ```sh
+  sudo dpkg -i <...>.deb
+  ```
+
+  ```sh
+  sudo rpm -i <...>.rpm
+  ```
+
+  ```sh
+  sudo pacman -U <...>.pkg.tar.zst
+  ```
+</details>
+
+<details>
+  <summary><b>Other Platforms</b></summary>
+
+  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
+
+  ```sh
+  go install github.com/supabase/cli@latest
+  ```
+
+  Add a symlink to the binary in `$PATH` for easier access:
+
+  ```sh
+  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
+  ```
+
+  This works on other non-standard Linux distros.
+</details>
+
+<details>
+  <summary><b>Community Maintained Packages</b></summary>
+
+  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
+  To install in your working directory:
+
+  ```bash
+  pkgx install supabase
+  ```
+
+  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
+</details>
+
+### Run the CLI
+
+```bash
+supabase bootstrap
+```
+
+Or using npx:
+
+```bash
+npx supabase bootstrap
+```
+
+The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
+
+## Docs
+
+Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
+
+## Breaking changes
+
+We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
+
+However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
+
+## Developing
+
+To run from source:
+
+```sh
+# Go >= 1.22
+go run . help
+```
