@@ -1,18 +1,18 @@
 "use client";
 
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 const PrivacyPolicy = () => {
   return (
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-3xl mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-8">
+        <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-8">
           <ArrowLeft className="w-4 h-4" /> Retour
         </Link>
-        
+
         <h1 className="text-3xl font-bold mb-8">Politique de Confidentialité</h1>
-        
+
         <div className="prose prose-green max-w-none space-y-6 text-muted-foreground">
           <section>
             <h2 className="text-xl font-semibold text-foreground">1. Collecte des données</h2>

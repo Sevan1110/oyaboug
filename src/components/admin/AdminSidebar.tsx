@@ -3,7 +3,8 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useLocation, Link, useNavigate } from "react-router-dom";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
@@ -97,17 +98,17 @@ const settingsMenuItems = [
 ];
 
 const AdminSidebar = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const pathname = usePathname();
+  const router = useRouter();
   const { toast } = useToast();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
   const isActive = (path: string) => {
     if (path === "/admin") {
-      return location.pathname === "/admin";
+      return pathname === "/admin";
     }
-    return location.pathname.startsWith(path);
+    return pathname.startsWith(path);
   };
 
   const handleLogout = async () => {
@@ -117,7 +118,7 @@ const AdminSidebar = () => {
         title: "Déconnexion réussie",
         description: "À bientôt sur ouyaboung !",
       });
-      navigate("/auth");
+      router.push("/auth");
     } else {
       toast({
         title: "Erreur de déconnexion",
@@ -161,7 +162,7 @@ const AdminSidebar = () => {
                     tooltip={item.title}
                   >
                     <Link
-                      to={item.url}
+                      href={item.url}
                       className="flex items-center justify-between"
                     >
                       <div className="flex items-center gap-2">
@@ -196,7 +197,7 @@ const AdminSidebar = () => {
                     isActive={isActive(item.url)}
                     tooltip={item.title}
                   >
-                    <Link to={item.url}>
+                    <Link href={item.url}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -219,7 +220,7 @@ const AdminSidebar = () => {
                     isActive={isActive(item.url)}
                     tooltip={item.title}
                   >
-                    <Link to={item.url}>
+                    <Link href={item.url}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
                     </Link>

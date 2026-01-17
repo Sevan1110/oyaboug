@@ -1,6 +1,6 @@
 "use client";
 
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { Leaf, Instagram, Twitter, Facebook, Mail, MapPin, Phone } from "lucide-react";
 
 const Footer = () => {
@@ -10,7 +10,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="md:col-span-1">
-            <Link to="/" className="flex items-center gap-2 mb-4">
+            <Link href="/" className="flex items-center gap-2 mb-4">
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                 <Leaf className="w-5 h-5 text-primary-foreground" />
               </div>
@@ -36,10 +36,10 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold text-foreground mb-4">Navigation</h4>
             <ul className="space-y-2">
-              <li><Link to="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">Accueil</Link></li>
-              <li><Link to="/search" className="text-sm text-muted-foreground hover:text-primary transition-colors">Trouver des invendus</Link></li>
-              <li><Link to="/concept" className="text-sm text-muted-foreground hover:text-primary transition-colors">Comment ça marche</Link></li>
-              <li><Link to="/auth?role=merchant" className="text-sm text-muted-foreground hover:text-primary transition-colors">Devenir partenaire</Link></li>
+              <li><Link href="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">Accueil</Link></li>
+              <li><Link href="/search" className="text-sm text-muted-foreground hover:text-primary transition-colors">Trouver des invendus</Link></li>
+              <li><Link href="/concept" className="text-sm text-muted-foreground hover:text-primary transition-colors">Comment ça marche</Link></li>
+              <li><Link href="/auth?role=merchant" className="text-sm text-muted-foreground hover:text-primary transition-colors">Devenir partenaire</Link></li>
             </ul>
           </div>
 
@@ -47,10 +47,10 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold text-foreground mb-4">Légal</h4>
             <ul className="space-y-2">
-              <li><Link to="/cgu" className="text-sm text-muted-foreground hover:text-primary transition-colors">Conditions d'utilisation</Link></li>
-              <li><Link to="/privacy" className="text-sm text-muted-foreground hover:text-primary transition-colors">Politique de confidentialité</Link></li>
-              <li><Link to="/faq" className="text-sm text-muted-foreground hover:text-primary transition-colors">FAQ</Link></li>
-              <li><Link to="/help" className="text-sm text-muted-foreground hover:text-primary transition-colors">Centre d'aide</Link></li>
+              <li><Link href="/cgu" className="text-sm text-muted-foreground hover:text-primary transition-colors">Conditions d'utilisation</Link></li>
+              <li><Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary transition-colors">Politique de confidentialité</Link></li>
+              <li><Link href="/faq" className="text-sm text-muted-foreground hover:text-primary transition-colors">FAQ</Link></li>
+              <li><Link href="/help" className="text-sm text-muted-foreground hover:text-primary transition-colors">Centre d'aide</Link></li>
             </ul>
           </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { ArrowLeft, MessageCircle, Mail, Phone, FileQuestion } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,10 @@ const HelpCenter = () => {
   return (
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-4xl mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-8">
+        <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-8">
           <ArrowLeft className="w-4 h-4" /> Retour
         </Link>
-        
+
         <h1 className="text-3xl font-bold mb-8">Centre d'aide</h1>
 
         <div className="grid md:grid-cols-3 gap-4 mb-12">
@@ -61,7 +61,7 @@ const HelpCenter = () => {
         <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
           <FileQuestion className="w-6 h-6" /> Questions fréquentes
         </h2>
-        
+
         <Accordion type="single" collapsible className="w-full">
           {faqs.map((faq, i) => (
             <AccordionItem key={i} value={`item-${i}`}>

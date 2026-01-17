@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Leaf, Menu, X, Store } from "lucide-react";
@@ -10,8 +11,7 @@ import { UserMenu } from "@/components/auth/UserMenu";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const location = useLocation();
-  const pathname = location.pathname;
+  const pathname = usePathname();
   const { isAuthenticated } = useAuth();
 
   const navLinks = [
@@ -26,7 +26,7 @@ const Navbar = () => {
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
       <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 group">
+        <Link href="/" className="flex items-center gap-2 group">
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
             <Leaf className="w-5 h-5 text-primary-foreground" />
           </div>
@@ -38,7 +38,7 @@ const Navbar = () => {
           {navLinks.map((link) => (
             <Link
               key={link.href}
-              to={link.href}
+              href={link.href}
               className={`text-sm font-medium transition-colors hover:text-primary ${isActive(link.href) ? "text-primary" : "text-muted-foreground"
                 }`}
             >
@@ -53,13 +53,13 @@ const Navbar = () => {
             <UserMenu />
           ) : (
             <>
-              <Link to="/auth?role=merchant">
+              <Link href="/auth?role=merchant">
                 <Button variant="ghost" size="sm" className="gap-2">
                   <Store className="w-4 h-4" />
                   Commerçant
                 </Button>
               </Link>
-              <Link to="/auth">
+              <Link href="/auth">
                 <Button size="sm">Connexion</Button>
               </Link>
             </>
@@ -88,7 +88,7 @@ const Navbar = () => {
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
-                  to={link.href}
+                  href={link.href}
                   onClick={() => setIsOpen(false)}
                   className={`text-base font-medium py-2 transition-colors ${isActive(link.href) ? "text-primary" : "text-muted-foreground"
                     }`}
@@ -103,13 +103,13 @@ const Navbar = () => {
                 </div>
               ) : (
                 <>
-                  <Link to="/auth?role=merchant" onClick={() => setIsOpen(false)}>
+                  <Link href="/auth?role=merchant" onClick={() => setIsOpen(false)}>
                     <Button variant="outline" className="w-full gap-2">
                       <Store className="w-4 h-4" />
                       Espace Commerçant
                     </Button>
                   </Link>
-                  <Link to="/auth" onClick={() => setIsOpen(false)}>
+                  <Link href="/auth" onClick={() => setIsOpen(false)}>
                     <Button className="w-full">Connexion</Button>
                   </Link>
                 </>

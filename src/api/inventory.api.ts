@@ -274,7 +274,7 @@ export const updateFoodItem = async (
   const client = requireSupabaseClient();
 
   // Recalculate discount if prices changed
-  let updateData: Record<string, unknown> = {
+  const updateData: Record<string, unknown> = {
     ...updates,
     updated_at: new Date().toISOString(),
   };
@@ -495,13 +495,15 @@ export const updateFoodItemQuantity = async (
   const newQuantity = Math.max(0, (current?.quantity_available || 0) + quantityChange);
   const isAvailable = newQuantity > 0;
 
+  const updateData: any = {
+    quantity_available: newQuantity,
+    is_available: isAvailable,
+    updated_at: new Date().toISOString(),
+  };
+
   const { data, error } = await client
     .from(DB_TABLES.FOOD_ITEMS)
-    .update({
-      quantity_available: newQuantity,
-      is_available: isAvailable,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', itemId)
     .select()
     .single();

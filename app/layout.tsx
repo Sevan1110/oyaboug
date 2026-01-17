@@ -15,6 +15,10 @@ export const metadata = {
     description: "Récupérez des invendus de qualité à petit prix près de chez vous.",
 };
 
+import QueryProvider from "@/providers/QueryProvider";
+
+// ... existing imports
+
 export default function RootLayout({
     children,
 }: {
@@ -23,14 +27,16 @@ export default function RootLayout({
     return (
         <html lang="fr" suppressHydrationWarning>
             <body className={inter.className}>
-                <AuthProvider>
-                    <AuthRedirect />
-                    <TooltipProvider>
-                        {children}
-                        <Toaster />
-                        <Sonner />
-                    </TooltipProvider>
-                </AuthProvider>
+                <QueryProvider>
+                    <AuthProvider>
+                        <AuthRedirect />
+                        <TooltipProvider>
+                            {children}
+                            <Toaster />
+                            <Sonner />
+                        </TooltipProvider>
+                    </AuthProvider>
+                </QueryProvider>
             </body>
         </html>
     );
