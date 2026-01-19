@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import FoodCard, { FoodItem as FoodCardItem } from "../../_components/FoodCard";
 import {
     ShoppingBag,
@@ -31,7 +32,9 @@ import type { Order, FoodItem, UserImpact } from "@/types";
 
 export default function UserDashboardPage() {
     const { user } = useAuth();
+    const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
+    const [reservingItemId, setReservingItemId] = useState<string | null>(null);
     const [activeOrders, setActiveOrders] = useState<Order[]>([]);
     const [favoriteItems, setFavoriteItems] = useState<FoodItem[]>([]);
     const [userImpact, setUserImpact] = useState<UserImpact | null>(null);
@@ -91,22 +94,77 @@ export default function UserDashboardPage() {
     };
 
     const handleReserve = async (item: FoodItem) => {
-        if (!userId) return;
-        const resp = await createReservation(userId, item.id, 1);
-        if (resp.success && resp.data) {
-            setActiveOrders((prev) => [resp.data as Order, ...prev]);
-            const key = `${item.id}:${resp.data?.merchant_id}`;
-            setReservedCountMap((prev) => ({
-                ...prev,
-                [key]: (prev[key] || 0) + 1,
-            }));
-            setFavoriteItems((prev) =>
-                prev.map((fi) =>
-                    fi.id === item.id
-                        ? { ...fi, quantity_available: Math.max(0, (fi.quantity_available || 0) - 1) }
-                        : fi
-                )
-            );
+        if (!userId) {
+            toast({
+                title: "Erreur",
+                description: "Vous devez être connecté pour réserver.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // Check if item is already being reserved
+        if (reservingItemId === item.id) return;
+
+        // Check if item has available quantity
+        if (!item.quantity_available || item.quantity_available <= 0) {
+            toast({
+                title: "Stock épuisé",
+                description: "Cet article n'est plus disponible.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setReservingItemId(item.id);
+
+        try {
+            const resp = await createReservation(userId, item.id, 1);
+
+            if (resp.success && resp.data) {
+                // Update active orders
+                setActiveOrders((prev) => [resp.data as Order, ...prev]);
+
+                // Update reserved count map
+                const key = `${item.id}:${resp.data?.merchant_id}`;
+                setReservedCountMap((prev) => ({
+                    ...prev,
+                    [key]: (prev[key] || 0) + 1,
+                }));
+
+                // Update item quantity
+                setFavoriteItems((prev) =>
+                    prev.map((fi) =>
+                        fi.id === item.id
+                            ? { ...fi, quantity_available: Math.max(0, (fi.quantity_available || 0) - 1) }
+                            : fi
+                    )
+                );
+
+                // Reload user stats to reflect new reservation
+                const impactResult = await getUserStats(userId);
+                if (impactResult.success && impactResult.data) {
+                    setUserImpact(impactResult.data);
+                }
+
+                // Show success toast
+                toast({
+                    title: "✅ Réservation réussie !",
+                    description: `${item.name} a été ajouté à vos réservations.`,
+                });
+            } else {
+                // Handle API error
+                throw new Error(resp.error?.message || "Échec de la réservation");
+            }
+        } catch (error: any) {
+            console.error('Error creating reservation:', error);
+            toast({
+                title: "Erreur de réservation",
+                description: error?.message || "Impossible de réserver cet article. Veuillez réessayer.",
+                variant: "destructive",
+            });
+        } finally {
+            setReservingItemId(null);
         }
     };
 
@@ -378,6 +436,7 @@ export default function UserDashboardPage() {
                             item={toFoodCardItem(item)}
                             onReserve={item.quantity_available > 0 ? () => handleReserve(item) : undefined}
                             reservedCount={reservedCountMap[`${item.id}:${item.merchant?.id || item.merchant_id}`] || 0}
+                            isReserving={reservingItemId === item.id}
                         />
                     ))}
                 </div>

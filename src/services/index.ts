@@ -70,6 +70,9 @@ export {
   isPickupPassed,
 } from './inventory.service';
 
+// Contact Service
+export * from './contact.service';
+
 // Order Service
 export {
   createReservation,

@@ -113,7 +113,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setUserRole(role as UserRole);
           }
         }
-      } catch (error) {
+      } catch (error: any) {
+        // Ignore AbortError which is expected during cleanup/fast refresh
+        if (error?.name === 'AbortError' || error?.message?.includes('aborted')) {
+          return;
+        }
         console.error('Error initializing auth:', error);
       } finally {
         if (mounted) {

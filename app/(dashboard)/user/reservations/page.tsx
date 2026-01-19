@@ -18,8 +18,8 @@ import {
 import {
     getAuthUser,
     getUserOrders,
-    cancelOrder,
 } from "@/services";
+import { cancelOrderViaRPC } from "@/api";
 
 const getStatusBadge = (status: string) => {
     switch (status) {
@@ -89,25 +89,50 @@ export default function ReservationsPage() {
 
                 const orders = resp.data?.data || [];
 
-                const mapped = orders.map((o: any) => ({
-                    id: o.id,
-                    merchantName: o.merchant?.business_name || o.merchant?.name || 'Commerce',
-                    merchantAddress: o.merchant?.address || '',
-                    merchantPhone: o.merchant?.phone || '',
-                    productName: o.food_item?.name || o.food_item?.title || 'Article',
-                    description: o.food_item?.description || '',
-                    price: o.total_price || 0,
-                    originalPrice: o.original_total || o.food_item?.original_price || 0,
-                    pickupTime: o.food_item ? `${o.food_item.pickup_start} - ${o.food_item.pickup_end}` : (o.pickup_time || ''),
-                    pickupDate: o.created_at ? new Date(o.created_at).toLocaleDateString('fr-FR') : '',
-                    status: o.status,
-                    createdAt: o.created_at,
-                    merchant: o.merchant,
-                }));
+                const mapped = orders.map((o: any) => {
+                    const pickupStart = o.food_item?.pickup_start ? new Date(o.food_item.pickup_start) : null;
+                    const pickupEnd = o.food_item?.pickup_end ? new Date(o.food_item.pickup_end) : null;
+
+                    // Format pickup time range
+                    let pickupTimeDisplay = o.pickup_time || '';
+                    if (!pickupTimeDisplay && pickupStart && pickupEnd) {
+                        const startStr = pickupStart.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                        const endStr = pickupEnd.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                        pickupTimeDisplay = `${startStr} - ${endStr}`;
+                    }
+
+                    // Format pickup date (use pickup_start or pickup_time, fallback to created_at)
+                    let pickupDateDisplay = '';
+                    if (o.pickup_time) {
+                        pickupDateDisplay = new Date(o.pickup_time).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+                    } else if (pickupStart) {
+                        pickupDateDisplay = pickupStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+                    } else {
+                        pickupDateDisplay = new Date(o.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+                    }
+
+                    return {
+                        id: o.id,
+                        merchantName: o.merchant?.business_name || o.merchant?.name || 'Commerçant inconnu',
+                        merchantAddress: o.merchant?.address || 'Adresse non disponible',
+                        merchantPhone: o.merchant?.phone || '',
+                        productName: o.food_item?.name || o.food_item?.title || 'Panier Surprise',
+                        description: o.food_item?.description || 'Contenu surprise',
+                        price: o.total_price || 0,
+                        originalPrice: o.original_total || o.food_item?.original_price || 0,
+                        pickupTime: pickupTimeDisplay,
+                        pickupDate: pickupDateDisplay,
+                        status: o.status,
+                        createdAt: o.created_at,
+                        merchant: o.merchant,
+                        pk: o.pickup_code // Ensure pickup code is passed if needed
+                    };
+                });
 
                 setReservations(mapped);
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'Erreur inconnue');
+                console.error("Error loading reservations:", err);
+                setError(err instanceof Error ? err.message : 'Erreur inconnue lors du chargement');
                 setReservations([]);
             } finally {
                 setIsLoading(false);
@@ -123,7 +148,7 @@ export default function ReservationsPage() {
         }
 
         try {
-            const resp = await cancelOrder(reservationId);
+            const resp = await cancelOrderViaRPC(reservationId);
             if (resp && resp.success) {
                 setReservations((prev) =>
                     prev.map((r) => (r.id === reservationId ? { ...r, status: 'cancelled' } : r))

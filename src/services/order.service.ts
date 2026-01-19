@@ -16,6 +16,7 @@ import {
   addOrderReview,
   getActiveOrders as getActiveOrdersApi,
 } from '@/api';
+import { cancelOrderViaRPC } from '@/api/orders-rpc.api';
 import type {
   ApiResponse,
   Order,

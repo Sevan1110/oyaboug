@@ -167,6 +167,7 @@ export const DB_TABLES = {
   PRICING_HISTORY: 'pricing_history',
   USER_ROLES: 'user_roles',
   ADMIN_ACTIVITIES: 'admin_activities',
+  CONTACT_MESSAGES: 'contact_messages',
 } as const;
 
 export type TableName = (typeof DB_TABLES)[keyof typeof DB_TABLES];

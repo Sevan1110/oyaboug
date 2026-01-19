@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,10 +12,18 @@ import { Slider } from "@/components/ui/slider";
 import FoodCard, { FoodItem as FoodCardItem } from "../../_components/FoodCard";
 import { Search as SearchIcon, MapPin, Grid, Map, SlidersHorizontal, Store, Loader2 } from "lucide-react";
 import { getAvailableItems, searchInventory, getCategoryName, formatPrice, getAuthUser, getActiveOrders, createReservation } from "@/services";
+import { useToast } from "@/hooks/use-toast";
 import type { FoodItem, FoodCategory, GabonCity, MerchantType } from "@/types";
 
-// Lazy load map component to avoid SSR issues
-const GabonMap = lazy(() => import("@/components/GabonMap"));
+// Dynamic load map component to avoid SSR issues - using MapLibre instead of Leaflet
+const GabonMapGL = dynamic(() => import("@/components/GabonMapGL"), {
+    ssr: false,
+    loading: () => (
+        <Card className="h-[500px] flex items-center justify-center bg-muted/50">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </Card>
+    ),
+});
 
 // Gabon cities
 const GABON_CITIES: GabonCity[] = [
@@ -51,6 +60,7 @@ const FOOD_CATEGORIES: FoodCategory[] = [
 ];
 
 const SearchPage = () => {
+    const { toast } = useToast();
     const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
     const [showFilters, setShowFilters] = useState(false);
     const [priceRange, setPriceRange] = useState([0, 20000]); // XAF
@@ -58,9 +68,10 @@ const SearchPage = () => {
     const [items, setItems] = useState<FoodItem[]>([]);
     const [userId, setUserId] = useState<string | null>(null);
     const [reservedCountMap, setReservedCountMap] = useState<Record<string, number>>({});
+    const [reservingItemId, setReservingItemId] = useState<string | null>(null);
 
     // Filter states
-    const [selectedCity, setSelectedCity] = useState<GabonCity | "all">("all");
+    const [selectedCity, setSelectedCity] = useState<GabonCity | "all">("Libreville");
     const [selectedCategory, setSelectedCategory] = useState<FoodCategory | "all">("all");
     const [selectedMerchantType, setSelectedMerchantType] = useState<MerchantType | "all">("all");
     const [sortBy, setSortBy] = useState<"distance" | "price" | "discount" | "rating">("distance");
@@ -135,22 +146,82 @@ const SearchPage = () => {
     };
 
     const handleReserve = async (item: FoodItem) => {
-        if (!userId) return;
-        if ((item.quantity_available || 0) <= 0) return;
-        const resp = await createReservation(userId, item.id, 1);
-        if (resp.success && resp.data) {
-            const key = `${item.id}:${resp.data?.merchant_id}`;
-            setReservedCountMap((prev) => ({
-                ...prev,
-                [key]: (prev[key] || 0) + 1,
-            }));
-            setItems((prev) =>
-                prev.map((fi) =>
-                    fi.id === item.id
-                        ? { ...fi, quantity_available: Math.max(0, (fi.quantity_available || 0) - 1) }
-                        : fi
-                )
-            );
+        // Vérifier si l'utilisateur est connecté
+        if (!userId) {
+            toast({
+                title: "Connexion requise",
+                description: "Veuillez vous connecter pour réserver ce produit",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // Vérifier la disponibilité
+        if ((item.quantity_available || 0) <= 0) {
+            toast({
+                title: "Stock épuisé",
+                description: "Ce produit n'est plus disponible",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // Vérifier si déjà réservé
+        const key = `${item.id}:${item.merchant_id}`;
+        const alreadyReserved = (reservedCountMap[key] || 0) > 0;
+
+        if (alreadyReserved) {
+            toast({
+                title: "Déjà réservé",
+                description: "Vous avez déjà réservé ce produit. Consultez vos réservations.",
+            });
+            return;
+        }
+
+        // Démarrer le chargement
+        setReservingItemId(item.id);
+
+        try {
+            const resp = await createReservation(userId, item.id, 1);
+
+            if (resp.success && resp.data) {
+                // Mise à jour du compteur de réservations
+                setReservedCountMap((prev) => ({
+                    ...prev,
+                    [key]: (prev[key] || 0) + 1,
+                }));
+
+                // Mise à jour locale de la quantité
+                setItems((prev) =>
+                    prev.map((fi) =>
+                        fi.id === item.id
+                            ? { ...fi, quantity_available: Math.max(0, (fi.quantity_available || 0) - 1) }
+                            : fi
+                    )
+                );
+
+                // Notification de succès
+                toast({
+                    title: "Réservation confirmée !",
+                    description: `${item.name} a été ajouté à vos réservations`,
+                });
+            } else {
+                // Notification d'erreur
+                toast({
+                    title: "Erreur de réservation",
+                    description: resp.error?.message || "Impossible de réserver ce produit",
+                    variant: "destructive",
+                });
+            }
+        } catch (error: any) {
+            console.error('Error reserving item:', error);
+            toast({
+                title: "Erreur",
+                description: "Une erreur est survenue lors de la réservation",
+                variant: "destructive",
+            });
+        } finally {
+            setReservingItemId(null);
         }
     };
 
@@ -379,42 +450,38 @@ const SearchPage = () => {
                         <div className="flex items-center justify-center py-20">
                             <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         </div>
-                    ) : viewMode === "grid" ? (
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {items.map((item, index) => (
-                                <motion.div
-                                    key={item.id}
-                                    data-food-id={item.id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.05 }}
-                                >
-                                    <FoodCard
-                                        item={toFoodCardItem(item)}
-                                        onReserve={item.quantity_available > 0 ? () => handleReserve(item) : undefined}
-                                        reservedCount={reservedCountMap[`${item.id}:${item.merchant_id}`] || 0}
-                                    />
-                                </motion.div>
-                            ))}
-                            {items.length === 0 && (
-                                <div className="col-span-full text-center py-12">
-                                    <p className="text-muted-foreground">Aucun résultat trouvé</p>
-                                    <p className="text-sm text-muted-foreground mt-2">
-                                        Essayez de modifier vos filtres
-                                    </p>
-                                </div>
-                            )}
-                        </div>
                     ) : (
-                        <Suspense
-                            fallback={
-                                <Card className="h-[500px] flex items-center justify-center bg-muted/50">
-                                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                                </Card>
-                            }
-                        >
-                            <div className="relative">
-                                <GabonMap
+                        <>
+                            {/* Grid View - Hidden when map is active */}
+                            <div className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-6 ${viewMode !== "grid" ? "hidden" : ""}`}>
+                                {items.map((item, index) => (
+                                    <motion.div
+                                        key={item.id}
+                                        data-food-id={item.id}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                    >
+                                        <FoodCard
+                                            item={toFoodCardItem(item)}
+                                            onReserve={item.quantity_available > 0 ? () => handleReserve(item) : undefined}
+                                            reservedCount={reservedCountMap[`${item.id}:${item.merchant_id}`] || 0}
+                                            isReserving={reservingItemId === item.id}
+                                        />
+                                    </motion.div>
+                                ))}
+                                {items.length === 0 && (
+                                    <div className="col-span-full text-center py-12">
+                                        <p className="text-muted-foreground">Aucun résultat trouvé</p>
+                                        <p className="text-sm text-muted-foreground mt-2">
+                                            Essayez de modifier vos filtres
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                            {/* Map View - Conditionally rendered to prevent MapLibre reuse errors */}
+                            {viewMode === "map" && (
+                                <GabonMapGL
                                     items={items}
                                     selectedCity={selectedCity === "all" ? "" : selectedCity}
                                     onItemSelect={(item) => {
@@ -427,8 +494,8 @@ const SearchPage = () => {
                                         }, 0);
                                     }}
                                 />
-                            </div>
-                        </Suspense>
+                            )}
+                        </>
                     )}
                 </div>
             </main>
