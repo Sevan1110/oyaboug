@@ -28,14 +28,30 @@ import { toast } from "sonner";
 import { changePassword } from "@/services";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
+import {
+  getAuthUser,
+  getNotificationPreferences,
+  updateNotificationPreferences,
+  getMyMerchantProfile,
+  updateMerchantProfile
+} from "@/services";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const MerchantSettingsPage = () => {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [merchantId, setMerchantId] = useState<string | null>(null);
+
   const [notifications, setNotifications] = useState({
     newOrder: true,
     orderReady: true,
     orderCancelled: true,
     dailySummary: false,
-    marketing: false,
+    marketing: false, // Local only
     sms: true,
     email: true,
     push: true,
@@ -52,8 +68,86 @@ const MerchantSettingsPage = () => {
   });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  const handleSave = () => {
-    toast.success("Paramètres enregistrés");
+  // Load Data
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const { data: userData } = await getAuthUser();
+        if (userData?.user) {
+          setUserId(userData.user.id);
+
+          // Load Preferences
+          const { data: prefs } = await getNotificationPreferences(userData.user.id);
+          if (prefs) {
+            setNotifications(prev => ({
+              ...prev,
+              sms: prefs.sms_notifications ?? true,
+              email: prefs.email_notifications ?? true,
+              push: prefs.notifications_enabled ?? true,
+            }));
+          }
+
+          // Load Merchant for ID
+          const { data: merchantData } = await getMyMerchantProfile(userData.user.id);
+          if (merchantData) {
+            setMerchantId(merchantData.id);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load settings", e);
+        toast.error("Impossible de charger les paramètres");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  const handleSave = async () => {
+    if (!userId) return;
+
+    try {
+      const result = await updateNotificationPreferences(userId, {
+        notificationsEnabled: notifications.push,
+        emailNotifications: notifications.email,
+        smsNotifications: notifications.sms,
+      });
+
+      if (result.success) {
+        toast.success("Paramètres enregistrés");
+      } else {
+        toast.error("Erreur lors de l'enregistrement");
+      }
+    } catch (e) {
+      toast.error("Une erreur est survenue");
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    if (!merchantId) return;
+    if (confirm("Êtes-vous sûr de vouloir désactiver votre compte ? Votre commerce ne sera plus visible.")) {
+      try {
+        const result = await updateMerchantProfile(merchantId, { isActive: false });
+        if (result.success) {
+          toast.success("Compte désactivé");
+          // Optional: Refresh or redirect
+        } else {
+          toast.error("Erreur lors de la désactivation");
+        }
+      } catch (e) {
+        toast.error("Une erreur est survenue");
+      }
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    toast.info("Veuillez contacter le support pour supprimer votre compte commerce définitivement.", {
+      duration: 5000,
+      action: {
+        label: "Contacter",
+        onClick: () => router.push("/merchant/help")
+      }
+    });
   };
 
   const handleChangePassword = async () => {
@@ -374,7 +468,7 @@ const MerchantSettingsPage = () => {
                     Votre commerce ne sera plus visible
                   </p>
                 </div>
-                <Button variant="outline">Désactiver</Button>
+                <Button variant="outline" onClick={handleDeactivateAccount}>Désactiver</Button>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -386,7 +480,7 @@ const MerchantSettingsPage = () => {
                     Cette action est irréversible
                   </p>
                 </div>
-                <Button variant="destructive">Supprimer</Button>
+                <Button variant="destructive" onClick={handleDeleteAccount}>Supprimer</Button>
               </div>
             </CardContent>
           </Card>

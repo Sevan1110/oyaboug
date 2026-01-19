@@ -126,7 +126,12 @@ const GabonMapGL = ({
                 }
 
                 // Fall back to city-based coordinates
-                const cityName = item.merchant?.city || selectedCity;
+                // If merchant city is missing and selectedCity is "all", default to Libreville
+                let cityName = item.merchant?.city;
+                if (!cityName) {
+                    cityName = !selectedCity ? "Libreville" : selectedCity;
+                }
+
                 if (cityName) {
                     const cityCoords = generateCityCoords(cityName, item.id);
                     if (cityCoords) {
@@ -205,7 +210,7 @@ const GabonMapGL = ({
                 ))}
 
                 {/* Popup */}
-                {popupInfo && popupInfo.merchant && (
+                {popupInfo && (
                     <Popup
                         longitude={itemsWithCoords.find(i => i.id === popupInfo.id)?.coords.longitude || 0}
                         latitude={itemsWithCoords.find(i => i.id === popupInfo.id)?.coords.latitude || 0}
@@ -234,7 +239,7 @@ const GabonMapGL = ({
                                 <div className="flex-1 min-w-0">
                                     <h3 className="font-semibold text-sm truncate">{popupInfo.name}</h3>
                                     <p className="text-xs text-muted-foreground truncate">
-                                        {popupInfo.merchant.business_name}
+                                        {popupInfo.merchant?.business_name || "Commerce"}
                                     </p>
                                 </div>
                             </div>

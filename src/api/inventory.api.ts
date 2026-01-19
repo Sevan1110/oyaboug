@@ -355,7 +355,7 @@ export const searchFoodItems = async (
   const client = requireSupabaseClient();
   let query = client
     .from(DB_TABLES.FOOD_ITEMS)
-    .select('*, merchants!inner(*)')
+    .select('*, merchants(*)')
     .eq('is_available', true)
     .gt('quantity_available', 0);
 

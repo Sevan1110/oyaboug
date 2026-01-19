@@ -120,6 +120,7 @@ export const updateMerchantProfile = async (
     openingHours?: OpeningHours;
     latitude?: number;
     longitude?: number;
+    isActive?: boolean;
   }
 ): Promise<ApiResponse<Merchant>> => {
   const updates: Partial<Merchant> = {
@@ -133,6 +134,7 @@ export const updateMerchantProfile = async (
     opening_hours: data.openingHours,
     latitude: data.latitude,
     longitude: data.longitude,
+    is_active: data.isActive,
   };
 
   // Remove undefined values

@@ -272,7 +272,7 @@ export const getOrdersByMerchant = async (
   const client = requireSupabaseClient();
   let query = client
     .from(DB_TABLES.ORDERS)
-    .select('*, food_items(*), profiles(*)', { count: 'exact' })
+    .select('*, food_items(*)', { count: 'exact' })
     .eq('merchant_id', merchantId);
 
   if (status) {
@@ -293,10 +293,26 @@ export const getOrdersByMerchant = async (
     };
   }
 
+  // Manually fetch profiles to avoid 400 Bad Request if relationship is missing
+  let profilesMap: Record<string, any> = {};
+  if (data && data.length > 0) {
+    const userIds = Array.from(new Set(data.filter(o => o.user_id).map(o => o.user_id)));
+    if (userIds.length > 0) {
+      const { data: profiles } = await client
+        .from(DB_TABLES.PROFILES)
+        .select('*')
+        .in('id', userIds);
+
+      if (profiles) {
+        profilesMap = profiles.reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+      }
+    }
+  }
+
   const orders = data?.map((o) => ({
     ...o,
     food_item: o.food_items,
-    user: o.profiles,
+    user: profilesMap[o.user_id] || null,
   })) as Order[];
 
   return {
