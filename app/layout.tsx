@@ -16,6 +16,7 @@ export const metadata = {
 };
 
 import QueryProvider from "@/providers/QueryProvider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 
 // ... existing imports
 
@@ -29,12 +30,19 @@ export default function RootLayout({
             <body className={inter.className} suppressHydrationWarning>
                 <QueryProvider>
                     <AuthProvider>
-                        <AuthRedirect />
-                        <TooltipProvider>
-                            {children}
-                            <Toaster />
-                            <Sonner />
-                        </TooltipProvider>
+                        <ThemeProvider
+                            attribute="class"
+                            defaultTheme="system"
+                            enableSystem
+                            disableTransitionOnChange
+                        >
+                            <AuthRedirect />
+                            <TooltipProvider>
+                                {children}
+                                <Toaster />
+                                <Sonner />
+                            </TooltipProvider>
+                        </ThemeProvider>
                     </AuthProvider>
                 </QueryProvider>
             </body>

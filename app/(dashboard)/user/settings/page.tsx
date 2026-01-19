@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -43,6 +44,13 @@ import { useRouter } from "next/navigation";
 export default function SettingsPage() {
     const { toast } = useToast();
     const router = useRouter();
+    const { theme, resolvedTheme, setTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     const {
         preferences: notifPreferences,
         updatePreferences: updateNotifPreferences
@@ -67,10 +75,10 @@ export default function SettingsPage() {
     const [settings, setSettings] = useState({
         // Display
         language: "fr",
-        darkMode: false,
+        darkMode: false, // Will sync with theme
 
         // Location
-        locationEnabled: true,
+        locationEnabled: true, // Default active
         defaultRadius: "5",
 
         // Privacy
@@ -88,7 +96,7 @@ export default function SettingsPage() {
 
                 setSettings({
                     language: metadata.language || "fr",
-                    darkMode: metadata.darkMode || false,
+                    darkMode: resolvedTheme === 'dark',
                     locationEnabled: metadata.locationEnabled !== undefined ? metadata.locationEnabled : true,
                     defaultRadius: metadata.defaultRadius || "5",
                     profilePublic: metadata.profilePublic || false,
@@ -107,7 +115,10 @@ export default function SettingsPage() {
         setIsSaving(true);
         try {
             // 1. Save generic settings to user_metadata
-            const profileRes = await updateProfile(settings);
+            const profileRes = await updateProfile({
+                ...settings,
+                darkMode: resolvedTheme === 'dark' // Ensure we save actual theme state
+            });
 
             if (!profileRes.success) {
                 throw new Error("Erreur lors de la sauvegarde du profil");
@@ -313,8 +324,12 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                             <Switch
-                                checked={settings.darkMode}
-                                onCheckedChange={(checked) => setSettings({ ...settings, darkMode: checked })}
+                                checked={resolvedTheme === 'dark'}
+                                onCheckedChange={(checked) => {
+                                    setTheme(checked ? 'dark' : 'light');
+                                    setSettings({ ...settings, darkMode: checked });
+                                }}
+                                disabled={!mounted}
                             />
                         </div>
                     </CardContent>

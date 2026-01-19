@@ -23,7 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { getAuthUser, updateProfile as updateAuthProfile } from "@/services/auth.service";
 import { updateProfile as updateUserProfile, getProfile as getDbProfile } from "@/services/user.service";
-import { supabaseClient } from "@/api/supabaseClient";
+import { requireSupabaseClient } from "@/api/supabaseClient";
 import { compressImage, isImageFile, getBase64Size } from "@/utils/imageCompression";
 
 export default function ProfilePage() {
@@ -166,9 +166,14 @@ export default function ProfilePage() {
 
         setUploading(true);
         try {
+            console.log("Starting upload process...");
             const { data: auth } = await getAuthUser();
             const userId = auth?.user?.id;
-            if (!userId || !supabaseClient) throw new Error("Erreur d'authentification");
+            const client = requireSupabaseClient();
+
+            if (!userId) throw new Error("Erreur d'authentification");
+
+            console.log("Compressing image...");
 
             let uploadBlob: Blob = file;
             let uploadExt = file.name.split('.').pop();
@@ -197,21 +202,27 @@ export default function ProfilePage() {
             // Upload to 'avatars' bucket
             let publicUrl: string | null = null;
             {
-                const { error: uploadError } = await supabaseClient.storage
+                console.log("Uploading to storage:", filePath);
+                const { error: uploadError, data: uploadData } = await client.storage
                     .from('avatars')
                     .upload(filePath, uploadBlob, { contentType: uploadMime, upsert: true });
+
+                if (uploadError) console.error("Upload error:", uploadError);
+                else console.log("Upload success:", uploadData);
+
                 if (uploadError && /Bucket not found/i.test(uploadError.message || '')) {
+                    console.log("Bucket not found, trying public bucket...");
                     const altPath = `avatars/${filePath}`;
-                    const { error: altErr } = await supabaseClient.storage
+                    const { error: altErr } = await client.storage
                         .from('public')
                         .upload(altPath, uploadBlob, { contentType: uploadMime, upsert: true });
                     if (altErr) throw altErr;
-                    const { data: altUrl } = supabaseClient.storage.from('public').getPublicUrl(altPath);
+                    const { data: altUrl } = client.storage.from('public').getPublicUrl(altPath);
                     publicUrl = altUrl.publicUrl;
                 } else if (uploadError) {
                     throw uploadError;
                 } else {
-                    const { data: urlData } = supabaseClient.storage
+                    const { data: urlData } = client.storage
                         .from('avatars')
                         .getPublicUrl(filePath);
                     publicUrl = urlData.publicUrl;
