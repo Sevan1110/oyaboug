@@ -270,12 +270,10 @@ const MerchantProductsContent = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Link href="/merchant/products/new">
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Nouveau produit
-              </Button>
-            </Link>
+            <Button className="gap-2" onClick={() => setIsAddModalOpen(true)}>
+              <Plus className="w-4 h-4" />
+              Nouveau produit
+            </Button>
           </div>
 
           {/* Tabs */}
@@ -325,12 +323,10 @@ const MerchantProductsContent = () => {
                     ? "Essayez une autre recherche"
                     : "Commencez par ajouter votre premier produit"}
                 </p>
-                <Link href="/merchant/products/new">
-                  <Button className="gap-2">
-                    <Plus className="w-4 h-4" />
-                    Ajouter un produit
-                  </Button>
-                </Link>
+                <Button className="gap-2" onClick={() => setIsAddModalOpen(true)}>
+                  <Plus className="w-4 h-4" />
+                  Ajouter un produit
+                </Button>
               </div>
             </Card>
           )}

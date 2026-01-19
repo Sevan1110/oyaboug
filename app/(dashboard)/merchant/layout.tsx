@@ -14,6 +14,7 @@ export default function MerchantDashboardLayout({ children }: { children: ReactN
     const [profile, setProfile] = useState<{
         businessName: string;
         businessType: string;
+        id: string; // Added ID
         logoUrl?: string; // If available in future
     } | null>(null);
 
@@ -27,6 +28,7 @@ export default function MerchantDashboardLayout({ children }: { children: ReactN
                         setProfile({
                             businessName: merchantData.business_name,
                             businessType: merchantData.business_type,
+                            id: merchantData.id,
                         });
                     }
                 }
@@ -43,6 +45,7 @@ export default function MerchantDashboardLayout({ children }: { children: ReactN
                 <MerchantSidebar
                     merchantName={profile?.businessName || "Mon Commerce"}
                     merchantType={profile?.businessType || "Commerce"}
+                    merchantId={profile?.id}
                 />
 
                 <SidebarInset className="flex-1">

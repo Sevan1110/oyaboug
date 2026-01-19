@@ -71,7 +71,7 @@ const SearchPage = () => {
     const [reservingItemId, setReservingItemId] = useState<string | null>(null);
 
     // Filter states
-    const [selectedCity, setSelectedCity] = useState<GabonCity | "all">("Libreville");
+    const [selectedCity, setSelectedCity] = useState<GabonCity | "all">("all");
     const [selectedCategory, setSelectedCategory] = useState<FoodCategory | "all">("all");
     const [selectedMerchantType, setSelectedMerchantType] = useState<MerchantType | "all">("all");
     const [sortBy, setSortBy] = useState<"distance" | "price" | "discount" | "rating">("distance");
@@ -115,6 +115,7 @@ const SearchPage = () => {
         });
 
         if (result.success && result.data) {
+            console.log("Search Results:", result.data.length, "items", result.data);
             setItems(result.data);
         }
 

@@ -85,6 +85,7 @@ export {
   complete as completeOrder,
   addReview,
   getActiveOrders,
+  getActive, // Export generic active orders fetcher
   getStatusText,
   getStatusColor,
   canCancel,

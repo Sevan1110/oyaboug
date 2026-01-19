@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
@@ -19,73 +18,78 @@ import {
     DollarSign,
     Loader2,
 } from "lucide-react";
-import {
-    getMyMerchantProfile,
-    getMerchantStats,
-    getMerchantOrders,
-    getMerchantItems,
-} from "@/services";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPrice } from "@/services";
-import type { Order, MerchantImpact, FoodItem } from "@/types";
+import { useMerchantProfile, useMerchantStats, useMerchantOrders, useMerchantItems } from "@/hooks/useMerchantData";
 
 export default function MerchantDashboardPage() {
     const { user } = useAuth();
-    const [isLoading, setIsLoading] = useState(true);
-    const [merchantId, setMerchantId] = useState<string | null>(null);
-    const [stats, setStats] = useState<MerchantImpact | null>(null);
-    const [recentOrders, setRecentOrders] = useState<Order[]>([]);
-    const [items, setItems] = useState<FoodItem[]>([]);
-    const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const loadDashboardData = async () => {
-            if (!user) return;
-            setIsLoading(true);
-            setError(null);
+    // 1. Get Merchant Profile
+    const {
+        data: merchantProfile,
+        isLoading: profileLoading,
+        error: profileError
+    } = useMerchantProfile(user?.id);
 
-            try {
-                // 1. Get Merchant Profile First
-                const profileRes = await getMyMerchantProfile(user.id);
+    const merchantId = merchantProfile?.id;
 
-                if (!profileRes.success || !profileRes.data) {
-                    setError("Commerçant non trouvé. Veuillez compléter votre profil.");
-                    setIsLoading(false);
-                    return;
-                }
+    // 2. Fetch all dashboard data (dependent on merchantId)
+    const {
+        data: stats,
+        isLoading: statsLoading
+    } = useMerchantStats(merchantId);
 
-                const mId = profileRes.data.id;
-                setMerchantId(mId);
+    const {
+        data: ordersData,
+        isLoading: ordersLoading
+    } = useMerchantOrders(merchantId, 'pending', 1);
 
-                // 2. Fetch all dashboard data in parallel
-                const [statsRes, ordersRes, itemsRes] = await Promise.all([
-                    getMerchantStats(mId),
-                    getMerchantOrders(mId, { perPage: 5, status: 'pending' }), // Get pending orders first
-                    getMerchantItems(mId)
-                ]);
+    // Fetch recent orders (all statuses) for the list
+    const {
+        data: recentOrdersData,
+        isLoading: recentOrdersLoading
+    } = useMerchantOrders(merchantId, 'all', 1);
 
-                if (statsRes.success && statsRes.data) {
-                    setStats(statsRes.data);
-                }
+    const {
+        data: items,
+        isLoading: itemsLoading
+    } = useMerchantItems(merchantId);
 
-                if (ordersRes.success && ordersRes.data) {
-                    setRecentOrders(ordersRes.data.data); // Paginated response
-                }
+    const isLoading = profileLoading || statsLoading || ordersLoading || recentOrdersLoading || itemsLoading;
 
-                if (itemsRes.success && itemsRes.data) {
-                    setItems(itemsRes.data);
-                }
+    // Calculate pending orders count from the specific query
+    const pendingOrdersCount = ordersData?.total || 0;
 
-            } catch (e) {
-                console.error("Error loading merchant dashboard", e);
-                setError("Une erreur est survenue lors du chargement du tableau de bord.");
-            } finally {
-                setIsLoading(false);
-            }
-        };
+    const recentOrders = recentOrdersData?.data || [];
 
-        loadDashboardData();
-    }, [user]);
+    // Error handling
+    if (!user) return null;
+
+    if (profileError) {
+        return (
+            <div className="flex flex-col items-center justify-center h-96 gap-4">
+                <div className="p-4 rounded-full bg-destructive/10">
+                    <AlertCircle className="w-8 h-8 text-destructive" />
+                </div>
+                <h2 className="text-xl font-semibold">
+                    {(profileError as Error).message || "Commerçant non trouvé"}
+                </h2>
+                <Link href="/merchant/settings">
+                    <Button>Accéder aux paramètres</Button>
+                </Link>
+            </div>
+        );
+    }
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-96">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <span className="ml-2 text-muted-foreground">Chargement du tableau de bord...</span>
+            </div>
+        );
+    }
 
     const dashboardStats = [
         {
@@ -121,32 +125,6 @@ export default function MerchantDashboardPage() {
             bgColor: "bg-orange-100",
         },
     ];
-
-    // Calculate pending orders count
-    const pendingOrdersCount = recentOrders.filter(o => o.status === 'pending').length;
-
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-96">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <span className="ml-2 text-muted-foreground">Chargement du tableau de bord...</span>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="flex flex-col items-center justify-center h-96 gap-4">
-                <div className="p-4 rounded-full bg-destructive/10">
-                    <AlertCircle className="w-8 h-8 text-destructive" />
-                </div>
-                <h2 className="text-xl font-semibold">{error}</h2>
-                <Link href="/merchant/settings">
-                    <Button>Accéder aux paramètres</Button>
-                </Link>
-            </div>
-        );
-    }
 
     return (
         <div className="space-y-6">
@@ -247,9 +225,9 @@ export default function MerchantDashboardPage() {
                                                 <Badge
                                                     variant="outline"
                                                     className={`mb-1 ${order.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                                                            order.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                                                                order.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
-                                                                    ''
+                                                        order.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                                            order.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
+                                                                ''
                                                         }`}
                                                 >
                                                     {order.status === 'pending' ? 'En attente' :
@@ -281,12 +259,12 @@ export default function MerchantDashboardPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-6">
-                                {items.length === 0 ? (
+                                {items?.length === 0 ? (
                                     <div className="text-center py-4 text-muted-foreground text-sm">
                                         Aucun produit en stock
                                     </div>
                                 ) : (
-                                    items.slice(0, 3).map(item => (
+                                    items?.slice(0, 3).map(item => (
                                         <div key={item.id}>
                                             <div className="flex justify-between mb-2 text-sm">
                                                 <span className="font-medium truncate max-w-[150px]">{item.name}</span>
@@ -318,3 +296,4 @@ export default function MerchantDashboardPage() {
         </div>
     );
 }
+
