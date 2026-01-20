@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
     ShoppingBag,
@@ -126,10 +127,13 @@ const ProductDetailPage = () => {
                         className="space-y-4"
                     >
                         <div className="relative aspect-square rounded-3xl overflow-hidden shadow-2xl border bg-muted">
-                            <img
+                            <Image
                                 src={product.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=800&fit=crop"}
                                 alt={product.name}
-                                className="w-full h-full object-cover"
+                                fill
+                                className="object-cover"
+                                sizes="(max-width: 768px) 100vw, 50vw"
+                                priority
                             />
                             <div className="absolute top-6 left-6 flex flex-wrap gap-2">
                                 <Badge className="bg-primary hover:bg-primary shadow-lg text-lg px-4 py-1.5 rounded-full">

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Clock, Store } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 
 export interface FoodItem {
   id: string;
@@ -42,10 +43,12 @@ const FoodCard = ({ item, onReserve, reservedCount = 0 }: FoodCardProps) => {
       <Card hover className="overflow-hidden group">
         {/* Image */}
         <div className="relative h-40 overflow-hidden">
-          <img
+          <Image
             src={item.image}
             alt={item.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
           <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
             {item.badges.includes("bio") && <Badge variant="bio">Bio</Badge>}

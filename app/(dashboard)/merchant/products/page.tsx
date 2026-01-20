@@ -8,6 +8,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -143,13 +144,15 @@ const MerchantProductsContent = () => {
       >
         <Card className="overflow-hidden">
           <div className="relative">
-            <img
+            <Image
               src={
                 product.image_url ||
                 "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=200&fit=crop"
               }
               alt={product.name}
-              className="w-full h-32 object-cover"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
             <div className="absolute top-2 right-2 flex gap-1">
               <Badge variant="secondary" className="text-xs">
