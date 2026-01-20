@@ -25,11 +25,13 @@ import { fr } from "date-fns/locale";
 import { adminService } from "@/services/admin.service";
 import type { AdminClient } from "@/types/admin.types";
 import { toast } from "sonner";
+import { ClientDetailsModal } from "@/components/admin/ClientDetailsModal";
 
 const AdminClientsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [clients, setClients] = useState<AdminClient[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [selectedClient, setSelectedClient] = useState<AdminClient | null>(null);
 
   useEffect(() => {
     const loadClients = async () => {
@@ -156,6 +158,7 @@ const AdminClientsPage = () => {
                   <TableHead>Inscription</TableHead>
                   <TableHead className="text-center">Commandes</TableHead>
                   <TableHead className="text-right">Total dépensé</TableHead>
+                  <TableHead>Rôle</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -199,6 +202,11 @@ const AdminClientsPage = () => {
                       {formatCurrency(client.totalSpent)}
                     </TableCell>
                     <TableCell>
+                      <Badge variant={client.role === 'merchant' ? 'default' : 'secondary'}>
+                        {client.role === 'merchant' ? 'Marchand' : 'Client'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       <Badge
                         variant={
                           client.status === "active" ? "default" : "secondary"
@@ -208,7 +216,11 @@ const AdminClientsPage = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedClient(client)}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
                     </TableCell>
@@ -219,6 +231,12 @@ const AdminClientsPage = () => {
           )}
         </CardContent>
       </Card>
+
+      <ClientDetailsModal
+        client={selectedClient}
+        isOpen={!!selectedClient}
+        onClose={() => setSelectedClient(null)}
+      />
     </AdminLayout>
   );
 };
