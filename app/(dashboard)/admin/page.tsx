@@ -28,11 +28,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { adminService } from "@/services/admin.service";
-import type { AdminKPIs, MerchantRegistration, AdminActivity } from "@/types/admin.types";
+import type { AdminKPIs, MerchantRegistration, AdminActivity, TopMerchant, GeoDistribution } from "@/types/admin.types";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
 
 const AdminDashboardPage = () => {
+  const [topMerchants, setTopMerchants] = useState<TopMerchant[]>([]);
+  const [geoDistribution, setGeoDistribution] = useState<GeoDistribution[]>([]);
+
   const [kpis, setKPIs] = useState<AdminKPIs | null>(null);
   const [pendingMerchants, setPendingMerchants] = useState<MerchantRegistration[]>([]);
   const [activities, setActivities] = useState<AdminActivity[]>([]);
@@ -52,16 +55,20 @@ const AdminDashboardPage = () => {
   const loadDashboardData = async () => {
     setIsLoading(true);
     try {
-      const [kpisData, merchantsData, activitiesData, statsData] = await Promise.all([
+      const [kpisData, merchantsData, activitiesData, statsData, topMerchantsData, geoData] = await Promise.all([
         adminService.getKPIs(),
         adminService.getMerchants('pending'),
         adminService.getRecentActivities(5),
         adminService.getSalesStats(),
+        adminService.getTopMerchants(5),
+        adminService.getGeoDistribution(),
       ]);
       setKPIs(kpisData);
       setPendingMerchants(merchantsData);
       setActivities(activitiesData);
       setSalesStats(statsData);
+      setTopMerchants(topMerchantsData);
+      setGeoDistribution(geoData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       toast.error("Erreur lors du chargement des données");
@@ -252,6 +259,73 @@ const AdminDashboardPage = () => {
 
         {/* Activity Feed */}
         <ActivityFeed activities={activities} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Top Merchants */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              Top Commerçants
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {topMerchants.map((merchant, index) => (
+                <div key={merchant.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{merchant.name}</p>
+                      <p className="text-xs text-muted-foreground">{merchant.productsCount} produits</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-sm">{adminService.formatCurrency(merchant.revenue)}</p>
+                    <p className="text-xs text-muted-foreground">{merchant.sales} ventes</p>
+                  </div>
+                </div>
+              ))}
+              {topMerchants.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">Aucune donnée disponible</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Geo Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Store className="w-4 h-4 text-primary" />
+              Répartition Géographique
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {geoDistribution.map((geo) => (
+                <div key={geo.city} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{geo.city}</span>
+                    <span className="text-muted-foreground">{geo.merchantCount} commerces</span>
+                  </div>
+                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary"
+                      style={{ width: `${(geo.merchantCount / Math.max(...geoDistribution.map(g => g.merchantCount), 1)) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {geoDistribution.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">Aucune donnée disponible</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Pending Validations */}

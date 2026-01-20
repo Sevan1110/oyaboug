@@ -59,8 +59,8 @@ export const adminService = {
     // Fetch user profiles
     const { data: profiles, error: profilesError } = await client
       .from(DB_TABLES.PROFILES)
-      .select('id, user_id, email, phone, full_name, city, quartier, created_at')
-      .eq('role', 'user');
+      .select('id, user_id, email, phone, full_name, city, quartier, role, created_at')
+      .in('role', ['user', 'merchant']);
 
     if (profilesError) {
       console.error('Error fetching client profiles:', profilesError);
@@ -126,8 +126,37 @@ export const adminService = {
         ordersCount: agg.ordersCount,
         totalSpent: agg.totalSpent,
         status,
+        role: p.role,
       };
     });
+  },
+
+  // Get orders for a specific client
+  getClientOrders: async (userId: string) => {
+    if (!isSupabaseConfigured()) {
+      return [];
+    }
+
+    const client = requireSupabaseClient();
+    const { data, error } = await client
+      .from(DB_TABLES.ORDERS)
+      .select('*, merchant:merchants(business_name)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching client orders:', error);
+      throw error;
+    }
+
+    return (data || []).map((order: any) => ({
+      id: order.id,
+      merchantName: order.merchant?.business_name || 'Commerce inconnu',
+      totalPrice: order.total_price,
+      status: order.status,
+      createdAt: new Date(order.created_at),
+      itemsCount: order.items?.length || 0, // Assuming items is a JSON array or handled elsewhere
+    }));
   },
 
   // Get all merchants with optional status filter

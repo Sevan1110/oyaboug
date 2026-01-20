@@ -112,6 +112,7 @@ export interface AdminClient {
   ordersCount: number;
   totalSpent: number;
   status: AdminClientStatus;
+  role: 'user' | 'merchant' | 'admin';
 }
 
 // ============================================
