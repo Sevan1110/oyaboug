@@ -11,6 +11,8 @@ export interface User {
   email: string;
   phone?: string;
   full_name?: string;
+  first_name?: string;
+  last_name?: string;
   avatar_url?: string;
   role: UserRole;
   created_at: string;
@@ -23,6 +25,7 @@ export interface UserProfile extends User {
   address?: string;
   city?: string;
   quartier?: string;
+  birth_date?: string;
   preferences?: UserPreferences;
 }
 
@@ -57,11 +60,12 @@ export interface Merchant {
   total_reviews: number;
   is_verified: boolean;
   is_active: boolean;
+  slug: string;
   created_at: string;
   updated_at: string;
 }
 
-export type MerchantType = 
+export type MerchantType =
   | 'restaurant'
   | 'bakery'
   | 'grocery'
@@ -107,9 +111,20 @@ export interface FoodItem {
   pickup_end: string;
   expiry_date?: string;
   is_available: boolean;
+  contents?: BasketItem[];
   badges?: string[];
+  slug: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface BasketItem {
+  id: string;
+  name: string;
+  category: FoodCategory;
+  originalPrice: number;
+  quantity: number;
+  imagePreview?: string;
 }
 
 export type FoodCategory =
@@ -134,6 +149,7 @@ export interface CreateFoodItemInput {
   pickup_end: string;
   expiry_date?: string;
   image_url?: string;
+  contents?: BasketItem[];
 }
 
 // ============================================
@@ -153,6 +169,7 @@ export interface Order {
   savings: number; // in XAF
   status: OrderStatus;
   pickup_code: string;
+  tracking_code: string;
   pickup_time?: string;
   confirmed_at?: string;
   picked_up_at?: string;
@@ -300,6 +317,7 @@ export interface SignUpData extends AuthCredentials {
   phone?: string;
   role: UserRole;
   business_name?: string; // for merchants
+  metadata?: Record<string, any>; // For additional profile data
 }
 
 export interface AuthSession {

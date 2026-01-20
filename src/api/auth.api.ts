@@ -15,7 +15,7 @@ export const signInWithEmail = async (
 ): Promise<ApiResponse<{ user: User; session: unknown }>> => {
   console.log('=== AUTH.API SIGNINWITHEMAIL ===');
   console.log('Credentials:', { email: credentials.email, password: '***' });
-  
+
   if (!isSupabaseConfigured()) {
     console.error('Supabase non configuré');
     return {
@@ -28,18 +28,17 @@ export const signInWithEmail = async (
   try {
     const client = requireSupabaseClient();
     console.log('Client Supabase obtenu, tentative de connexion...');
-    
-    // Réduire le timeout à 5 secondes pour le navigateur
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Timeout de connexion - Vérifiez votre réseau ou les paramètres CORS')), 5000);
-    });
-    
+
+    // Wrapper pour ajouter un timeout
     const signInPromise = client.auth.signInWithPassword({
       email: credentials.email,
       password: credentials.password,
     });
-    
-    console.log('Appel de signInWithPassword() en cours...');
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout: Supabase ne répond pas après 10s')), 10000)
+    );
+
     const { data, error } = await Promise.race([signInPromise, timeoutPromise]) as any;
     console.log('Réponse Supabase reçue:', { data: !!data, error: error?.message });
 
@@ -65,7 +64,7 @@ export const signInWithEmail = async (
     console.error('Exception dans signInWithEmail:', error);
     return {
       data: null,
-      error: { code: 'EXCEPTION', message: error.message },
+      error: { code: 'EXCEPTION', message: (error as Error).message },
       success: false,
     };
   }
@@ -86,7 +85,7 @@ export const signUpWithEmail = async (
   }
 
   const client = requireSupabaseClient();
-  const redirectUrl = `${import.meta.env.DEV ? 'http://127.0.0.1:3000' : window.location.origin}/auth`;
+  const redirectUrl = `${process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:3000' : window.location.origin}/auth`;
 
   try {
     const { data, error } = await client.auth.signUp({
@@ -99,6 +98,7 @@ export const signUpWithEmail = async (
           phone: signUpData.phone,
           role: signUpData.role,
           business_name: signUpData.business_name,
+          ...signUpData.metadata,
         },
       },
     });
@@ -306,8 +306,13 @@ export const verifyOtp = async (
   }
 
   const client = requireSupabaseClient();
+
+  // For email OTP codes, the type in Supabase is usually 'magiclink' or 'signup'
+  // For phone, it's 'sms'
+  const verifyType = type === 'email' ? 'magiclink' : 'sms';
+
   const options = type === 'email'
-    ? { email: identifier, token, type: 'email' as const }
+    ? { email: identifier, token, type: verifyType as any }
     : { phone: identifier, token, type: 'sms' as const };
 
   const { data, error } = await client.auth.verifyOtp(options);

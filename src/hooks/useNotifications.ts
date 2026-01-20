@@ -68,40 +68,56 @@ export const useNotifications = () => {
   }, []);
 
   useEffect(() => {
-    load();
-
-    // Set up real-time subscription
+    let isMounted = true;
     let subscription: any = null;
 
+    const loadWithCheck = async () => {
+      if (isMounted) {
+        await load();
+      }
+    };
+
+    loadWithCheck();
+
+    // Set up real-time subscription
     const setupSubscription = async () => {
-      const { data } = await getAuthUser();
-      const userId = data?.user?.id;
+      try {
+        const { data } = await getAuthUser();
+        const userId = data?.user?.id;
 
-      if (!userId || !supabaseClient) return;
+        if (!userId || !supabaseClient || !isMounted) return;
 
-      subscription = supabaseClient
-        .channel('public:notifications')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${userId}`,
-          },
-          (payload) => {
-            // Reload on any change to user's notifications
-            if (payload.new || payload.old) {
-              load();
+        subscription = supabaseClient
+          .channel('public:notifications')
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'notifications',
+              filter: `user_id=eq.${userId}`,
+            },
+            (payload) => {
+              // Reload on any change to user's notifications
+              if (isMounted && (payload.new || payload.old)) {
+                load();
+              }
             }
-          }
-        )
-        .subscribe();
+          )
+          .subscribe();
+      } catch (error: any) {
+        // Ignore AbortError which is expected during cleanup/fast refresh
+        if (error?.name === 'AbortError' || error?.message?.includes('aborted')) {
+          return;
+        }
+        console.error('Error setting up notification subscription:', error);
+      }
     };
 
     setupSubscription();
 
     return () => {
+      isMounted = false;
       if (subscription) {
         supabaseClient?.removeChannel(subscription);
       }
@@ -111,33 +127,50 @@ export const useNotifications = () => {
   const unreadCount = useMemo(() => notifications.filter((n) => !n.is_read && !n.is_archived).length, [notifications]);
 
   const groupedNotifications = useMemo((): NotificationGroup[] => {
-    const groups: Record<string, AppNotification[]> = {};
+    try {
+      const groups: Record<string, AppNotification[]> = {};
 
-    notifications
-      .filter((n) => !n.is_archived)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .forEach((notification) => {
-        const date = parseISO(notification.created_at);
-        let groupKey: string;
+      notifications
+        .filter((n) => !n.is_archived)
+        .sort((a, b) => {
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return timeB - timeA;
+        })
+        .forEach((notification) => {
+          if (!notification.created_at) return;
 
-        if (isToday(date)) {
-          groupKey = "Aujourd'hui";
-        } else if (isYesterday(date)) {
-          groupKey = 'Hier';
-        } else {
-          groupKey = format(date, 'EEEE d MMMM', { locale: fr });
-        }
+          try {
+            const date = parseISO(notification.created_at);
+            if (isNaN(date.getTime())) return;
 
-        if (!groups[groupKey]) {
-          groups[groupKey] = [];
-        }
-        groups[groupKey].push(notification);
-      });
+            let groupKey: string;
 
-    return Object.entries(groups).map(([date, notifs]) => ({
-      date,
-      notifications: notifs,
-    }));
+            if (isToday(date)) {
+              groupKey = "Aujourd'hui";
+            } else if (isYesterday(date)) {
+              groupKey = 'Hier';
+            } else {
+              groupKey = format(date, 'EEEE d MMMM', { locale: fr });
+            }
+
+            if (!groups[groupKey]) {
+              groups[groupKey] = [];
+            }
+            groups[groupKey].push(notification);
+          } catch (e) {
+            console.error('Error formatting notification date:', e, notification);
+          }
+        });
+
+      return Object.entries(groups).map(([date, notifs]) => ({
+        date,
+        notifications: notifs,
+      }));
+    } catch (e) {
+      console.error('Critical error in groupedNotifications memo:', e);
+      return [];
+    }
   }, [notifications]);
 
   const markAsRead = useCallback(async (notificationId: string) => {

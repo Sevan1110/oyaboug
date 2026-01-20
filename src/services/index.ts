@@ -70,6 +70,9 @@ export {
   isPickupPassed,
 } from './inventory.service';
 
+// Contact Service
+export * from './contact.service';
+
 // Order Service
 export {
   createReservation,
@@ -82,6 +85,7 @@ export {
   complete as completeOrder,
   addReview,
   getActiveOrders,
+  getActive, // Export generic active orders fetcher
   getStatusText,
   getStatusColor,
   canCancel,

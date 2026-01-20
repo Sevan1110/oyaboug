@@ -1,10 +1,8 @@
-// ============================================
-// User Menu - User Profile Dropdown
-// ouyaboung Platform - Anti-gaspillage alimentaire
-// ============================================
+"use client";
 
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export const UserMenu: React.FC = () => {
   const { user, userRole, signOut, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const { toast } = useToast();
 
   if (!isAuthenticated || !user) {
@@ -30,18 +28,33 @@ export const UserMenu: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
+      console.log('Initiating sign out in UserMenu...');
+
+      // Set a safety timeout
+      const safetyRedirect = setTimeout(() => {
+        console.warn('Navigation hanging, forcing hard redirect...');
+        window.location.href = '/';
+      }, 2000);
+
       await signOut();
+
+      clearTimeout(safetyRedirect);
+
       toast({
         title: "Déconnexion réussie",
         description: "À bientôt sur Oyaboung !",
       });
-      navigate('/');
+
+      // Force navigation to home page
+      router.replace('/');
+      // router.refresh(); // Not needed in React Router
     } catch (error) {
-      toast({
-        title: "Erreur de déconnexion",
-        description: "Une erreur est survenue lors de la déconnexion",
-        variant: "destructive",
-      });
+      console.error('Logout error in UserMenu:', error);
+      // Fallback: Clear local storage and force redirect to /auth
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        window.location.href = '/auth';
+      }
     }
   };
 
@@ -93,6 +106,18 @@ export const UserMenu: React.FC = () => {
     }
   };
 
+  const getProfilePath = () => {
+    switch (userRole) {
+      case 'admin':
+        return '/admin/settings';
+      case 'merchant':
+        return '/merchant/profile';
+      case 'user':
+      default:
+        return '/user/profile';
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -122,23 +147,37 @@ export const UserMenu: React.FC = () => {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link to={getDashboardPath()} className="cursor-pointer">
-            <User className="mr-2 h-4 w-4" />
-            <span>Tableau de bord</span>
-          </Link>
+          {userRole === 'user' ? (
+            <a href={getDashboardPath()} className="cursor-pointer flex w-full items-center">
+              <User className="mr-2 h-4 w-4" />
+              <span>Tableau de bord</span>
+            </a>
+          ) : (
+            <Link href={getDashboardPath()} className="cursor-pointer flex w-full items-center">
+              <User className="mr-2 h-4 w-4" />
+              <span>Tableau de bord</span>
+            </Link>
+          )}
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/profile" className="cursor-pointer">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Profil</span>
-          </Link>
+          {userRole === 'user' ? (
+            <a href={getProfilePath()} className="cursor-pointer flex w-full items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Profil</span>
+            </a>
+          ) : (
+            <Link href={getProfilePath()} className="cursor-pointer flex w-full items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Profil</span>
+            </Link>
+          )}
         </DropdownMenuItem>
         {userRole === 'user' && (
           <DropdownMenuItem asChild>
-            <Link to="/user/favorites" className="cursor-pointer">
+            <a href="/user/favorites" className="cursor-pointer flex w-full items-center">
               <Heart className="mr-2 h-4 w-4" />
               <span>Favoris</span>
-            </Link>
+            </a>
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />

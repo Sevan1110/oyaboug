@@ -4,6 +4,7 @@
 // ============================================
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
@@ -39,23 +40,18 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { FoodCategory, CreateFoodItemInput } from "@/types";
+import type { FoodCategory, CreateFoodItemInput, BasketItem } from "@/types";
 import { formatPrice, getCategoryName } from "@/services";
+import { createListing } from "@/services/inventory.service";
 import { compressImage, validateImageFile, formatFileSize, getBase64Size } from "@/utils/imageCompression";
 
-interface BasketItem {
-  id: string;
-  name: string;
-  category: FoodCategory;
-  originalPrice: number;
-  quantity: number;
-  imagePreview?: string;
-}
+
 
 interface AddProductModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onProductCreated?: () => void;
+  merchantId: string;
 }
 
 const categories: { value: FoodCategory; label: string }[] = [
@@ -74,11 +70,12 @@ const AddProductModal = ({
   open,
   onOpenChange,
   onProductCreated,
+  merchantId,
 }: AddProductModalProps) => {
   const [mode, setMode] = useState<"single" | "basket">("single");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const basketFileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Single product form
   const [productForm, setProductForm] = useState<CreateFoodItemInput>({
     name: "",
@@ -95,6 +92,7 @@ const AddProductModal = ({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [basketImagePreview, setBasketImagePreview] = useState<string | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [compressionInfo, setCompressionInfo] = useState<{ original: number; compressed: number } | null>(null);
 
   // Basket mode
@@ -105,6 +103,7 @@ const AddProductModal = ({
   const [basketDiscount, setBasketDiscount] = useState(30);
   const [basketPickupStart, setBasketPickupStart] = useState("12:00");
   const [basketPickupEnd, setBasketPickupEnd] = useState("14:00");
+  const [basketExpiryDate, setBasketExpiryDate] = useState("");
 
   // Temp item for basket
   const [tempItem, setTempItem] = useState<Partial<BasketItem>>({
@@ -188,6 +187,7 @@ const AddProductModal = ({
     setBasketDescription("");
     setBasketQuantity(1);
     setBasketDiscount(30);
+    setBasketExpiryDate("");
     setTempItem({ name: "", category: "other", originalPrice: 0, quantity: 1 });
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (basketFileInputRef.current) basketFileInputRef.current.value = "";
@@ -230,20 +230,59 @@ const AddProductModal = ({
     basketTotalOriginal * (1 - basketDiscount / 100)
   );
 
-  const handleSubmitSingle = () => {
+  // Helper to combine date and time for pickup window
+  const combineDateAndTime = (timeStr: string) => {
+    if (!timeStr) return new Date().toISOString();
+
+    const today = new Date();
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const date = new Date(today);
+    date.setHours(hours, minutes, 0, 0);
+    return date.toISOString();
+  };
+
+  const handleSubmitSingle = async () => {
     if (!productForm.name || !productForm.original_price) {
       toast.error("Veuillez remplir les champs obligatoires");
       return;
     }
 
-    // Mock API call
-    console.log("Creating single product:", productForm);
-    toast.success(`Produit "${productForm.name}" créé avec succès`);
-    onProductCreated?.();
-    handleClose();
+    setIsSubmitting(true);
+    console.log("Submitting single product...", productForm);
+
+    try {
+      const response = await createListing(merchantId, {
+        name: productForm.name,
+        description: productForm.description,
+        category: productForm.category,
+        originalPrice: productForm.original_price,
+        discountedPrice: productForm.discounted_price,
+        quantity: productForm.quantity_available,
+        pickupStart: combineDateAndTime(productForm.pickup_start),
+        pickupEnd: combineDateAndTime(productForm.pickup_end),
+        expiryDate: productForm.expiry_date,
+        imageUrl: productForm.image_url,
+      });
+
+      console.log("Create listing response:", response);
+
+      if (response.success) {
+        toast.success(`Produit "${productForm.name}" créé avec succès`);
+        onProductCreated?.();
+        handleClose();
+      } else {
+        toast.error(response.error?.message || "Erreur lors de la création du produit");
+        console.error("API Error:", response.error);
+      }
+    } catch (error) {
+      console.error("Error creating product:", error);
+      toast.error("Une erreur est survenue lors de la création");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleSubmitBasket = () => {
+  const handleSubmitBasket = async () => {
     if (!basketName) {
       toast.error("Veuillez donner un nom au panier");
       return;
@@ -253,33 +292,49 @@ const AddProductModal = ({
       return;
     }
 
-    const basketData = {
-      name: basketName,
-      description: basketDescription,
-      category: "mixed_basket" as FoodCategory,
-      original_price: basketTotalOriginal,
-      discounted_price: basketTotalDiscounted,
-      quantity_available: basketQuantity,
-      pickup_start: basketPickupStart,
-      pickup_end: basketPickupEnd,
-      items: basketItems,
-      image_url: basketImagePreview,
-    };
+    setIsSubmitting(true);
+    console.log("Submitting basket...", { basketName, basketItems });
 
-    // Mock API call
-    console.log("Creating basket:", basketData);
-    toast.success(`Panier "${basketName}" créé avec succès`);
-    onProductCreated?.();
-    handleClose();
+    try {
+      const response = await createListing(merchantId, {
+        name: basketName,
+        description: basketDescription,
+        category: "mixed_basket",
+        originalPrice: basketTotalOriginal,
+        discountedPrice: basketTotalDiscounted,
+        quantity: basketQuantity,
+        pickupStart: combineDateAndTime(basketPickupStart),
+        pickupEnd: combineDateAndTime(basketPickupEnd),
+        expiryDate: basketExpiryDate,
+        imageUrl: basketImagePreview || undefined,
+        contents: basketItems,
+      });
+
+      console.log("Create basket response:", response);
+
+      if (response.success) {
+        toast.success(`Panier "${basketName}" créé avec succès`);
+        onProductCreated?.();
+        handleClose();
+      } else {
+        toast.error(response.error?.message || "Erreur lors de la création du panier");
+        console.error("API Error:", response.error);
+      }
+    } catch (error) {
+      console.error("Error creating basket:", error);
+      toast.error("Une erreur est survenue lors de la création");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const discountPercentage =
     productForm.original_price > 0
       ? Math.round(
-          ((productForm.original_price - productForm.discounted_price) /
-            productForm.original_price) *
-            100
-        )
+        ((productForm.original_price - productForm.discounted_price) /
+          productForm.original_price) *
+        100
+      )
       : 0;
 
   return (
@@ -355,7 +410,7 @@ const AddProductModal = ({
               />
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="original_price">Prix original (XAF) *</Label>
                 <Input
@@ -388,20 +443,23 @@ const AddProductModal = ({
                   }
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Réduction</Label>
-                <div className="h-10 flex items-center">
+              <div className="space-y-2 md:col-span-2">
+                <Label>Aperçu de la réduction</Label>
+                <div className="h-10 flex items-center gap-2 p-2 bg-muted/30 rounded-md border border-border/50">
                   <Badge
                     variant={discountPercentage >= 30 ? "default" : "secondary"}
                     className="text-sm"
                   >
                     -{discountPercentage}%
                   </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    Le client économise {formatPrice(productForm.original_price - productForm.discounted_price)}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="quantity">Quantité disponible *</Label>
                 <Input
@@ -414,6 +472,17 @@ const AddProductModal = ({
                       ...productForm,
                       quantity_available: parseInt(e.target.value) || 1,
                     })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="expiry_date">Date de péremption (Optionnel)</Label>
+                <Input
+                  id="expiry_date"
+                  type="datetime-local"
+                  value={productForm.expiry_date || ""}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, expiry_date: e.target.value })
                   }
                 />
               </div>
@@ -459,10 +528,12 @@ const AddProductModal = ({
                 </div>
               ) : imagePreview ? (
                 <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
-                  <img
+                  <Image
                     src={imagePreview}
                     alt="Aperçu"
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="100vw"
                   />
                   <Button
                     variant="destructive"
@@ -512,9 +583,18 @@ const AddProductModal = ({
               <Button variant="outline" onClick={handleClose}>
                 Annuler
               </Button>
-              <Button onClick={handleSubmitSingle}>
-                <Plus className="w-4 h-4 mr-2" />
-                Créer le produit
+              <Button onClick={handleSubmitSingle} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Créer le produit
+                  </>
+                )}
               </Button>
             </div>
           </TabsContent>
@@ -565,10 +645,12 @@ const AddProductModal = ({
               />
               {basketImagePreview ? (
                 <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
-                  <img
+                  <Image
                     src={basketImagePreview}
                     alt="Aperçu du panier"
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="100vw"
                   />
                   <Button
                     variant="destructive"
@@ -713,7 +795,8 @@ const AddProductModal = ({
             </AnimatePresence>
 
             {/* Pricing & Pickup */}
-            <div className="grid sm:grid-cols-3 gap-4">
+            {/* Pricing & Pickup */}
+            <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="basket_discount">Réduction (%)</Label>
                 <Input
@@ -725,6 +808,15 @@ const AddProductModal = ({
                   onChange={(e) =>
                     setBasketDiscount(parseInt(e.target.value) || 30)
                   }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="basket_expiry">Date de péremption</Label>
+                <Input
+                  id="basket_expiry"
+                  type="datetime-local"
+                  value={basketExpiryDate}
+                  onChange={(e) => setBasketExpiryDate(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -780,10 +872,19 @@ const AddProductModal = ({
               </Button>
               <Button
                 onClick={handleSubmitBasket}
-                disabled={basketItems.length < 2}
+                disabled={basketItems.length < 2 || isSubmitting}
               >
-                <ShoppingBasket className="w-4 h-4 mr-2" />
-                Créer le panier ({basketItems.length} articles)
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBasket className="w-4 h-4 mr-2" />
+                    Créer le panier ({basketItems.length} articles)
+                  </>
+                )}
               </Button>
             </div>
           </TabsContent>

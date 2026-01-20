@@ -53,6 +53,7 @@ export {
   getNearbyMerchants,
   getMerchantImpact as getMerchantImpactApi,
   searchMerchants,
+  getMerchantBySlug,
 } from './merchants.api';
 
 // Inventory API
@@ -66,6 +67,7 @@ export {
   searchFoodItems,
   getFoodCategories,
   updateFoodItemQuantity,
+  getFoodItemBySlug,
 } from './inventory.api';
 
 // Orders API
@@ -81,7 +83,11 @@ export {
   completeOrder,
   addOrderReview,
   getActiveOrders,
+  getOrderByTrackingCode,
 } from './orders.api';
+
+// Orders RPC (bypasses RLS)
+export { cancelOrderViaRPC } from './orders-rpc.api';
 
 // Pricing API
 export {

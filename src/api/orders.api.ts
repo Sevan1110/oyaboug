@@ -5,12 +5,12 @@
 
 import { supabaseClient, requireSupabaseClient, isSupabaseConfigured } from './supabaseClient';
 import { DB_TABLES } from './routes';
-import type { 
-  ApiResponse, 
-  Order, 
+import type {
+  ApiResponse,
+  Order,
   OrderStatus,
   CreateOrderInput,
-  PaginatedResponse 
+  PaginatedResponse
 } from '@/types';
 
 /**
@@ -41,7 +41,7 @@ export const createOrder = async (
   }
 
   const client = requireSupabaseClient();
-  
+
   // Get food item details to calculate prices
   const { data: foodItem, error: itemError } = await client
     .from(DB_TABLES.FOOD_ITEMS)
@@ -159,6 +159,40 @@ export const getOrderById = async (
 };
 
 /**
+ * Get order by tracking code (for public/guest access with verification)
+ */
+export const getOrderByTrackingCode = async (
+  trackingCode: string
+): Promise<ApiResponse<Order>> => {
+  const client = requireSupabaseClient();
+  const { data, error } = await client
+    .from(DB_TABLES.ORDERS)
+    .select('*, food_items(*), merchants(*)')
+    .eq('tracking_code', trackingCode)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      data: null,
+      error: { code: error.code, message: error.message },
+      success: false,
+    };
+  }
+
+  const order: Order = data ? {
+    ...data,
+    food_item: data.food_items,
+    merchant: data.merchants,
+  } : null;
+
+  return {
+    data: order as Order,
+    error: null,
+    success: true,
+  };
+};
+
+/**
  * Get orders by user
  */
 export const getOrdersByUser = async (
@@ -238,7 +272,7 @@ export const getOrdersByMerchant = async (
   const client = requireSupabaseClient();
   let query = client
     .from(DB_TABLES.ORDERS)
-    .select('*, food_items(*), profiles(*)', { count: 'exact' })
+    .select('*, food_items(*)', { count: 'exact' })
     .eq('merchant_id', merchantId);
 
   if (status) {
@@ -259,10 +293,26 @@ export const getOrdersByMerchant = async (
     };
   }
 
+  // Manually fetch profiles to avoid 400 Bad Request if relationship is missing
+  let profilesMap: Record<string, any> = {};
+  if (data && data.length > 0) {
+    const userIds = Array.from(new Set(data.filter(o => o.user_id).map(o => o.user_id)));
+    if (userIds.length > 0) {
+      const { data: profiles } = await client
+        .from(DB_TABLES.PROFILES)
+        .select('*')
+        .in('id', userIds);
+
+      if (profiles) {
+        profilesMap = profiles.reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+      }
+    }
+  }
+
   const orders = data?.map((o) => ({
     ...o,
     food_item: o.food_items,
-    user: o.profiles,
+    user: profilesMap[o.user_id] || null,
   })) as Order[];
 
   return {
@@ -295,7 +345,7 @@ export const updateOrderStatus = async (
   }
 
   const client = requireSupabaseClient();
-  
+
   const updateData: Record<string, unknown> = {
     status,
     updated_at: new Date().toISOString(),
@@ -401,7 +451,7 @@ export const completeOrder = async (
   }
 
   const client = requireSupabaseClient();
-  
+
   // Verify pickup code
   const { data: order, error: fetchError } = await client
     .from(DB_TABLES.ORDERS)
@@ -482,7 +532,7 @@ export const addOrderReview = async (
 
     if (merchant) {
       const newTotalReviews = (merchant.total_reviews || 0) + 1;
-      const newRating = 
+      const newRating =
         ((merchant.rating || 0) * (merchant.total_reviews || 0) + rating) / newTotalReviews;
 
       await client

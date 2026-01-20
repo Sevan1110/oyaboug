@@ -112,4 +112,42 @@ export interface AdminClient {
   ordersCount: number;
   totalSpent: number;
   status: AdminClientStatus;
+  role: 'user' | 'merchant' | 'admin';
+}
+
+// ============================================
+// Admin Product
+// ============================================
+
+export interface AdminProduct {
+  id: string;
+  name: string;
+  merchantId: string;
+  merchantName: string;
+  category: string;
+  originalPrice: number;
+  discountPrice: number;
+  quantity: number;
+  isAvailable: boolean;
+  description?: string;
+  createdAt: Date;
+}
+
+// ============================================
+// Platform Settings
+// ============================================
+
+export interface PlatformSettings {
+  general: {
+    platformName: string;
+    supportEmail: string;
+  };
+  registration: {
+    isOpen: boolean;
+    autoApprove: boolean;
+  };
+  maintenance: {
+    isEnabled: boolean;
+    message: string;
+  };
 }

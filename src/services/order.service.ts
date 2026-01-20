@@ -14,13 +14,14 @@ import {
   markOrderReady,
   completeOrder,
   addOrderReview,
-  getActiveOrders,
+  getActiveOrders as getActiveOrdersApi,
 } from '@/api';
-import type { 
-  ApiResponse, 
-  Order, 
+import { cancelOrderViaRPC } from '@/api/orders-rpc.api';
+import type {
+  ApiResponse,
+  Order,
   OrderStatus,
-  PaginatedResponse 
+  PaginatedResponse
 } from '@/types';
 
 /**
@@ -65,10 +66,10 @@ export const getActiveOrders = async (
   options: { userId: string }
 ): Promise<ApiResponse<Order[]>> => {
   const { userId } = options;
-  
+
   // Get orders with active statuses
   const result = await getOrdersByUser(userId, undefined, 50, 0); // Get more orders
-  
+
   if (!result.success || !result.data) {
     return {
       data: [],
@@ -79,7 +80,7 @@ export const getActiveOrders = async (
 
   // Filter for active orders only
   const activeStatuses: OrderStatus[] = ['pending', 'confirmed', 'ready'];
-  const activeOrders = result.data.data.filter(order => 
+  const activeOrders = result.data.data.filter(order =>
     activeStatuses.includes(order.status)
   );
 
@@ -142,7 +143,7 @@ export const getActive = async (options?: {
   userId?: string;
   merchantId?: string;
 }): Promise<ApiResponse<Order[]>> => {
-  return getActiveOrders(options?.userId, options?.merchantId);
+  return getActiveOrdersApi(options?.userId, options?.merchantId);
 };
 
 /**

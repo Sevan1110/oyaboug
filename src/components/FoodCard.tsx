@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, Store } from "lucide-react";
 import { motion } from "framer-motion";
+import Link from "next/link";
+import Image from "next/image";
 
 export interface FoodItem {
   id: string;
@@ -15,7 +17,9 @@ export interface FoodItem {
     name: string;
     type: string;
     distance: string;
+    slug: string;
   };
+  slug: string;
   pickupTime: string;
   quantity: number;
   badges: ("bio" | "lastItems" | "free")[];
@@ -39,10 +43,12 @@ const FoodCard = ({ item, onReserve, reservedCount = 0 }: FoodCardProps) => {
       <Card hover className="overflow-hidden group">
         {/* Image */}
         <div className="relative h-40 overflow-hidden">
-          <img
+          <Image
             src={item.image}
             alt={item.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
           <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
             {item.badges.includes("bio") && <Badge variant="bio">Bio</Badge>}
@@ -57,21 +63,27 @@ const FoodCard = ({ item, onReserve, reservedCount = 0 }: FoodCardProps) => {
 
         <CardContent className="p-4">
           {/* Merchant info */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+          <Link
+            href={`/m/${item.merchant.slug}`}
+            className="flex items-center gap-2 text-xs text-muted-foreground mb-2 hover:text-primary transition-colors cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Store className="w-3 h-3" />
             <span>{item.merchant.name}</span>
             <span>•</span>
             <span>{item.merchant.type}</span>
-          </div>
+          </Link>
 
           {/* Name & description */}
-          <h3 className="font-semibold text-foreground mb-1 line-clamp-1">{item.name}</h3>
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{item.description}</p>
+          <Link href={`/p/${item.slug}`} className="block group/link">
+            <h3 className="font-semibold text-foreground mb-1 line-clamp-1 group-hover/link:text-primary transition-colors">{item.name}</h3>
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{item.description}</p>
+          </Link>
 
           {/* Price */}
           <div className="flex items-baseline gap-2 mb-3">
-            <span className="text-lg font-bold text-primary">{item.discountedPrice.toFixed(2)} €</span>
-            <span className="text-sm text-muted-foreground line-through">{item.originalPrice.toFixed(2)} €</span>
+            <span className="text-lg font-bold text-primary">{item.discountedPrice.toLocaleString()} XAF</span>
+            <span className="text-sm text-muted-foreground line-through">{item.originalPrice.toLocaleString()} XAF</span>
           </div>
 
           {/* Meta info */}

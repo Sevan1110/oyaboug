@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star, Quote } from "lucide-react";
 
@@ -59,10 +60,12 @@ const Testimonials = () => {
                   <Quote className="w-8 h-8 text-primary/20 mb-4" />
                   <p className="text-muted-foreground mb-6 italic">"{testimonial.content}"</p>
                   <div className="flex items-center gap-3">
-                    <img
+                    <Image
                       src={testimonial.avatar}
                       alt={testimonial.name}
-                      className="w-12 h-12 rounded-full object-cover"
+                      width={48}
+                      height={48}
+                      className="rounded-full object-cover"
                     />
                     <div>
                       <p className="font-semibold text-foreground">{testimonial.name}</p>

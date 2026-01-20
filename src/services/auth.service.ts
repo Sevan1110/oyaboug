@@ -28,9 +28,9 @@ export const login = async (
   console.log('=== AUTH.SERVICE LOGIN ===');
   console.log('Email:', email);
   console.log('Password provided:', !!password);
-  
+
   const credentials: AuthCredentials = { email, password };
-  
+
   try {
     console.log('Appel de signInWithEmail()...');
     const result = await signInWithEmail(credentials);
@@ -53,6 +53,7 @@ export const register = async (
     phone?: string;
     role?: UserRole;
     businessName?: string;
+    metadata?: Record<string, any>;
   } = {}
 ): Promise<ApiResponse<{ user: User; session: unknown }>> => {
   const signUpData: SignUpData = {
@@ -62,6 +63,7 @@ export const register = async (
     phone: options.phone,
     role: options.role || 'user',
     business_name: options.businessName,
+    metadata: options.metadata,
   };
   return signUpWithEmail(signUpData);
 };
@@ -162,5 +164,5 @@ export const getUserRole = async (): Promise<UserRole | null> => {
 export const updateProfile = async (
   metadata: object
 ): Promise<ApiResponse<{ user: User | null }>> => {
-  return import('@/api/auth.api').then(m => m.updateUser({ data: metadata }));
+  return updateUser({ data: metadata });
 };
