@@ -132,3 +132,22 @@ export interface AdminProduct {
   description?: string;
   createdAt: Date;
 }
+
+// ============================================
+// Platform Settings
+// ============================================
+
+export interface PlatformSettings {
+  general: {
+    platformName: string;
+    supportEmail: string;
+  };
+  registration: {
+    isOpen: boolean;
+    autoApprove: boolean;
+  };
+  maintenance: {
+    isEnabled: boolean;
+    message: string;
+  };
+}

@@ -15,7 +15,8 @@ import type {
   TopMerchant,
   MerchantStatus,
   AdminClient,
-  AdminProduct
+  AdminProduct,
+  PlatformSettings
 } from '@/types/admin.types';
 
 // Transform DB merchant to MerchantRegistration
@@ -530,6 +531,64 @@ export const adminService = {
       description: item.description,
       createdAt: new Date(item.created_at),
     }));
+  },
+
+  getPlatformSettings: async (): Promise<PlatformSettings> => {
+    if (!isSupabaseConfigured()) {
+      return {
+        general: { platformName: 'ouyaboung Gabon', supportEmail: 'support@ouyaboung.ga' },
+        registration: { isOpen: true, autoApprove: false },
+        maintenance: { isEnabled: false, message: 'Plateforme en maintenance' },
+      };
+    }
+
+    const client = requireSupabaseClient();
+    const { data, error } = await client
+      .from('platform_settings')
+      .select('key, value');
+
+    if (error) {
+      console.error('Error fetching platform settings:', error);
+      // Fallback to defaults
+      return {
+        general: { platformName: 'ouyaboung Gabon', supportEmail: 'support@ouyaboung.ga' },
+        registration: { isOpen: true, autoApprove: false },
+        maintenance: { isEnabled: false, message: 'Plateforme en maintenance' },
+      };
+    }
+
+    const settings: any = {
+      general: { platformName: 'ouyaboung Gabon', supportEmail: 'support@ouyaboung.ga' },
+      registration: { isOpen: true, autoApprove: false },
+      maintenance: { isEnabled: false, message: 'Plateforme en maintenance' },
+    };
+
+    data.forEach((item: any) => {
+      if (settings[item.key]) {
+        settings[item.key] = { ...settings[item.key], ...item.value };
+      }
+    });
+
+    return settings as PlatformSettings;
+  },
+
+  updatePlatformSettings: async (key: keyof PlatformSettings, value: any) => {
+    if (!isSupabaseConfigured()) return false;
+
+    const client = requireSupabaseClient();
+    const { error } = await client
+      .from('platform_settings')
+      .upsert({
+        key,
+        value,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'key' });
+
+    if (error) {
+      console.error(`Error updating platform settings [${key}]:`, error);
+      return false;
+    }
+    return true;
   },
 };
 

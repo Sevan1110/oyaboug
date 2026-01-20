@@ -14,7 +14,11 @@ import { Badge } from "@/components/ui/badge";
 import { useNotifications } from "@/hooks/useNotifications";
 import NotificationList from "./NotificationList";
 
-const NotificationBell = () => {
+interface NotificationBellProps {
+  viewAllLink?: string;
+}
+
+const NotificationBell = ({ viewAllLink }: NotificationBellProps) => {
   const { unreadCount } = useNotifications();
 
   return (
@@ -33,7 +37,7 @@ const NotificationBell = () => {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0 max-h-[60vh] overflow-hidden" align="end">
-        <NotificationList />
+        <NotificationList viewAllLink={viewAllLink} />
       </PopoverContent>
     </Popover>
   );
