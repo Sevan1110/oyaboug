@@ -236,7 +236,16 @@ const AdminSettingsPage = () => {
                     <Switch
                       checked={preferences?.categories?.system ?? true}
                       onCheckedChange={(checked) => updatePreferences({
-                        categories: { ...preferences?.categories!, system: checked }
+                        categories: {
+                          order: true,
+                          payment: true,
+                          promotion: true,
+                          merchant: true,
+                          impact: true,
+                          // system intentionally omitted here as it is set below
+                          ...(preferences?.categories ?? {}),
+                          system: checked
+                        }
                       })}
                     />
                   </div>
@@ -245,7 +254,16 @@ const AdminSettingsPage = () => {
                     <Switch
                       checked={preferences?.categories?.merchant ?? true}
                       onCheckedChange={(checked) => updatePreferences({
-                        categories: { ...preferences?.categories!, merchant: checked }
+                        categories: {
+                          order: true,
+                          payment: true,
+                          promotion: true,
+                          // merchant intentionally omitted here as it is set below
+                          impact: true,
+                          system: true,
+                          ...(preferences?.categories ?? {}),
+                          merchant: checked
+                        }
                       })}
                     />
                   </div>
