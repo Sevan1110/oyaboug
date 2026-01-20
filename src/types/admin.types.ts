@@ -112,6 +112,7 @@ export interface AdminClient {
   ordersCount: number;
   totalSpent: number;
   status: AdminClientStatus;
+  role: 'user' | 'merchant' | 'admin';
 }
 
 // ============================================
@@ -130,4 +131,23 @@ export interface AdminProduct {
   isAvailable: boolean;
   description?: string;
   createdAt: Date;
+}
+
+// ============================================
+// Platform Settings
+// ============================================
+
+export interface PlatformSettings {
+  general: {
+    platformName: string;
+    supportEmail: string;
+  };
+  registration: {
+    isOpen: boolean;
+    autoApprove: boolean;
+  };
+  maintenance: {
+    isEnabled: boolean;
+    message: string;
+  };
 }

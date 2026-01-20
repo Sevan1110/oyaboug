@@ -91,6 +91,7 @@ const AddProductModal = ({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [basketImagePreview, setBasketImagePreview] = useState<string | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [compressionInfo, setCompressionInfo] = useState<{ original: number; compressed: number } | null>(null);
 
   // Basket mode
@@ -228,11 +229,25 @@ const AddProductModal = ({
     basketTotalOriginal * (1 - basketDiscount / 100)
   );
 
+  // Helper to combine date and time for pickup window
+  const combineDateAndTime = (timeStr: string) => {
+    if (!timeStr) return new Date().toISOString();
+
+    const today = new Date();
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const date = new Date(today);
+    date.setHours(hours, minutes, 0, 0);
+    return date.toISOString();
+  };
+
   const handleSubmitSingle = async () => {
     if (!productForm.name || !productForm.original_price) {
       toast.error("Veuillez remplir les champs obligatoires");
       return;
     }
+
+    setIsSubmitting(true);
+    console.log("Submitting single product...", productForm);
 
     try {
       const response = await createListing(merchantId, {
@@ -242,23 +257,27 @@ const AddProductModal = ({
         originalPrice: productForm.original_price,
         discountedPrice: productForm.discounted_price,
         quantity: productForm.quantity_available,
-        pickupStart: productForm.pickup_start,
-        pickupEnd: productForm.pickup_end,
+        pickupStart: combineDateAndTime(productForm.pickup_start),
+        pickupEnd: combineDateAndTime(productForm.pickup_end),
         expiryDate: productForm.expiry_date,
         imageUrl: productForm.image_url,
       });
+
+      console.log("Create listing response:", response);
 
       if (response.success) {
         toast.success(`Produit "${productForm.name}" créé avec succès`);
         onProductCreated?.();
         handleClose();
       } else {
-        toast.error("Erreur lors de la création du produit");
-        console.error(response.error);
+        toast.error(response.error?.message || "Erreur lors de la création du produit");
+        console.error("API Error:", response.error);
       }
     } catch (error) {
       console.error("Error creating product:", error);
-      toast.error("Une erreur est survenue");
+      toast.error("Une erreur est survenue lors de la création");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -272,6 +291,9 @@ const AddProductModal = ({
       return;
     }
 
+    setIsSubmitting(true);
+    console.log("Submitting basket...", { basketName, basketItems });
+
     try {
       const response = await createListing(merchantId, {
         name: basketName,
@@ -280,24 +302,28 @@ const AddProductModal = ({
         originalPrice: basketTotalOriginal,
         discountedPrice: basketTotalDiscounted,
         quantity: basketQuantity,
-        pickupStart: basketPickupStart,
-        pickupEnd: basketPickupEnd,
+        pickupStart: combineDateAndTime(basketPickupStart),
+        pickupEnd: combineDateAndTime(basketPickupEnd),
         expiryDate: basketExpiryDate,
         imageUrl: basketImagePreview || undefined,
         contents: basketItems,
       });
+
+      console.log("Create basket response:", response);
 
       if (response.success) {
         toast.success(`Panier "${basketName}" créé avec succès`);
         onProductCreated?.();
         handleClose();
       } else {
-        toast.error("Erreur lors de la création du panier");
-        console.error(response.error);
+        toast.error(response.error?.message || "Erreur lors de la création du panier");
+        console.error("API Error:", response.error);
       }
     } catch (error) {
       console.error("Error creating basket:", error);
-      toast.error("Une erreur est survenue");
+      toast.error("Une erreur est survenue lors de la création");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -554,9 +580,18 @@ const AddProductModal = ({
               <Button variant="outline" onClick={handleClose}>
                 Annuler
               </Button>
-              <Button onClick={handleSubmitSingle}>
-                <Plus className="w-4 h-4 mr-2" />
-                Créer le produit
+              <Button onClick={handleSubmitSingle} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Créer le produit
+                  </>
+                )}
               </Button>
             </div>
           </TabsContent>
@@ -832,10 +867,19 @@ const AddProductModal = ({
               </Button>
               <Button
                 onClick={handleSubmitBasket}
-                disabled={basketItems.length < 2}
+                disabled={basketItems.length < 2 || isSubmitting}
               >
-                <ShoppingBasket className="w-4 h-4 mr-2" />
-                Créer le panier ({basketItems.length} articles)
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBasket className="w-4 h-4 mr-2" />
+                    Créer le panier ({basketItems.length} articles)
+                  </>
+                )}
               </Button>
             </div>
           </TabsContent>

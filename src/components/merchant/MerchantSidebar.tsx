@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { logout } from "@/services";
 import { useToast } from "@/hooks/use-toast";
+import { useMerchantItems, useMerchantActiveOrders } from "@/hooks/useMerchantData";
 
 const mainMenuItems = [
   {
@@ -92,17 +93,32 @@ const settingsMenuItems = [
 interface MerchantSidebarProps {
   merchantName?: string;
   merchantType?: string;
+  merchantId?: string;
 }
 
 const MerchantSidebar = ({
   merchantName = "Mon Commerce",
   merchantType = "Restaurant",
+  merchantId,
 }: MerchantSidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+
+  const { data: products } = useMerchantItems(merchantId);
+  const { data: activeOrders } = useMerchantActiveOrders(merchantId);
+
+  const menuItemsWithBadges = mainMenuItems.map(item => {
+    if (item.url === "/merchant/products") {
+      return { ...item, badge: products?.length || 0 };
+    }
+    if (item.url === "/merchant/orders") {
+      return { ...item, badge: activeOrders?.length || 0 };
+    }
+    return item;
+  });
 
   const isActive = (path: string) => {
     if (path === "/merchant") {
@@ -169,7 +185,7 @@ const MerchantSidebar = ({
           <SidebarGroupLabel>Menu principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainMenuItems.map((item) => (
+              {menuItemsWithBadges.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild

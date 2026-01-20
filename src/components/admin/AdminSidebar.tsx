@@ -4,6 +4,7 @@
 // ============================================
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Sidebar,
@@ -36,40 +37,7 @@ import {
 import { logout } from "@/services";
 import { useToast } from "@/hooks/use-toast";
 
-const mainMenuItems = [
-  {
-    title: "Tableau de bord",
-    url: "/admin",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Commerces",
-    url: "/admin/merchants",
-    icon: Store,
-    badge: 3,
-  },
-  {
-    title: "Validations",
-    url: "/admin/validations",
-    icon: ClipboardCheck,
-    badge: 2,
-  },
-  {
-    title: "Clients",
-    url: "/admin/clients",
-    icon: Users,
-  },
-  {
-    title: "Produits & Paniers",
-    url: "/admin/products",
-    icon: Package,
-  },
-  {
-    title: "Transactions",
-    url: "/admin/transactions",
-    icon: ShoppingBag,
-  },
-];
+
 
 const analyticsMenuItems = [
   {
@@ -103,6 +71,58 @@ const AdminSidebar = () => {
   const { toast } = useToast();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const [stats, setStats] = useState({ merchants: 0, validations: 0 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Use getKPIs to fetch counts
+        const kpis = await import("@/services/admin.service").then(m => m.adminService.getKPIs());
+        setStats({
+          merchants: kpis.totalMerchants,
+          validations: kpis.pendingMerchants
+        });
+      } catch (error) {
+        console.error("Error fetching sidebar stats:", error);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const getMainMenuItems = () => [
+    {
+      title: "Tableau de bord",
+      url: "/admin",
+      icon: LayoutDashboard,
+    },
+    {
+      title: "Commerces",
+      url: "/admin/merchants",
+      icon: Store,
+      badge: stats.merchants,
+    },
+    {
+      title: "Validations",
+      url: "/admin/validations",
+      icon: ClipboardCheck,
+      badge: stats.validations,
+    },
+    {
+      title: "Clients",
+      url: "/admin/clients",
+      icon: Users,
+    },
+    {
+      title: "Produits & Paniers",
+      url: "/admin/products",
+      icon: Package,
+    },
+    {
+      title: "Transactions",
+      url: "/admin/transactions",
+      icon: ShoppingBag,
+    },
+  ];
 
   const isActive = (path: string) => {
     if (path === "/admin") {
@@ -154,7 +174,7 @@ const AdminSidebar = () => {
           <SidebarGroupLabel>Gestion</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainMenuItems.map((item) => (
+              {getMainMenuItems().map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -169,9 +189,10 @@ const AdminSidebar = () => {
                         <item.icon className="w-4 h-4" />
                         <span>{item.title}</span>
                       </div>
-                      {item.badge && !isCollapsed && (
+                      {/* Only show badge if > 0 */}
+                      {(item.badge !== undefined && item.badge > 0 && !isCollapsed) && (
                         <Badge
-                          variant="destructive"
+                          variant={item.title === "Validations" ? "destructive" : "secondary"}
                           className="ml-auto h-5 px-1.5 text-xs"
                         >
                           {item.badge}

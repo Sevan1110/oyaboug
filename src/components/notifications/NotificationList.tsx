@@ -140,7 +140,11 @@ const NotificationItem = ({
   );
 };
 
-const NotificationList = () => {
+interface NotificationListProps {
+  viewAllLink?: string;
+}
+
+const NotificationList = ({ viewAllLink = "/user/notifications" }: NotificationListProps) => {
   const {
     groupedNotifications,
     unreadCount,
@@ -209,7 +213,7 @@ const NotificationList = () => {
 
       <Separator />
       <Link
-        href="/user/notifications"
+        href={viewAllLink}
         className="flex items-center justify-center gap-2 p-3 text-sm text-primary hover:bg-muted/50 transition-colors"
       >
         Voir toutes les notifications

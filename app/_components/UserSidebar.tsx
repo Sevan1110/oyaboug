@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useActiveReservationsCount } from "@/hooks/useActiveReservationsCount";
 import {
     LayoutDashboard,
     ShoppingBag,
@@ -51,7 +52,7 @@ const mainMenuItems = [
         title: "Mes réservations",
         url: "/user/reservations",
         icon: ShoppingBag,
-        badge: 2,
+        isDynamicBadge: true, // Marker for dynamic badge
     },
     {
         title: "Mes favoris",
@@ -99,6 +100,7 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
     const { toast } = useToast();
     const { state, toggleSidebar } = useSidebar();
     const { unreadCount } = useNotifications();
+    const { count: activeReservationsCount } = useActiveReservationsCount();
     const { signOut, user } = useAuth();
     const isCollapsed = state === "collapsed";
 
@@ -215,12 +217,12 @@ const UserSidebar = ({ userName = "Utilisateur" }: UserSidebarProps) => {
                                                 <item.icon className="w-4 h-4" />
                                                 <span>{item.title}</span>
                                             </div>
-                                            {item.badge && !isCollapsed && (
+                                            {(item as any).isDynamicBadge && activeReservationsCount > 0 && !isCollapsed && (
                                                 <Badge
                                                     variant="secondary"
                                                     className="ml-auto h-5 px-1.5 text-xs"
                                                 >
-                                                    {item.badge}
+                                                    {activeReservationsCount}
                                                 </Badge>
                                             )}
                                         </Link>

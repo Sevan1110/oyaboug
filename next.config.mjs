@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    // Enable if you have issues with strict mode, though strictly recommended to keep true
-    reactStrictMode: true,
+    // Temporarily disabled due to Leaflet map library incompatibility
+    // Leaflet doesn't handle React 18 Strict Mode's double-invocation properly
+    reactStrictMode: false,
 
     // Necessary for generic Supabase image hosting if used, or other external domains
     images: {

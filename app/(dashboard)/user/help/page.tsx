@@ -14,14 +14,16 @@ import {
     Phone,
     FileText,
     ExternalLink,
-    Search
+    Search,
+    Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { contactSupport, getAuthUser } from "@/services";
 
 const faqs = [
     {
-        question: "Comment fonctionne oyaboug ?",
-        answer: "oyaboug vous permet de réserver des invendus alimentaires à prix réduit chez des commerçants partenaires. Vous réservez en ligne et récupérez votre commande directement en magasin aux horaires indiqués."
+        question: "Comment fonctionne ouyaboug ?",
+        answer: "ouyaboug vous permet de réserver des invendus alimentaires à prix réduit chez des commerçants partenaires. Vous réservez en ligne et récupérez votre commande directement en magasin aux horaires indiqués."
     },
     {
         question: "Comment réserver un panier ?",
@@ -56,6 +58,7 @@ const faqs = [
 export default function HelpPage() {
     const { toast } = useToast();
     const [searchQuery, setSearchQuery] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [contactForm, setContactForm] = useState({
         subject: "",
         message: "",
@@ -67,13 +70,53 @@ export default function HelpPage() {
             faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        toast({
-            title: "Message envoyé",
-            description: "Notre équipe vous répondra dans les plus brefs délais.",
-        });
-        setContactForm({ subject: "", message: "" });
+        setIsSubmitting(true);
+
+        try {
+            // Get current user ID (optional, can be anonymous if API supported it, but we require auth)
+            const { data: authData } = await getAuthUser();
+            const userId = authData?.user?.id;
+
+            if (!userId) {
+                toast({
+                    title: "Connexion requise",
+                    description: "Vous devez être connecté pour envoyer un message.",
+                    variant: "destructive",
+                });
+                setIsSubmitting(false);
+                return;
+            }
+
+            const response = await contactSupport(
+                userId,
+                contactForm.subject,
+                contactForm.message
+            );
+
+            if (response.success) {
+                toast({
+                    title: "Message envoyé",
+                    description: "Notre équipe vous répondra dans les plus brefs délais.",
+                });
+                setContactForm({ subject: "", message: "" });
+            } else {
+                toast({
+                    title: "Erreur",
+                    description: response.error?.message || "Une erreur est survenue lors de l'envoi du message.",
+                    variant: "destructive",
+                });
+            }
+        } catch (error) {
+            toast({
+                title: "Erreur critique",
+                description: "Impossible d'envoyer le message. Veuillez réessayer plus tard.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -153,6 +196,7 @@ export default function HelpPage() {
                                         value={contactForm.subject}
                                         onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
                                         required
+                                        disabled={isSubmitting}
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -164,10 +208,18 @@ export default function HelpPage() {
                                         value={contactForm.message}
                                         onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                                         required
+                                        disabled={isSubmitting}
                                     />
                                 </div>
-                                <Button type="submit" className="w-full">
-                                    Envoyer le message
+                                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Envoi en cours...
+                                        </>
+                                    ) : (
+                                        "Envoyer le message"
+                                    )}
                                 </Button>
                             </form>
                         </CardContent>
@@ -223,18 +275,18 @@ export default function HelpPage() {
                         </CardHeader>
                         <CardContent className="space-y-2">
                             <Button variant="outline" className="w-full justify-start" asChild>
-                                <a href="/cgu">
+                                <Link href="/cgu">
                                     <FileText className="h-4 w-4 mr-2" />
                                     Conditions d'utilisation
                                     <ExternalLink className="h-3 w-3 ml-auto" />
-                                </a>
+                                </Link>
                             </Button>
                             <Button variant="outline" className="w-full justify-start" asChild>
-                                <a href="/privacy">
+                                <Link href="/privacy">
                                     <FileText className="h-4 w-4 mr-2" />
                                     Politique de confidentialité
                                     <ExternalLink className="h-3 w-3 ml-auto" />
-                                </a>
+                                </Link>
                             </Button>
                         </CardContent>
                     </Card>
@@ -254,3 +306,6 @@ export default function HelpPage() {
         </div>
     );
 }
+
+// Helper to fix Link import
+import Link from "next/link";

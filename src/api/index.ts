@@ -86,6 +86,9 @@ export {
   getOrderByTrackingCode,
 } from './orders.api';
 
+// Orders RPC (bypasses RLS)
+export { cancelOrderViaRPC } from './orders-rpc.api';
+
 // Pricing API
 export {
   getPricingRecommendation,

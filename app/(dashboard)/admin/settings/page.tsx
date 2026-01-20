@@ -5,7 +5,7 @@
 // ouyaboung Platform - Anti-gaspillage alimentaire
 // ============================================
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,22 +22,82 @@ import {
   Globe,
   Database,
   Save,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
+import { adminService } from "@/services/admin.service";
+import { useNotifications } from "@/hooks/useNotifications";
+import type { PlatformSettings } from "@/types/admin.types";
 
 const AdminSettingsPage = () => {
-  const [settings, setSettings] = useState({
-    platformName: 'ouyaboung Gabon',
-    supportEmail: 'support@ouyaboung.ga',
-    autoApprove: false,
-    emailNotifications: true,
-    maintenanceMode: false,
-    registrationOpen: true,
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [platformSettings, setPlatformSettings] = useState<PlatformSettings | null>(null);
+  const { preferences, updatePreferences } = useNotifications();
 
-  const handleSave = () => {
-    toast.success("Paramètres enregistrés");
+  // Load platform settings separately from notifications (which are loaded by the hook)
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await adminService.getPlatformSettings();
+        setPlatformSettings(settings);
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+        toast.error("Erreur lors du chargement des paramètres");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  const handleSaveGeneral = async () => {
+    if (!platformSettings) return;
+    toast.promise(
+      Promise.all([
+        adminService.updatePlatformSettings('general', platformSettings.general),
+        adminService.updatePlatformSettings('registration', platformSettings.registration)
+      ]),
+      {
+        loading: 'Enregistrement...',
+        success: 'Paramètres généraux enregistrés',
+        error: 'Erreur lors de l\'enregistrement'
+      }
+    );
   };
+
+  const handleSaveSecurity = async () => {
+    if (!platformSettings) return;
+    toast.promise(
+      adminService.updatePlatformSettings('maintenance', platformSettings.maintenance),
+      {
+        loading: 'Enregistrement...',
+        success: 'Paramètres de sécurité enregistrés',
+        error: 'Erreur lors de l\'enregistrement'
+      }
+    );
+  };
+
+  // Helper to update local state deep keys
+  const updateSetting = (section: keyof PlatformSettings, key: string, value: any) => {
+    if (!platformSettings) return;
+    setPlatformSettings({
+      ...platformSettings,
+      [section]: {
+        ...platformSettings[section],
+        [key]: value
+      }
+    });
+  };
+
+  if (isLoading || !platformSettings) {
+    return (
+      <AdminLayout title="Paramètres" subtitle="Configuration de la plateforme">
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout
@@ -78,8 +138,8 @@ const AdminSettingsPage = () => {
                   <Label htmlFor="platformName">Nom de la plateforme</Label>
                   <Input
                     id="platformName"
-                    value={settings.platformName}
-                    onChange={(e) => setSettings({ ...settings, platformName: e.target.value })}
+                    value={platformSettings.general.platformName}
+                    onChange={(e) => updateSetting('general', 'platformName', e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -87,8 +147,8 @@ const AdminSettingsPage = () => {
                   <Input
                     id="supportEmail"
                     type="email"
-                    value={settings.supportEmail}
-                    onChange={(e) => setSettings({ ...settings, supportEmail: e.target.value })}
+                    value={platformSettings.general.supportEmail}
+                    onChange={(e) => updateSetting('general', 'supportEmail', e.target.value)}
                   />
                 </div>
               </CardContent>
@@ -114,8 +174,8 @@ const AdminSettingsPage = () => {
                     </p>
                   </div>
                   <Switch
-                    checked={settings.registrationOpen}
-                    onCheckedChange={(checked) => setSettings({ ...settings, registrationOpen: checked })}
+                    checked={platformSettings.registration.isOpen}
+                    onCheckedChange={(checked) => updateSetting('registration', 'isOpen', checked)}
                   />
                 </div>
                 <Separator />
@@ -127,12 +187,19 @@ const AdminSettingsPage = () => {
                     </p>
                   </div>
                   <Switch
-                    checked={settings.autoApprove}
-                    onCheckedChange={(checked) => setSettings({ ...settings, autoApprove: checked })}
+                    checked={platformSettings.registration.autoApprove}
+                    onCheckedChange={(checked) => updateSetting('registration', 'autoApprove', checked)}
                   />
                 </div>
               </CardContent>
             </Card>
+
+            <div className="flex justify-end">
+              <Button onClick={handleSaveGeneral} className="gap-2">
+                <Save className="w-4 h-4" />
+                Enregistrer Général
+              </Button>
+            </div>
           </div>
         </TabsContent>
 
@@ -141,10 +208,10 @@ const AdminSettingsPage = () => {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Mail className="w-4 h-4" />
-                Notifications email
+                Mes Préférences de Notification
               </CardTitle>
               <CardDescription>
-                Configurez les notifications par email
+                Configurez vos alertes personnelles
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -156,26 +223,32 @@ const AdminSettingsPage = () => {
                   </p>
                 </div>
                 <Switch
-                  checked={settings.emailNotifications}
-                  onCheckedChange={(checked) => setSettings({ ...settings, emailNotifications: checked })}
+                  checked={preferences?.email_enabled ?? true}
+                  onCheckedChange={(checked) => updatePreferences({ email_enabled: checked })}
                 />
               </div>
               <Separator />
               <div className="space-y-2">
-                <Label>Types de notifications</Label>
+                <Label>Catégories</Label>
                 <div className="space-y-2">
-                  {[
-                    'Nouvelle inscription commerce',
-                    'Nouvelle vente',
-                    'Commerce validé',
-                    'Commerce refusé',
-                    'Alertes système',
-                  ].map((item) => (
-                    <div key={item} className="flex items-center justify-between py-2">
-                      <span className="text-sm">{item}</span>
-                      <Switch defaultChecked />
-                    </div>
-                  ))}
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm">Alertes Système</span>
+                    <Switch
+                      checked={preferences?.categories?.system ?? true}
+                      onCheckedChange={(checked) => updatePreferences({
+                        categories: { ...preferences?.categories!, system: checked }
+                      })}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm">Inscriptions Commerces</span>
+                    <Switch
+                      checked={preferences?.categories?.merchant ?? true}
+                      onCheckedChange={(checked) => updatePreferences({
+                        categories: { ...preferences?.categories!, merchant: checked }
+                      })}
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -202,22 +275,30 @@ const AdminSettingsPage = () => {
                   </p>
                 </div>
                 <Switch
-                  checked={settings.maintenanceMode}
-                  onCheckedChange={(checked) => setSettings({ ...settings, maintenanceMode: checked })}
+                  checked={platformSettings.maintenance.isEnabled}
+                  onCheckedChange={(checked) => updateSetting('maintenance', 'isEnabled', checked)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="maintenanceMsg">Message de maintenance</Label>
+                <Input
+                  id="maintenanceMsg"
+                  value={platformSettings.maintenance.message}
+                  onChange={(e) => updateSetting('maintenance', 'message', e.target.value)}
+                  disabled={!platformSettings.maintenance.isEnabled}
                 />
               </div>
             </CardContent>
           </Card>
+
+          <div className="flex justify-end mt-6">
+            <Button onClick={handleSaveSecurity} variant="destructive" className="gap-2">
+              <Save className="w-4 h-4" />
+              Enregistrer Maintenance
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
-
-      {/* Save Button */}
-      <div className="flex justify-end mt-6">
-        <Button onClick={handleSave} className="gap-2">
-          <Save className="w-4 h-4" />
-          Enregistrer les modifications
-        </Button>
-      </div>
     </AdminLayout>
   );
 };

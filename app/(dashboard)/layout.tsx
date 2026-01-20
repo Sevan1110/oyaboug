@@ -23,10 +23,12 @@ export default function DashboardLayout({
     } | null>(null);
 
     useEffect(() => {
+        let isMounted = true;
+
         const loadUser = async () => {
             try {
                 const { data } = await getAuthUser();
-                if (data?.user) {
+                if (isMounted && data?.user) {
                     const metadata = data.user.user_metadata || {};
                     const fullName = metadata.full_name || "";
                     const [firstName = "U", lastName = ""] = fullName.split(" ");
@@ -37,16 +39,25 @@ export default function DashboardLayout({
                         avatarUrl: metadata.avatar_url || "",
                     });
                 }
-            } catch (e) {
+            } catch (e: any) {
+                // Ignore AbortError which is expected during cleanup/fast refresh
+                if (e?.name === 'AbortError' || e?.message?.includes('aborted')) {
+                    return;
+                }
                 console.error("Failed to load user for layout", e);
             }
         };
+
         loadUser();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     return (
         <SidebarProvider>
-            <UserSidebar userName={user ? `${user.firstName} ${user.lastName} ` : undefined} />
+            <UserSidebar userName={user ? `${user.firstName} ${user.lastName}` : undefined} />
 
             <SidebarInset className="flex-1">
                 {/* Top Header */}
@@ -74,7 +85,7 @@ export default function DashboardLayout({
                                 <Avatar className="h-8 w-8">
                                     <AvatarImage src={user?.avatarUrl} alt={user?.firstName} className="object-cover" />
                                     <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                                        {user ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)} ` : "U"}
+                                        {user ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}` : "U"}
                                     </AvatarFallback>
                                 </Avatar>
                             </Button>

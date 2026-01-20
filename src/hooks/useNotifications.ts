@@ -68,40 +68,56 @@ export const useNotifications = () => {
   }, []);
 
   useEffect(() => {
-    load();
-
-    // Set up real-time subscription
+    let isMounted = true;
     let subscription: any = null;
 
+    const loadWithCheck = async () => {
+      if (isMounted) {
+        await load();
+      }
+    };
+
+    loadWithCheck();
+
+    // Set up real-time subscription
     const setupSubscription = async () => {
-      const { data } = await getAuthUser();
-      const userId = data?.user?.id;
+      try {
+        const { data } = await getAuthUser();
+        const userId = data?.user?.id;
 
-      if (!userId || !supabaseClient) return;
+        if (!userId || !supabaseClient || !isMounted) return;
 
-      subscription = supabaseClient
-        .channel('public:notifications')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${userId}`,
-          },
-          (payload) => {
-            // Reload on any change to user's notifications
-            if (payload.new || payload.old) {
-              load();
+        subscription = supabaseClient
+          .channel('public:notifications')
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'notifications',
+              filter: `user_id=eq.${userId}`,
+            },
+            (payload) => {
+              // Reload on any change to user's notifications
+              if (isMounted && (payload.new || payload.old)) {
+                load();
+              }
             }
-          }
-        )
-        .subscribe();
+          )
+          .subscribe();
+      } catch (error: any) {
+        // Ignore AbortError which is expected during cleanup/fast refresh
+        if (error?.name === 'AbortError' || error?.message?.includes('aborted')) {
+          return;
+        }
+        console.error('Error setting up notification subscription:', error);
+      }
     };
 
     setupSubscription();
 
     return () => {
+      isMounted = false;
       if (subscription) {
         supabaseClient?.removeChannel(subscription);
       }
