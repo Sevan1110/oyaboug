@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { MapPin, Phone, Mail, Clock, Star, Store, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,10 +75,13 @@ const MerchantPublicPage = () => {
 
             {/* Cover Image */}
             <div className="relative h-64 md:h-80 w-full overflow-hidden pt-16">
-                <img
+                <Image
                     src={merchant.cover_image_url || "https://images.unsplash.com/photo-1517248135467-4c7ed9d42339?w=1200&h=400&fit=crop"}
                     alt={merchant.business_name}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="100vw"
+                    priority
                 />
                 <div className="absolute inset-0 bg-black/30" />
                 <div className="absolute bottom-6 left-6 right-6 container mx-auto px-4">
@@ -100,10 +104,12 @@ const MerchantPublicPage = () => {
                             <div className="p-6">
                                 <div className="flex items-center gap-4 mb-6">
                                     <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted border-2 border-white shadow-lg">
-                                        <img
+                                        <Image
                                             src={merchant.logo_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=200&h=200&fit=crop"}
                                             alt={merchant.business_name}
-                                            className="w-full h-full object-cover"
+                                            fill
+                                            className="object-cover"
+                                            sizes="80px"
                                         />
                                     </div>
                                     <div>

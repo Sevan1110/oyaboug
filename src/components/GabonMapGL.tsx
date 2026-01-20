@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import Image from "next/image";
 import Map, {
     Marker,
     Popup,
@@ -223,12 +224,14 @@ const GabonMapGL = ({
                     >
                         <div className="p-2 min-w-[200px]">
                             <div className="flex items-start gap-2 mb-2">
-                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0 relative">
                                     {popupInfo.image_url ? (
-                                        <img
+                                        <Image
                                             src={popupInfo.image_url}
                                             alt={popupInfo.name}
-                                            className="w-full h-full object-cover"
+                                            fill
+                                            className="object-cover"
+                                            sizes="48px"
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">

@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -493,7 +494,13 @@ const MerchantProfilePage = () => {
                 onClick={() => fileInputRef.current?.click()}
               >
                 {profile.logo_url ? (
-                  <img src={profile.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                  <Image
+                    src={profile.logo_url}
+                    alt="Logo"
+                    fill
+                    className="object-cover"
+                    sizes="128px"
+                  />
                 ) : (
                   <Store className="w-16 h-16 text-primary" />
                 )}

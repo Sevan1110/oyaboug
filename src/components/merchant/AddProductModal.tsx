@@ -4,6 +4,7 @@
 // ============================================
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
@@ -527,10 +528,12 @@ const AddProductModal = ({
                 </div>
               ) : imagePreview ? (
                 <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
-                  <img
+                  <Image
                     src={imagePreview}
                     alt="Aperçu"
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="100vw"
                   />
                   <Button
                     variant="destructive"
@@ -642,10 +645,12 @@ const AddProductModal = ({
               />
               {basketImagePreview ? (
                 <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
-                  <img
+                  <Image
                     src={basketImagePreview}
                     alt="Aperçu du panier"
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="100vw"
                   />
                   <Button
                     variant="destructive"
